@@ -1,0 +1,31 @@
+{
+    "name": "kocka-logger",
+    "version": "0.0.1",
+    "description": "The time has come.",
+    "keywords": [
+        "wikia",
+        "countervandalism",
+        "logger"
+    ],
+    "license": "CC-BY-SA-4.0",
+    "author": {
+        "name": "KockaAdmiralac",
+        "email": "1405223@gmail.com",
+        "url": "https://github.com/KockaAdmiralac"
+    },
+    "contributors": [],
+    "main": "main.js",
+    "scripts": {
+        "start": "node main.js"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/KockaAdmiralac/KockaLogger.git"
+    },
+    "dependencies": {
+        "irc": ">=0.5.2",
+        "eslint": ">=5.0.0",
+        "request": ">=2.87.0",
+        "request-promise-native": ">=1.0.5"
+    }
+}

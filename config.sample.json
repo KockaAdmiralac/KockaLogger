@@ -1,0 +1,30 @@
+{
+    "client": {
+        "server": "freenode.wikia.com",
+        "port": 9999,
+        "nick": "MyKockaLogger",
+        "realname": "The time has come.",
+        "channels": {
+            "rc": "#recentchanges",
+            "newusers": "#newusers",
+            "discussions": "#discuss"
+        },
+        "users": {
+            "rc": "Tim",
+            "newusers": "Daniel",
+            "discussions": "Bert"
+        }
+    },
+    "modules": {
+        "logger": [
+            {
+                "wiki": "community",
+                "transport": {
+                    "type": "discord",
+                    "id": "123456789012345678",
+                    "token": "aHDAkNAjao_l4JAS9A0qkl04pASCjLASD-ASLKjQWE_MASDA0ijASjkh23Spoqk-02nk"
+                }
+            }
+        ]
+    }
+}
