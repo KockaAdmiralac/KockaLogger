@@ -216,7 +216,7 @@ class Logger extends Module {
                 message.action = rc.logaction;
                 message.namespace = rc.ns;
                 message.reason = rc.comment;
-                this._execute(wikis, message);
+                this._handleThreadTitle(wikis, message);
             }
         }.bind(this));
     }
@@ -261,20 +261,29 @@ class Logger extends Module {
      */
     _handleTitle(wikis, message) {
         const ns = wikis[0].namespaces[message.page.split(':')[0]];
+        message.namespace = ns;
         if (ns === 1201 || ns === 2001) {
-            const parent = message.page.split('/').slice(0, 2).join('/'),
-                  data = this._cache.get(`${message.wiki}-${parent}`);
-            message.isMain = parent === message.page;
-            message.ns = ns;
-            if (data) {
-                message.threadtitle = data.title;
-                message.threadid = data.id;
-                this._execute(wikis, message);
-            } else {
-                this._fetchThreadInfo(wikis, message, parent);
-            }
+            this._handleThreadTitle(wikis, message);
         } else {
             this._execute(wikis, message);
+        }
+    }
+    /**
+     * Handles transport of a message related to a thread after its
+     * title has been obtained
+     * @param {Array<Object>} wikis Wikis the message is from
+     * @param {Message} message Message to transport
+     */
+    _handleThreadTitle(wikis, message) {
+        const parent = message.page.split('/').slice(0, 2).join('/'),
+        data = this._cache.get(`${message.wiki}-${parent}`);
+        message.isMain = parent === message.page;
+        if (data) {
+            message.threadtitle = data.title;
+            message.threadid = data.id;
+            this._execute(wikis, message);
+        } else {
+            this._fetchThreadInfo(wikis, message, parent);
         }
     }
     /**

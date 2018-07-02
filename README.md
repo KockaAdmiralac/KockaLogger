@@ -45,9 +45,21 @@ To run KockaLogger, use:
 $ npm start
 ```
 
+## Translation
+To be described later
+
 ## To do
 - Link directly to replies in thread links
 - Cache for Discussions thread titles
 - New users transport
+- New wikis log
 - Basic summary filter
 - Basic XRM
+- Handle "Created page with summaries"
+- Memory usage checking and optimization
+- CLI
+- GUI?
+- Proper error logs
+- Article/blog comments displaying prettier
+- Log AbuseFilter hits within the `logging` module
+- Separating wiki from Discussions logs and CVNAdvanced-style Discussions logs

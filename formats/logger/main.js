@@ -69,7 +69,7 @@ class Logger extends Format {
                 m.user,
                 m.threadid,
                 m.threadtitle,
-                m.ns,
+                m.namespace,
                 m.page.split(':')[1].split('/')[0],
                 m.diff,
                 n ? m.summary : m.params.diff
@@ -111,8 +111,8 @@ class Logger extends Format {
                 temp = [
                     w,
                     m.user,
-                    m.page,
-                    m.page,
+                    m.threadid,
+                    m.threadtitle,
                     m.namespace,
                     m.page.split(':')[1].split('/')[0],
                     m.reason
@@ -468,7 +468,7 @@ class Logger extends Format {
                 temp = args[0].trim();
                 return temp.length === 0 ?
                     '' :
-                    `(*${this._escape(temp.replace(/\n|\r/g, ''))}*)`;
+                    `(*${this._escape(temp.replace(/(?:\n|\r|\s)+/g, ' '))}*)`;
             case 'board':
                 return this._wikiLink(
                     this._msg(`board-${args[0]}`, wiki, args[1]).content,
