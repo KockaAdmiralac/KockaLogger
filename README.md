@@ -29,6 +29,11 @@ https://discordapp.com/api/webhooks/123456789012345678/aHDAkNAjao_l4JAS9A0qkl04p
 your webhook ID will be `123456789012345678` and your webhook token will be `aHDAkNAjao_l4JAS9A0qkl04pASCjLASD-ASLKjQWE_MASDA0ijASjkh23Spoqk-02nk`.
 
 ## Running
+Install all the required modules using:
+```console
+$ npm install
+```
+
 Before running, you must generate the i18n cache that will be used when parsing log messages. To do so, run
 ```console
 $ node messages/main.js
@@ -39,3 +44,10 @@ To run KockaLogger, use:
 ```console
 $ npm start
 ```
+
+## To do
+- Link directly to replies in thread links
+- Cache for Discussions thread titles
+- New users transport
+- Basic summary filter
+- Basic XRM

@@ -22,13 +22,40 @@ class Discord extends Transport {
     constructor(config) {
         super(config);
         this._url = `https://discordapp.com/api/webhooks/${config.id}/${config.token}`;
+        this._queue = [];
     }
     /**
      * Executes the transport
      * @param {Object} message Formatted message to transport
      */
     execute(message) {
-        io.webhook(this._url, message);
+        if (this._ratelimit) {
+            this._queue.push(message);
+        } else {
+            io.webhook(this._url, message).catch(function(e) {
+                if (e.statusCode === 429) {
+                    this._ratelimit = true;
+                    this._queue.push(message);
+                    if (!this._timer) {
+                        this._timer = setTimeout(
+                            this._timeout.bind(this),
+                            e.error.retry_after
+                        );
+                    }
+                } else {
+                    console.log('Discord transport error:', e);
+                }
+            }.bind(this));
+        }
+    }
+    /**
+     * Executed after Discord's wait time finishes
+     * @private
+     */
+    _timeout() {
+        this._timer = false;
+        this._ratelimit = false;
+        this._queue.splice(0).forEach(this.execute, this);
     }
 }
 

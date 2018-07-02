@@ -48,6 +48,30 @@ class Util {
             .replace(/%3A/g, ':')
             .replace(/%2F/g, '/');
     }
+    /**
+     * Decodes HTML
+     * Reverse of mw.html.encode
+     * @param {String} html HTML to decode
+     * @returns {String} Decoded HTML
+     * @static
+     */
+    static decodeHTML(html) {
+        return String(html)
+            .replace(/&#039;/g, '\'')
+            .replace(/&quot;/g, '"')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&amp;/g, '&');
+    }
+    /**
+     * Capitalizes the first letter in a string
+     * @param {String} str String to capitalize
+     * @returns {String} String with the first letter capitalized
+     * @static
+     */
+    static cap(str) {
+        return `${str.charAt(0).toUpperCase()}${str.substring(1)}`;
+    }
 }
 
 module.exports = Util;

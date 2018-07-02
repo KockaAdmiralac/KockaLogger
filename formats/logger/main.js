@@ -43,54 +43,65 @@ class Logger extends Format {
      * @returns {Object} Formatted message
      */
     execute(message) {
-        const w = message.wiki;
-        if (message.type === 'edit') {
-            if (message.flags.includes('N')) {
-                return this._msg(
-                    'new',
-                    w,
-                    message.user,
-                    message.page,
-                    message.diff,
-                    message.summary
-                );
-            }
+        const func = this[`_handle${util.cap(message.type)}`];
+        if (typeof func === 'function') {
+            return func.call(this, message);
+        }
+        console.log('Cannot find handler for type', message.type);
+        return null;
+    }
+    /**
+     * Handles edits
+     * @param {Message} m Message to format
+     * @returns {Object} Formatted message
+     * @private
+     */
+    _handleEdit(m) {
+        const n = m.flags.includes('N');
+        if (m.threadtitle) {
             return this._msg(
-                'edit',
-                w,
-                message.user,
-                message.page,
-                message.diff,
-                message.params.diff,
-                message.summary
-            );
-        } else if (message.type === 'log') {
-            return this._handleLog(message);
-        } else if (message.type === 'discussions') {
-            return this._msg(
-                'discussions',
-                w,
-                message.user,
-                message.dtype === 'report' ?
-                    this._i18n['discussions-create-report'] :
-                    message.action === 'created' ?
-                        this._i18n['discussions-create-post'] :
-                        this._i18n[`discussions-${message.action}`],
-                message.title,
-                message.thread,
-                message.reply,
-                message.size,
-                this._escape(message.category),
-                message.snippet
+                `${
+                    n ? 'new' : 'edit'
+                }-${
+                    m.isMain ? 'post' : 'reply'
+                }`,
+                m.wiki,
+                m.user,
+                m.threadid,
+                m.threadtitle,
+                m.ns,
+                m.page.split(':')[1].split('/')[0],
+                m.diff,
+                n ? m.summary : m.params.diff
             );
         }
-        return null;
+        if (n) {
+            return this._msg(
+                'new',
+                m.wiki,
+                m.user,
+                m.page,
+                m.diff,
+                m.summary
+            );
+        }
+        return this._msg(
+            'edit',
+            m.wiki,
+            m.user,
+            m.page,
+            m.diff,
+            m.params.diff,
+            m.summary
+        );
     }
     /* eslint-disable complexity */
     /**
      * Handles logs
      * @param {Message} m Message to format
      * @returns {Object} Formatted message
+     * @private
+     * @todo Split this up somehow
      */
     _handleLog(m) {
         const w = m.wiki;
@@ -257,8 +268,8 @@ class Logger extends Format {
                     'wikifeatures',
                     w,
                     m.user,
-                    m.feature,
-                    m.value
+                    this._i18n[`feature-${m.value ? 'enable' : 'disable'}`],
+                    this._i18n[`feature-${m.feature}`]
                 );
             // patrol doesn't need to be logged
             default:
@@ -267,48 +278,112 @@ class Logger extends Format {
     }
     /* eslint-enable complexity */
     /**
+     * Handles Discussions
+     * @param {Message} m Message to format
+     * @returns {Object} Formatted message
+     * @private
+     */
+    _handleDiscussions(m) {
+        return this._msg(
+            'discussions',
+            m.wiki,
+            m.user,
+            m.dtype === 'report' ?
+                this._i18n['discussions-create-report'] :
+                m.action === 'created' ?
+                    this._i18n['discussions-create-post'] :
+                    this._i18n[`discussions-${m.action}`],
+            m.title,
+            m.thread,
+            m.reply,
+            m.size,
+            this._escape(m.category),
+            m.snippet
+        );
+    }
+    /* eslint-disable max-statements */
+    /**
      * Formats an RC message by type
      * @param {String} key I18n message key
      * @param {String} wiki Wiki where the message occurred
      * @param {Array} args Arguments for the message
      * @returns {Object} Formatted message
+     * @todo Nested templates support
+     * @todo Split this up somehow
      */
     _msg(key, wiki, ...args) {
-        const params = args.map(this._preprocess, this);
+        const string = this._i18n[key];
+        if (!string) {
+            return {
+                content: key ?
+                    `Unknown message key: ${key}` :
+                    'Undefined message key'
+            };
+        }
+        let mode = 0,
+            temp = 0,
+            result = '';
+        const templates = [],
+              tArgs = [];
+        for (let i = 0, l = string.length; i < l; ++i) {
+            let char = string.charAt(i);
+            if (mode === 1) {
+                if (char >= '0' && char <= '9') {
+                    temp = temp * 10 + Number(char);
+                } else {
+                    mode = 0;
+                    if (temp > 0) {
+                        const arg = args[temp - 1];
+                        result += typeof arg === 'undefined' || arg === null ?
+                            '' :
+                            String(arg);
+                        temp = 0;
+                    } else {
+                        result += '$';
+                    }
+                }
+            } else if (mode === 2) {
+                mode = 0;
+                if (char === '{') {
+                    templates.push(result);
+                    result = '';
+                    char = '';
+                } else {
+                    result += '{';
+                }
+            } else if (mode === 3) {
+                mode = 0;
+                if (char === '}') {
+                    tArgs.push(result);
+                    result = templates.pop() + this._template(
+                        wiki,
+                        ...tArgs.splice(0)
+                    );
+                    char = '';
+                } else {
+                    result += '}';
+                }
+            }
+            if (mode === 0) {
+                if (char === '$') {
+                    mode = 1;
+                } else if (char === '{') {
+                    mode = 2;
+                } else if (char === '}') {
+                    mode = 3;
+                } else if (char === '|' && templates.length) {
+                    tArgs.push(result);
+                    result = '';
+                } else {
+                    result += char;
+                }
+            }
+        }
         return {
-            content: this._i18n[key].replace(
-                /\$(\d+)/g,
-                (_, index) => params[Number(index) - 1]
-            ).replace(
-                /\{\{([^}]+)\}\}/g,
-                (_, template) => this._template(wiki, ...template.split('|'))
-            )
+            content: result
         };
     }
-    /**
-     * Preprocesses parameters so they can be successfully
-     * replaced into the i18n string
-     * @param {String} param Parameter to preprocess
-     * @returns {String} Preprocessed parameter
-     */
-    _preprocess(param) {
-        return String(param || '')
-            .replace(/\{\{/g, `{${ZWS}{`)
-            .replace(/\}\}/g, `}${ZWS}}`)
-            .replace(/\|/g, `${ZWS}I`);
-    }
-    /**
-     * Unescapes certain constructions that aren't
-     * hazardous anymore
-     * @param {String} message Message to postprocess
-     * @returns {String} Unescaped message
-     */
-    _postprocess(message) {
-        return message
-            .replace(/\{\u200B\{/g, '{{')
-            .replace(/\}\u200B\}/g, '}}')
-            .replace(/\u200BI/g, '|');
-    }
+    /* eslint-enable max-statements */
     /**
      * Escapes a message parameter
      * @param {String} param Parameter to escape
@@ -398,7 +473,7 @@ class Logger extends Format {
                 return this._wikiLink(
                     this._msg(`board-${args[0]}`, wiki, args[1]).content,
                     wiki,
-                    `${args[0] === 1201 ?
+                    `${Number(args[0]) === 1201 ?
                         'Message Wall' :
                         'Board'}:${args[1]}`
                 );

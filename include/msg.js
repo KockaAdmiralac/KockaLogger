@@ -59,11 +59,6 @@ BLOCK_FLAGS = [
         chatbanremove: 'chat-chatbanremove-log-entry'
     },
     delete: {
-        // eslint-disable-next-line
-        article_comment: [
-            'deletedarticle',
-            'undeletedarticle'
-        ],
         delete: 'deletedarticle',
         restore: 'undeletedarticle'
     },
@@ -93,7 +88,7 @@ BLOCK_FLAGS = [
 }, NEWUSERS_REGEX = /^(.+) New user registration https?:\/\/([a-z0-9-.]+)\.wikia\.com\/wiki\/Special:Log\/newusers$/,
 DISCUSSIONS_URL_REGEX = /^https?:\/\/([a-z0-9-.]+)\.wikia\.com\/d\/p\/(\d{19,})(?:\/r\/(\d{19,}))?$/,
 DISCUSSIONS_TYPE_REGEX = /^discussion-(thread|post|report)$/,
-WIKIFEATURES_REGEX = /^wikifeatures: set extension option: ([^=]+) = (.*)$/;
+WIKIFEATURES_REGEX = /^wikifeatures: set extension option: ([^=]+) = (true|false)$/;
 
 /**
  * Represents an RC message
@@ -237,10 +232,12 @@ class Message {
         }
         return summary;
     }
+    /* eslint-disable max-statements */
     /**
      * Extracts useful information from log summaries
      * THIS IS POTENTIALLY EXPENSIVE!
      * @returns {Boolean} If parsing has been successful
+     * @todo Shorten this or something
      */
     parse() {
         /**
@@ -254,7 +251,17 @@ class Message {
         if (typeof this[`_${this.log}`] === 'function') {
             let res = null;
             if (MESSAGE_MAP[this.log]) {
-                res = this._i18n();
+                // Article comments suck
+                if (this.action === 'article_comment') {
+                    this.action = 'delete';
+                    res = this._i18n();
+                    if (!res) {
+                        this.action = 'restore';
+                        res = this._i18n();
+                    }
+                } else {
+                    res = this._i18n();
+                }
                 if (!res) {
                     return false;
                 }
@@ -270,6 +277,7 @@ class Message {
         delete this._summary;
         return false;
     }
+    /* eslint-enable max-statements */
     /**
      * Attempts to parse the summary based on regular expressions
      * generated from i18n MediaWiki messages
@@ -278,32 +286,26 @@ class Message {
      * @returns {Array<String>|null} Parsing results if successful
      */
     _i18n() {
-        let msg = MESSAGE_MAP[this.log][this.action];
+        const msg = MESSAGE_MAP[this.log][this.action];
         if (!msg) {
             return null;
         }
-        // Article comments suck
-        if (typeof msg === 'string') {
-            msg = [msg];
-        }
-        for (let k = 0, kl = msg.length; k < kl; ++k) {
-            for (let i = 0, l = i18n[msg[k]].length; i < l; ++i) {
-                const res = i18n[msg[k]][i].exec(this._summary);
-                if (res) {
-                    const ret = Array(res.length - 1);
-                    let max = 0;
-                    original[msg[k]][i].match(/\$(\d+)/g).forEach(function(m, j) {
-                        const n = Number(m.substring(1));
-                        if (n > max) {
-                            max = n;
-                        }
-                        ret[n - 1] = res[j + 1];
-                    });
-                    for (let j = max + 1, jl = res.length; j < jl; ++j) {
-                        ret[j - 1] = res[j];
+        for (let i = 0, l = i18n[msg].length; i < l; ++i) {
+            const res = i18n[msg][i].exec(this._summary);
+            if (res) {
+                const ret = Array(res.length - 1);
+                let max = 0;
+                original[msg][i].match(/\$(\d+)/g).forEach(function(m, j) {
+                    const n = Number(m.substring(1));
+                    if (n > max) {
+                        max = n;
                     }
-                    return ret;
+                    ret[n - 1] = res[j + 1];
+                });
+                for (let j = max + 1, jl = res.length; j < jl; ++j) {
+                    ret[j - 1] = res[j];
                 }
+                return ret;
             }
         }
         return null;
@@ -323,8 +325,8 @@ class Message {
     _abusefilter() {
         const res = AF_REGEX.exec(this._summary);
         if (res) {
-            this.id = Number(res.shift());
-            this.diff = Number(res.shift());
+            this.id = Number(res[1]);
+            this.diff = Number(res[2]);
         } else {
             return false;
         }
@@ -338,17 +340,22 @@ class Message {
         this.target = res.shift();
         if (this.action !== 'unblock') {
             this.expiry = res.shift();
-            this.flags = res.shift().split(',').map(function(f) {
-                for (let i = 0, l = BLOCK_FLAGS.length; i < l; ++i) {
-                    if (
-                        i18n[`block-log-flags-${BLOCK_FLAGS[i]}`]
-                            .test(f.trim())
-                    ) {
-                        return BLOCK_FLAGS[i];
+            const flags = res.shift();
+            if (flags) {
+                this.flags = flags.split(',').map(function(f) {
+                    for (let i = 0, l = BLOCK_FLAGS.length; i < l; ++i) {
+                        if (
+                            i18n[`block-log-flags-${BLOCK_FLAGS[i]}`]
+                                .test(f.trim())
+                        ) {
+                            return BLOCK_FLAGS[i];
+                        }
                     }
-                }
-                return 'unknown';
-            });
+                    return 'unknown';
+                });
+            } else {
+                this.flags = [];
+            }
         }
         this.reason = res.shift();
     }
@@ -455,7 +462,7 @@ class Message {
         const res = WIKIFEATURES_REGEX.exec(this._summary);
         if (res) {
             this.feature = res[1];
-            this.value = res[2];
+            this.value = res[2] === 'true';
         } else {
             return false;
         }
