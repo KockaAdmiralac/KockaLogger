@@ -1,4 +1,3 @@
-# Version x.x.x
 ## Fixed
 - Fix 1
 - Fix 2
@@ -11,3 +10,6 @@
 
 ## Notes
 - Don't forget to eat pie every day
+
+## Pings
+@KockaAdmiralac

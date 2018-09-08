@@ -417,7 +417,6 @@ class Message {
     }
     /**
      * Handles move summary extraction
-     * Also detects new wikis
      * @param {Array<String>} res I18n checking result
      * @private
      */
