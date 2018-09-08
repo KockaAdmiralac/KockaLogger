@@ -9,16 +9,18 @@
  * Importing modules
  */
 const i18n = require('../messages/i18n.json'),
+      custom = require('../messages/i18n2.json'),
       original = require('../messages/messagecache.json'),
+      customOriginal = require('../messages/custom.json'),
       util = require('./util.js');
 
 /**
  * Constants
  */
 const REGEXES = {
-    edit: /^\u000314\[\[\u000307([^\]]+)\u000314\]\]\u00034 ([!NBM]*)\u000310 \u000302https?:\/\/([a-z0-9-.]+)\.wikia\.com\/index\.php\?(\S+)\u0003 \u00035\*\u0003 \u000303([^\u0003]+)\u0003 \u00035\*\u0003 \(\u0002?(\+|-)(\d+)\u0002?\) \u000310(.*)$/,
-    log: /^\u000314\[\[\u000307[^:]+:Log\/([^\u0003]+)\u000314\]\]\u00034 ([^\u0003]+)\u000310 \u000302https?:\/\/([a-z0-9-.]+)\.wikia\.com\/wiki\/[^:]+:Log\/[^\u0003]+\u0003 \u00035\*\u0003 \u000303([^\u0003]+)\u0003 \u00035\*\u0003\s{2}\u000310(.*)$/
-}, AF_REGEX = /https?:\/\/[a-z0-9-.]+\.wikia\.com\/wiki\/[^:]+:AbuseFilter\/(\d+) \(https?:\/\/[a-z0-9-.]+\.wikia\.com\/wiki\/[^:]+:AbuseFilter\/history\/\d+\/diff\/prev\/(\d+)\)$/,
+    edit: /^\x0314\[\[\x0307([^\]]+)\x0314\]\]\x034 ([!NBM]*)\x0310 \x0302https?:\/\/([a-z0-9-.]+)\.(?:wikia|fandom)\.com\/(?:([a-z-]+)\/)?index\.php\?(\S+)\x03 \x035\*\x03 \x0303([^\x03]+)\x03 \x035\*\x03 \(\x02?(\+|-)(\d+)\x02?\) \x0310(.*)$/,
+    log: /^\x0314\[\[\x0307[^:]+:Log\/([^\x03]+)\x0314\]\]\x034 ([^\x03]+)\x0310 \x0302https?:\/\/([a-z0-9-.]+)\.(?:wikia|fandom)\.com\/(?:([a-z-]+)\/)?wiki\/[^:]+:Log\/[^\x03]+\x03 \x035\*\x03 \x0303([^\x03]+)\x03 \x035\*\x03\s{2}\x0310(.*)$/
+}, AF_REGEX = /https?:\/\/[a-z0-9-.]+\.(?:wikia|fandom)\.com\/(?:[a-z-]+\/)?wiki\/[^:]+:AbuseFilter\/(\d+) \(https?:\/\/[a-z0-9-.]+\.(?:wikia|fandom)\.com\/(?:[a-z-]+\/)?wiki\/[^:]+:AbuseFilter\/history\/\d+\/diff\/prev\/(\d+)\)$/,
 BLOCK_FLAGS = [
     'angry-autoblock',
     'anononly',
@@ -43,6 +45,7 @@ BLOCK_FLAGS = [
     'overwroteimage',
     '1movedto2',
     '1movedto2_redir',
+    'blog-avatar-removed-log',
     'patrol-log-line',
     'chat-chatbanadd-log-entry',
     'chat-chatbanchange-log-entry',
@@ -84,11 +87,15 @@ BLOCK_FLAGS = [
         overwrite: 'overwroteimage',
         revert: 'uploadedimage',
         upload: 'uploadedimage'
+    },
+    useravatar: {
+        // eslint-disable-next-line
+        avatar_rem: 'blog-avatar-removed-log'
     }
-}, NEWUSERS_REGEX = /^(.+) New user registration https?:\/\/([a-z0-9-.]+)\.wikia\.com\/wiki\/Special:Log\/newusers$/,
-DISCUSSIONS_URL_REGEX = /^https?:\/\/([a-z0-9-.]+)\.wikia\.com\/d\/p\/(\d{19,})(?:\/r\/(\d{19,}))?$/,
+}, NEWUSERS_REGEX = /^(.+) New user registration https?:\/\/([a-z0-9-.]+)\.(?:wikia|fandom)\.com\/(?:([a-z-]+)\/)?wiki\/Special:Log\/newusers$/,
+DISCUSSIONS_URL_REGEX = /^https?:\/\/([a-z0-9-.]+)\.(?:wikia|fandom)\.com\/(?:([a-z-]+)\/)?d\/p\/(\d{19,})(?:\/r\/(\d{19,}))?$/,
 DISCUSSIONS_TYPE_REGEX = /^discussion-(thread|post|report)$/,
-WIKIFEATURES_REGEX = /^wikifeatures: set extension option: ([^=]+) = (true|false)$/;
+WIKIFEATURES_REGEX = /^wikifeatures\s?: set extension option: ([^=]+) = (true|false)$/;
 
 /**
  * Represents an RC message
@@ -106,11 +113,21 @@ class Message {
     }
     /**
      * Turns i18n data into regular expressions in advance
+     * @todo Is the return condition thread-safe?
      */
     static prepare() {
+        // Already prepared
+        if (i18n[MESSAGES[0]][0] instanceof RegExp) {
+            return;
+        }
         MESSAGES.forEach(function(m) {
             i18n[m] = i18n[m].map(msg => new RegExp(msg));
         });
+        for (const wiki in custom) {
+            for (const msg in custom[wiki]) {
+                custom[wiki][msg] = new RegExp(custom[wiki][msg]);
+            }
+        }
         BLOCK_FLAGS.forEach(function(m) {
             i18n[`block-log-flags-${m}`] = new RegExp(
                 i18n[`block-log-flags-${m}`]
@@ -150,14 +167,16 @@ class Message {
                 this.type = 'discussions';
                 this.parsed = true;
                 this.wiki = res[1];
-                this.thread = res[2];
-                this.reply = res[3];
+                this.language = res[2] || 'en';
+                this.thread = res[3];
+                this.reply = res[4];
                 this.dtype = res2[1];
                 this.snippet = msg.snippet;
                 this.title = msg.title;
                 this.size = msg.size;
                 this.category = msg.category;
                 this.url = msg.url;
+                // TODO: Remove when FANDOM releases HTTPS globally
                 if (!this.wiki.includes('.')) {
                     this.url = this.url.replace(/^http:/, 'https:');
                 }
@@ -182,6 +201,7 @@ class Message {
             this.parsed = true;
             this.user = res[1];
             this.wiki = res[2];
+            this.language = res[3] || 'en';
         }
     }
     /**
@@ -194,6 +214,7 @@ class Message {
         this.page = res.shift();
         this.flags = res.shift().split('');
         this.wiki = res.shift();
+        this.language = res.shift() || 'en';
         this.params = {};
         res.shift().split('&').forEach(function(p) {
             const spl = p.split('=');
@@ -214,8 +235,9 @@ class Message {
         this.log = res.shift();
         this.action = res.shift();
         this.wiki = res.shift();
+        this.language = res.shift() || 'en';
         this.user = res.shift();
-        if (this.log === 'useravatar') {
+        if (this.log === 'useravatar' && this.action === 'avatar_chn') {
             this.parsed = true;
         }
         this._summary = this._trimSummary(res.shift());
@@ -227,7 +249,7 @@ class Message {
      * @private
      */
     _trimSummary(summary) {
-        if (summary.endsWith('\u0003')) {
+        if (summary.endsWith('\x03')) {
             return summary.slice(0, -1);
         }
         return summary;
@@ -290,12 +312,19 @@ class Message {
         if (!msg) {
             return null;
         }
-        for (let i = 0, l = i18n[msg].length; i < l; ++i) {
-            const res = i18n[msg][i].exec(this._summary);
+        // May be expensive
+        const clone = i18n[msg].slice(0),
+              originalClone = original[msg].slice(0);
+        if (custom[this.wiki] && custom[this.wiki][msg]) {
+            clone.unshift(custom[this.wiki][msg]);
+            originalClone.unshift(customOriginal[this.wiki][msg]);
+        }
+        for (let i = 0, l = clone.length; i < l; ++i) {
+            const res = clone[i].exec(this._summary);
             if (res) {
                 const ret = Array(res.length - 1);
                 let max = 0;
-                original[msg][i].match(/\$(\d+)/g).forEach(function(m, j) {
+                originalClone[i].match(/\$(\d+)/g).forEach(function(m, j) {
                     const n = Number(m.substring(1));
                     if (n > max) {
                         max = n;
@@ -311,11 +340,11 @@ class Message {
         return null;
     }
     /**
-     * Handles Wikia's log fuckups
+     * Handles FANDOM's log fuckups
      * @private
      */
     _0() {
-        this.wikiaFuckedUp = true;
+        this.FANDOMFuckedUp = true;
     }
     /**
      * Handles abuse filter summary extraction
@@ -388,6 +417,7 @@ class Message {
     }
     /**
      * Handles move summary extraction
+     * Also detects new wikis
      * @param {Array<String>} res I18n checking result
      * @private
      */
@@ -452,6 +482,14 @@ class Message {
     _upload(res) {
         this.file = res.shift();
         this.reason = res.shift();
+    }
+    /**
+     * Handles user avatar removals
+     * @param {Array<String>} res I18n checking result
+     * @private
+     */
+    _useravatar(res) {
+        this.target = res.shift();
     }
     /**
      * Handles wiki feature summaries

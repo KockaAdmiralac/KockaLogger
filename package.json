@@ -1,9 +1,10 @@
 {
     "name": "kocka-logger",
-    "version": "0.1.1",
+    "version": "1.0.0",
     "description": "The time has come.",
     "keywords": [
         "wikia",
+        "FANDOM",
         "countervandalism",
         "logger"
     ],
@@ -26,6 +27,7 @@
         "irc": ">=0.5.2",
         "eslint": ">=5.0.0",
         "request": ">=2.87.0",
-        "request-promise-native": ">=1.0.5"
+        "request-promise-native": ">=1.0.5",
+        "mysql2": ">=1.6.1"
     }
 }

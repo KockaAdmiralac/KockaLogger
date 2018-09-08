@@ -43,7 +43,7 @@ class Discord extends Transport {
                         );
                     }
                 } else {
-                    console.log('Discord transport error:', e);
+                    this._logger.error('Discord transport error:', e);
                 }
             }.bind(this));
         }

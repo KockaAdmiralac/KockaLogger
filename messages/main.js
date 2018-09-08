@@ -11,19 +11,24 @@
 const http = require('request-promise-native'),
       fs = require('fs'),
       messages = require('./messages.json'),
-      MAPPING = require('./map.js');
+      custom = require('./custom.json'),
+      MAPPING = require('./map.js'),
+      util = require('../include/util.js');
 
 /**
  * Constants
  */
 const results = {},
       THREADS = 10,
-      debug = process.argv.includes('--debug');
+      debug = process.argv.includes('--debug'),
+      GENDER_PLACEHOLDER = 'GENDER PLACEHOLDER';
 
 /**
  * Preprocessing
  */
-let languages = [], running = THREADS;
+let languages = [],
+    running = THREADS,
+    ended = 0;
 messages.forEach(function(m) {
     results[m] = [];
 });
@@ -44,7 +49,34 @@ function formatJSON(json) {
  * Callback after writing to the file
  */
 function finished() {
-    console.log('Finished!');
+    if (++ended === 2) {
+        console.log('Finished!');
+    }
+}
+
+/**
+ * Processes {{GENDER:}} magic words in system messages and maps
+ * them using respective regular expressions
+ * @param {String} i Key of the mapping message
+ * @returns {Function} Mapping function
+ */
+function doMapping(i) {
+    return function(str) {
+        const placeholder = [];
+        return MAPPING[i](
+            str.replace(/\{\{GENDER:[^|]*\|([^}]+)\}\}/ig, function(_, match) {
+                const arr = match.split('|');
+                if (arr[0] === arr[2] || arr[1] === arr[2]) {
+                    arr.pop();
+                }
+                placeholder.push(`(?:${arr.map(util.escapeRegex).join('|')})`);
+                return GENDER_PLACEHOLDER;
+            })
+        ).replace(
+            new RegExp(GENDER_PLACEHOLDER, 'g'),
+            () => placeholder.shift()
+        );
+    };
 }
 
 /**
@@ -55,7 +87,7 @@ function postProcess(res) {
     console.log('Processing messages...');
     for (const i in res) {
         if (MAPPING[i]) {
-            res[i] = res[i].map(MAPPING[i]);
+            res[i] = res[i].map(doMapping(i));
         }
     }
     fs.writeFile('messages/i18n.json', formatJSON(res), finished);
@@ -104,7 +136,7 @@ function apiCall() {
             format: 'json',
             meta: 'allmessages'
         },
-        uri: 'http://community.wikia.com/api.php'
+        uri: 'https://community.wikia.com/api.php'
     }).then(function(d) {
         let diff = null;
         d.query.allmessages.forEach(function(m) {
@@ -122,6 +154,18 @@ function apiCall() {
         });
         apiCall();
     });
+}
+
+/**
+ * Processes custom messages
+ */
+function processCustom() {
+    for (const wiki in custom) {
+        for (const msg in custom[wiki]) {
+            custom[wiki][msg] = doMapping(msg)(custom[wiki][msg]);
+        }
+    }
+    fs.writeFile('messages/i18n2.json', formatJSON(custom), finished);
 }
 
 /**
@@ -157,7 +201,7 @@ if (process.argv.includes('--cache')) {
             meta: 'siteinfo',
             siprop: 'languages'
         },
-        uri: 'http://community.wikia.com/api.php'
+        uri: 'https://community.wikia.com/api.php'
     }).then(function(d) {
         languages = d.query.languages.map(l => l.code);
         for (let i = 0; i < THREADS; ++i) {
@@ -165,3 +209,4 @@ if (process.argv.includes('--cache')) {
         }
     });
 }
+processCustom();

@@ -46,20 +46,25 @@ $ npm start
 ```
 
 ## Translation
-To be described later
+To translate KockaLogger's logging module you would need to translate JSON files located in `formats/logger/i18n`. The English translation can be found in the `en.json` file. Template names (`{{something|...}}`) and variables (`$1`, `$2`...) should not be translated.
+
+As some translation files have been transferred from WikiaActivityLogger, they require update for full translations in KockaLogger. Languages that require update are:
+- Belarusian (`be`)
+- German (`de`)
+- Spanish (`es`)
+- French (`fr`)
+- Polish (`pl`)
+- Brazillian Portuguese (`pt-br`)
+- Russian (`ru`)
+- Ukrainian (`uk`)
+
+After translation updates, the patch version of KockaLogger needs to be increased by 1.
 
 ## To do
 - Link directly to replies in thread links
 - Cache for Discussions thread titles
-- New users transport
-- New wikis log
-- Basic summary filter
-- Basic XRM
-- Handle "Created page with summaries"
+- Handle "Created page with" summaries
 - Memory usage checking and optimization
-- CLI
-- GUI?
-- Proper error logs
 - Article/blog comments displaying prettier
-- Log AbuseFilter hits within the `logging` module
-- Separating wiki from Discussions logs and CVNAdvanced-style Discussions logs
+- CVNAdvanced-style Discussions logs
+- Complete replacement for `#cvn-wikia` that sucks less?

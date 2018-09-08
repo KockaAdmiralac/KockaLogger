@@ -10,14 +10,19 @@
  */
 class Util {
     /**
-     * Returns a Wikia wiki URL
+     * Returns a FANDOM wiki URL
      * @param {String} wiki Subdomain of the wiki
+     * @param {String} lang Language of the wiki
      * @returns {String} URL to the requested wiki
      * @static
      */
-    static url(wiki) {
-        const w = wiki || 'c';
-        return `${w.includes('.') ? 'http' : 'https'}://${w}.wikia.com`;
+    static url(wiki, lang) {
+        const w = wiki || 'c',
+              prefix = `${w.includes('.') ? 'http' : 'https'}://${w}.wikia.com`;
+        if (!lang || lang === 'en') {
+            return prefix;
+        }
+        return `${prefix}/${lang}`;
     }
     /**
      * Escapes a string from special regex characters
@@ -71,6 +76,45 @@ class Util {
      */
     static cap(str) {
         return `${str.charAt(0).toUpperCase()}${str.substring(1)}`;
+    }
+    /**
+     * Checks if a string is an IP address
+     * @param {String} str String to check
+     * @returns {Boolean} If the supplied string is an IP address
+     * @static
+     */
+    static isIP(str) {
+        const spl1 = str.split('.'),
+              spl2 = str.split(':');
+        return spl1.length === 4 &&
+               spl1.every(function(v) {
+                   const num = Number(v);
+                   return num >= 0 && num < 256;
+               }) ||
+               spl2.length === 6 &&
+               spl2.every(function(v) {
+                   if (v === '') {
+                       return true;
+                   }
+                   const num = parseInt(v, 16);
+                   return num >= 0 && num < 65536;
+               });
+    }
+    /**
+     * Checks if a string is an IP range
+     * @param {String} str String to check
+     * @returns {Boolean} If the supplied string is an IP address/range
+     * @static
+     */
+    static isIPRange(str) {
+        const spl = str.split('/');
+        if (spl.length !== 2 || !this.isIP(spl[0])) {
+            return false;
+        }
+        // See $wgBlockCIDRLimit configuration variable
+        const cidrLimit = spl[0].includes(':') ? 19 : 16,
+              range = Number(spl[1]);
+        return !isNaN(range) && range <= cidrLimit;
     }
 }
 

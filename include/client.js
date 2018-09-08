@@ -9,8 +9,8 @@
  * Importing modules
  */
 const irc = require('irc'),
-      fs = require('fs'),
-      Message = require('./msg.js');
+      Message = require('./msg.js'),
+      Logger = require('./log.js');
 
 /**
  * Constants
@@ -43,17 +43,23 @@ class Client {
         try {
             this._config = require('../config.json');
         } catch (e) {
-            console.log('Configuration failed to load!', e, 'Exiting...');
+            this._logger.error(
+                'Config failed to load!',
+                e,
+                'Exiting...'
+            );
             process.exit();
         }
     }
     /**
-     * Initializes the file log stream
+     * Initializes the debug/info/error logger
      * @private
      */
     _initLogger() {
-        this._stream = fs.createWriteStream('log.txt', {
-            flags: 'a'
+        this._logger = new Logger({
+            file: true,
+            name: 'client',
+            stdout: true
         });
     }
     /**
@@ -70,7 +76,10 @@ class Client {
                 const Module = require(`../modules/${mod}/main.js`);
                 this._modules[mod] = new Module(this._config.modules[mod]);
             } catch (e) {
-                console.log(e);
+                this._logger.error(
+                    'Error while initializing module',
+                    mod, ':', e
+                );
             }
         }
     }
@@ -85,7 +94,6 @@ class Client {
                 config.channels.discussions,
                 config.channels.newusers
             ],
-            // debug: true,
             port: config.port,
             realName: config.realname,
             retryCount: config.retries || 10,
@@ -101,7 +109,7 @@ class Client {
      * @param {Object} command IRC command sent upon joining
      */
     _registered(command) {
-        console.log(command.args[1]);
+        this._logger.info(command.args[1]);
     }
     /**
      * The client has joined an IRC channel
@@ -115,7 +123,7 @@ class Client {
                 channel === this._config.client.channels[type] &&
                 user === this._config.client.nick
             ) {
-                console.log(`Joined ${type} channel`);
+                this._logger.info('Joined', type, 'channel');
                 break;
             }
         }
@@ -126,7 +134,7 @@ class Client {
      * @param {Object} command IRC command sent upon error
      */
     _error(command) {
-        console.log('IRC error', command);
+        this._logger.error('IRC error', command);
     }
     /**
      * An IRC message has been sent
@@ -144,8 +152,17 @@ class Client {
                 const msg = this[`_${i}Message`](message);
                 if (msg && msg.type) {
                     this._dispatchMessage(msg);
-                } else if (i !== 'rc' || this._notFirstMessage) {
-                    this._stream.write(`${channel}: ${message}\n`);
+                } else if (msg && (i !== 'rc' || this._notFirstMessage)) {
+                    this._logger.error(
+                        'FAILED TO PARSE MESSAGE IN',
+                        channel, ':', msg.raw
+                    );
+                } else if (this._notFirstMessage) {
+                    this._logger.error(
+                        'PARSED MESSAGE IS NULL',
+                        channel, ':', message, '(', msg,
+                        'overflow: ', this._overflow, ')'
+                    );
                 }
                 if (i === 'rc') {
                     this._notFirstMessage = true;
@@ -156,17 +173,17 @@ class Client {
     }
     /**
      * Handles messages in the RC channel
+     * @private
      * @param {String} message Message to handle
      * @returns {Message} Parsed message object
-     * @private
      * @todo Edge cases:
      *  - this._overflow is a shared resource
-     *  - Overflows can start with \u000314
+     *  - Overflows can start with \x0314
      *  - Overflows may not come right after the message!
      */
     _rcMessage(message) {
         let msg = null;
-        if (message.startsWith('\u000314')) {
+        if (message.startsWith('\x0314')) {
             if (this._overflow) {
                 msg = new Message(this._overflow, 'rc');
             }
@@ -217,7 +234,10 @@ class Client {
             try {
                 this._modules[mod].execute(message);
             } catch (e) {
-                console.log(e);
+                this._logger.error(
+                    'Dispatch error to module',
+                    mod, ':', e
+                );
             }
         }
     }

@@ -8,7 +8,8 @@
 /**
  * Importing modules
  */
-const fs = require('fs');
+const fs = require('fs'),
+      Logger = require('./log.js');
 
 /**
  * Constants
@@ -34,6 +35,12 @@ class Cache {
             expiry :
             DEFAULT_CACHE_EXPIRY;
         this._debugMode = Boolean(debug);
+        if (this._debugMode) {
+            this._logger = new Logger({
+                file: true,
+                name: 'cache'
+            });
+        }
         if (this._name && typeof save === 'number') {
             this._saveInterval = setInterval(this._save.bind(this), save);
         }
@@ -86,7 +93,7 @@ class Cache {
             if (typeof this._reject === 'function') {
                 this._reject(e);
             } else {
-                this._debug('Cache save error:', e);
+                this._debug('error', 'Cache save error:', e);
             }
         } else if (typeof this._resolve === 'function') {
             this._resolve(e);
@@ -102,15 +109,14 @@ class Cache {
         for (const i in this._data) {
             if (now - this._data[i].touched > this._expiry) {
                 if (this._pop) {
-                    delete this._data[i].touched;
-                    this._pop(this._data[i]);
+                    this._pop(i, this._data[i].value);
                 }
                 ++number;
                 delete this._data[i];
             }
         }
         if (number > 0) {
-            this._debug(`${number} entries cleaned from cache`);
+            this._debug('info', number, 'entries cleaned from cache');
         }
     }
     /**
@@ -120,7 +126,7 @@ class Cache {
         try {
             this._data = require(`../${CACHE_DIRECTORY}/${this._name}.json`);
         } catch (e) {
-            this._debug(`${this._name} cache created anew`);
+            this._debug('info', this._name, 'cache created anew');
         }
     }
     /**
@@ -131,7 +137,7 @@ class Cache {
      */
     get(key) {
         if (typeof this._data[key] !== 'object') {
-            this._debug(`Cache miss for ${key}`);
+            this._debug('debug', 'Cache miss for', key);
             return null;
         }
         this._data[key].touched = Date.now();
@@ -158,13 +164,14 @@ class Cache {
         }
     }
     /**
-     * Logs debug output to console if in debug mode
-     * @param {String} content Content to log
+     * Logs debug output to stdout if in debug mode
+     * @param {String} level Log level
+     * @param {Array<String>} messages Content to log
      * @private
      */
-    _debug(content) {
+    _debug(level, ...messages) {
         if (this._debugMode) {
-            console.log(content);
+            this._logger[level](...messages);
         }
     }
 }
