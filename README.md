@@ -34,16 +34,16 @@ Install all the required modules using:
 $ npm install
 ```
 
-Before running, you must generate the i18n cache that will be used when parsing log messages. To do so, run
-```console
-$ node messages/main.js
-```
-from the root directory of the project. If you want to view prettified versions of `messagecache.json` and `i18n.json`, add a `--debug` flag to the command.
-
 To run KockaLogger, use:
 ```console
-$ npm start
+$ node main.js
 ```
+
+### Command-line options
+- After the first run, KockaLogger will fetch required system messages and store them in cache. If you want to re-fetch system messages, pass a `--fetch` command-line option to the main script.
+- To enable JSON pretty-printing in cache, pass a `--debug` command-line option
+- To regenerate system messages without fetching them, pass a `--generate` command-line option.
+
 ## Contributing
 To contribute to KockaLogger, see `CONTRIBUTING.md`.
 
@@ -55,5 +55,4 @@ To contribute to KockaLogger, see `CONTRIBUTING.md`.
 - Article/blog comments displaying prettier
 - CVNAdvanced-style Discussions logs
 - Complete replacement for `#cvn-wikia` that sucks less?
-- Automating the fetching and saving of custom system messages
-- Ensure `Message.prepare` is called appropriately
+- **[BUG]** Make loader not blank the cache files after writing to them for the second time

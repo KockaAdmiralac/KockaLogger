@@ -100,6 +100,7 @@ class NewUsers extends Module {
         if (typeof config !== 'object') {
             throw new Error('Discord configuration invalid!');
         }
+        config.type = 'discord-newusers';
         this._transport = new Discord(config);
     }
     /**
@@ -182,7 +183,7 @@ class NewUsers extends Module {
                     id, ':', data
                 );
             }
-        }.bind(this));
+        }.bind(this)).catch(e => this._logger.error('Service API error', e));
     }
     /**
      * Posts profile information to a Discord channel
@@ -215,6 +216,13 @@ class NewUsers extends Module {
                 });
             }
         }
+        message.fields.push({
+            inline: true,
+            name: 'Report',
+            value: `!report p ${
+                wiki === 'www' || wiki === 'community' ? 'c' : wiki
+            } ${info.username}`
+        });
         this._transport.execute({embeds: [message]});
     }
 }

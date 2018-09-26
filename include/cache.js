@@ -9,12 +9,13 @@
  * Importing modules
  */
 const fs = require('fs'),
+      path = require('path'),
       Logger = require('./log.js');
 
 /**
  * Constants
  */
-const CACHE_DIRECTORY = 'cache',
+const DEFAULT_CACHE_DIRECTORY = 'cache',
       DEFAULT_CACHE_EXPIRY = 60000;
 
 /**
@@ -27,14 +28,19 @@ class Cache {
      * @param {Number} save Interval on which to save the cache
      * @param {Number} expiry Time after cache entries expire
      * @param {Number} check Interval on which to check for cache expiry
+     * @param {String} dir Directory to save cache in
      */
-    constructor({name, save, expiry, check, debug, pop}) {
+    constructor({name, save, expiry, check, debug, pop, dir}) {
         this._data = {};
         this._name = typeof name === 'string' ? name : null;
         this._expiry = typeof expiry === 'number' ?
             expiry :
             DEFAULT_CACHE_EXPIRY;
-        this._debugMode = Boolean(debug);
+        this._debugMode = Boolean(debug) || Boolean(Cache._debug);
+        this._dir = typeof dir === 'string' && !dir.startsWith('_') ?
+            dir :
+            Cache._dir;
+        this._absDir = path.resolve(this._dir);
         if (this._debugMode) {
             this._logger = new Logger({
                 file: true,
@@ -50,13 +56,23 @@ class Cache {
         this._pop = typeof pop === 'function' ? pop : null;
     }
     /**
+     * Sets up global caching configuration
+     * @param {String} dir Cache directory
+     * @param {Boolean} debug KockaLogger debug mode
+     * @static
+     */
+    static setup({dir}, debug) {
+        this._dir = dir || DEFAULT_CACHE_DIRECTORY;
+        this._debug = debug;
+    }
+    /**
      * Saves the cache to a file
      * @private
      */
     _save() {
         this._saving = true;
         fs.writeFile(
-            `${CACHE_DIRECTORY}/${this._name}.json`,
+            `${this._dir}/${this._name}.json`,
             this._debugMode ?
                 JSON.stringify(this._data, null, '    ') :
                 JSON.stringify(this._data),
@@ -124,7 +140,7 @@ class Cache {
      */
     load() {
         try {
-            this._data = require(`../${CACHE_DIRECTORY}/${this._name}.json`);
+            this._data = require(`${this._absDir}/${this._name}.json`);
         } catch (e) {
             this._debug('info', this._name, 'cache created anew');
         }

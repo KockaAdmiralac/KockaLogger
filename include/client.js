@@ -10,7 +10,8 @@
  */
 const irc = require('irc'),
       Message = require('./msg.js'),
-      Logger = require('./log.js');
+      Logger = require('./log.js'),
+      Cache = require('./cache.js');
 
 /**
  * Constants
@@ -28,34 +29,25 @@ const EVENTS = [
 class Client {
     /**
      * Class constructor
+     * @param {Object} config KockaLogger configuration
+     * @param {Boolean} debug KockaLogger debug mode
+     * @param {Loader} loader Loader instance
      */
-    constructor() {
-        this._initConfig();
-        this._initLogger();
+    constructor(config, {debug}, loader) {
+        this._config = config;
+        this._debug = debug;
+        this._loader = loader;
+        this._initLogger(config.logging || {});
+        Cache.setup(config.cache || {}, debug);
         this._initModules();
-        Message.prepare();
-    }
-    /**
-     * Initializes configuration
-     * @private
-     */
-    _initConfig() {
-        try {
-            this._config = require('../config.json');
-        } catch (e) {
-            this._logger.error(
-                'Config failed to load!',
-                e,
-                'Exiting...'
-            );
-            process.exit();
-        }
     }
     /**
      * Initializes the debug/info/error logger
+     * @param {Object} config Logging configuration
      * @private
      */
-    _initLogger() {
+    _initLogger(config) {
+        Logger.setup(config, this._debug);
         this._logger = new Logger({
             file: true,
             name: 'client',
@@ -74,7 +66,10 @@ class Client {
         for (const mod in this._config.modules) {
             try {
                 const Module = require(`../modules/${mod}/main.js`);
-                this._modules[mod] = new Module(this._config.modules[mod]);
+                this._modules[mod] = new Module(
+                    this._config.modules[mod],
+                    this
+                );
             } catch (e) {
                 this._logger.error(
                     'Error while initializing module',
@@ -85,8 +80,15 @@ class Client {
     }
     /**
      * Initializes the IRC client
+     * @param {Object} data Loader data
      */
-    run() {
+    run(data) {
+        Message.setup(data);
+        this._logger.info('Setting up modules...');
+        for (const mod in this._modules) {
+            this._modules[mod].setup(data);
+        }
+        this._logger.info('Initializing IRC client...');
         const config = this._config.client;
         this._client = new irc.Client(config.server, config.nick, {
             channels: [
@@ -149,7 +151,8 @@ class Client {
                 user.startsWith(this._config.client.users[i]) &&
                 channel === this._config.client.channels[i]
             ) {
-                const msg = this[`_${i}Message`](message);
+                const oldOverflow = this._overflow,
+                      msg = this[`_${i}Message`](message);
                 if (msg && msg.type) {
                     this._dispatchMessage(msg);
                 } else if (msg && (i !== 'rc' || this._notFirstMessage)) {
@@ -160,8 +163,8 @@ class Client {
                 } else if (this._notFirstMessage) {
                     this._logger.error(
                         'PARSED MESSAGE IS NULL',
-                        channel, ':', message, '(', msg,
-                        'overflow: ', this._overflow, ')'
+                        channel, ':', oldOverflow, '(', msg,
+                        'overflow:', this._overflow, ')'
                     );
                 }
                 if (i === 'rc') {
@@ -240,6 +243,29 @@ class Client {
                 );
             }
         }
+    }
+    /**
+     * Updates custom messages
+     * @param {String} wiki Wiki to update the messages on
+     * @param {String} language Language of the wiki
+     * @param {Object} messages Map of customized messages
+     */
+    updateMessages(wiki, language, messages) {
+        this._logger.info('Updating messages for', wiki);
+        this._logger.debug(messages);
+        this._loader.updateCustom(
+            wiki,
+            language,
+            messages,
+            Message.update.bind(Message)
+        );
+    }
+    /**
+     * Gets whether the debug mode is enabled
+     * @returns {Boolean} Whether the debug mode is enabled
+     */
+    get debug() {
+        return this._debug;
     }
 }
 

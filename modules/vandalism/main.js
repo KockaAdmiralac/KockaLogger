@@ -12,8 +12,7 @@ const Module = require('../module.js'),
       Cache = require('../../include/cache.js'),
       util = require('../../include/util.js'),
       Format = require('../../formats/logger/main.js'),
-      Discord = require('../../transports/discord/main.js'),
-      i18n = require('../../messages/i18n.json');
+      Discord = require('../../transports/discord/main.js');
 
 /**
  * Main vandalism filter class
@@ -34,8 +33,9 @@ class Vandalism extends Module {
         this._removal = typeof config.removal === 'number' ?
             config.removal :
             1500;
-        this._replacement = i18n['autosumm-replace'].map(s => new RegExp(s));
-        this._transport = new Discord(config.transport);
+        const transport = config.transport || {};
+        transport.type = 'discord-vandalism';
+        this._transport = new Discord(transport);
         this._format = new Format({}, this._transport);
         this._cache = new Cache({
             check: 60000,
@@ -68,9 +68,11 @@ class Vandalism extends Module {
                 util.isIP(message.user) &&
                 (
                     // Page was blanked
-                    i18n['autosumm-blank'].includes(message.summary) ||
+                    this._caches.i18n['autosumm-blank']
+                        .includes(message.summary) ||
                     // Page was replaced
-                    this._replacement.some(s => s.test(message.summary)) ||
+                    this._caches.i18n['autosumm-replace']
+                        .some(s => s.test(message.summary)) ||
                     // Large removal of content
                     message.diff <= -this._removal
                 )

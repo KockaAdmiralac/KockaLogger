@@ -8,11 +8,7 @@
 /**
  * Importing modules
  */
-const i18n = require('../messages/i18n.json'),
-      custom = require('../messages/i18n2.json'),
-      original = require('../messages/messagecache.json'),
-      customOriginal = require('../messages/custom.json'),
-      util = require('./util.js');
+const util = require('./util.js');
 
 /**
  * Constants
@@ -28,28 +24,6 @@ BLOCK_FLAGS = [
     'noautoblock',
     'noemail',
     'nousertalk'
-], MESSAGES = [
-    'blocklogentry',
-    'unblocklogentry',
-    'reblock-logentry',
-    'protectedarticle',
-    'modifiedarticleprotection',
-    'unprotectedarticle',
-    'movedarticleprotection',
-    'rightslogentry',
-    'deletedarticle',
-    'undeletedarticle',
-    'logentry-delete-event-legacy',
-    'logentry-delete-revision-legacy',
-    'uploadedimage',
-    'overwroteimage',
-    '1movedto2',
-    '1movedto2_redir',
-    'blog-avatar-removed-log',
-    'patrol-log-line',
-    'chat-chatbanadd-log-entry',
-    'chat-chatbanchange-log-entry',
-    'chat-chatbanremove-log-entry'
 ], MESSAGE_MAP = {
     block: {
         block: 'blocklogentry',
@@ -113,28 +87,33 @@ class Message {
     }
     /**
      * Turns i18n data into regular expressions in advance
-     * @todo Is the return condition thread-safe?
+     * @param {Object} data Loader data
+     * @static
      */
-    static prepare() {
-        // Already prepared
-        if (i18n[MESSAGES[0]][0] instanceof RegExp) {
-            return;
-        }
-        MESSAGES.forEach(function(m) {
-            i18n[m] = i18n[m].map(msg => new RegExp(msg));
-        });
-        for (const wiki in custom) {
-            for (const msg in custom[wiki]) {
-                custom[wiki][msg] = new RegExp(custom[wiki][msg]);
-            }
+    static setup(data) {
+        for (const key in data) {
+            this[`_${key}`] = data[key];
         }
         BLOCK_FLAGS.forEach(function(m) {
-            i18n[`block-log-flags-${m}`] = new RegExp(
-                i18n[`block-log-flags-${m}`]
+            this._i18n[`block-log-flags-${m}`] = new RegExp(
+                this._i18n[`block-log-flags-${m}`]
                     .map(util.escapeRegex)
                     .join('|')
             );
-        });
+        }, this);
+    }
+    /**
+     * Updates custom messages
+     * @param {String} wiki Wiki to update the messages on
+     * @param {String} language Language of the wiki to update the messages on
+     * @param {Object} messages Custom messages on the wiki
+     * @param {Object} generated Processed custom messages on the wiki
+     * @static
+     */
+    static update(wiki, language, messages, generated) {
+        const key = `${language}:${wiki}`;
+        this._custom[key] = messages;
+        this._i18n2[key] = generated;
     }
     /**
      * Handles RC IRC messages
@@ -313,11 +292,12 @@ class Message {
             return null;
         }
         // May be expensive
-        const clone = i18n[msg].slice(0),
-              originalClone = original[msg].slice(0);
-        if (custom[this.wiki] && custom[this.wiki][msg]) {
-            clone.unshift(custom[this.wiki][msg]);
-            originalClone.unshift(customOriginal[this.wiki][msg]);
+        const clone = Message._i18n[msg].slice(0),
+              originalClone = Message._messagecache[msg].slice(0),
+              key = `${this.language}:${this.wiki}`;
+        if (Message._i18n2[key] && Message._i18n2[key][msg]) {
+            clone.unshift(Message._i18n2[key][msg]);
+            originalClone.unshift(Message._custom[key][msg]);
         }
         for (let i = 0, l = clone.length; i < l; ++i) {
             const res = clone[i].exec(this._summary);
@@ -374,14 +354,14 @@ class Message {
                 this.flags = flags.split(',').map(function(f) {
                     for (let i = 0, l = BLOCK_FLAGS.length; i < l; ++i) {
                         if (
-                            i18n[`block-log-flags-${BLOCK_FLAGS[i]}`]
+                            Message._i18n[`block-log-flags-${BLOCK_FLAGS[i]}`]
                                 .test(f.trim())
                         ) {
                             return BLOCK_FLAGS[i];
                         }
                     }
                     return 'unknown';
-                });
+                }, this);
             } else {
                 this.flags = [];
             }

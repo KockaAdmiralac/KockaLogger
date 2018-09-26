@@ -9,7 +9,15 @@
  * Importing modules
  */
 const fs = require('fs'),
+      path = require('path'),
       io = require('./io.js');
+
+/**
+ * Constants
+ */
+const LOG_LEVELS = ['debug', 'info', 'warn', 'error'],
+      DEFAULT_LOG_LEVEL = 'debug',
+      DEFAULT_LOG_DIRECTORY = 'logs';
 
 /**
  * Simple logging interface
@@ -18,16 +26,18 @@ class Logger {
     /**
      * Class constructor
      */
-    constructor({name, stdout, file, discord}) {
+    constructor({name, stdout, file, discord, level, dir, debug}) {
         if (typeof name !== 'string') {
             throw new Error('Log must have a name!');
         }
         this._name = name;
+        this._level = level || Logger._level;
         this._console = stdout;
         if (file) {
-            this._stream = fs.createWriteStream(`logs/${name}.log`, {
-                flags: 'a'
-            });
+            this._stream = fs.createWriteStream(
+                path.resolve(`${dir || Logger._dir}/${name}.log`),
+                {flags: 'a'}
+            );
         }
         if (typeof discord === 'object') {
             this._url = `https://discordapp.com/api/webhooks/${discord.id}/${discord.token}`;
@@ -35,6 +45,21 @@ class Logger {
         if (!this._console && !this._stream && !this._url) {
             throw new Error('No logging route specified!');
         }
+        if (debug || Logger._debug) {
+            this._level = LOG_LEVELS.indexOf('debug');
+        }
+    }
+    /**
+     * Sets up global logging configuration
+     * @param {String} level Logging level
+     * @param {Boolean} debug Whether debug mode is enabled
+     * @param {String} dir Logging directory
+     * @static
+     */
+    static setup({level, dir}, debug) {
+        this._level = LOG_LEVELS.indexOf(level || DEFAULT_LOG_LEVEL);
+        this._dir = dir || DEFAULT_LOG_DIRECTORY;
+        this._debug = debug;
     }
     /**
      * Formats a console color based on color number
@@ -56,6 +81,8 @@ class Logger {
             case 'DEBUG': return 33;
             // Info  - magenta text
             case 'INFO': return 35;
+            // Warning - yellow background
+            case 'WARN': return 43;
             // Error - red background
             case 'ERROR': return 41;
             // Dunno - reset color
@@ -80,6 +107,9 @@ class Logger {
     _log(level, ...messages) {
         if (typeof level !== 'string') {
             throw new Error('Invalid log level!');
+        }
+        if (LOG_LEVELS.indexOf(level) < this._level) {
+            return;
         }
         const now = new Date(),
               str = messages.map(function(msg) {
@@ -128,6 +158,13 @@ class Logger {
      */
     info(...messages) {
         this._log('info', ...messages);
+    }
+    /**
+     * Outputs specified warnings
+     * @param {Array<String>} messages Warnings to output
+     */
+    warn(...messages) {
+        this._log('warn', ...messages);
     }
     /**
      * Outputs specified errors

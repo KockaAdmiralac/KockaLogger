@@ -25,6 +25,25 @@ class Util {
         return `${prefix}/${lang}`;
     }
     /**
+     * Makes Markdown safe to post through a webhook
+     * @param {String} text Markdown to escape
+     * @returns {String} Escaped parameter
+     */
+    static escape(text) {
+        return text
+            // Escape links
+            .replace(/http:\/\//g, 'http:/\u200B/')
+            .replace(/https:\/\//g, 'https:/\u200B/')
+            // Escape mentions
+            .replace(/@/g, '@\u200B')
+            // Escape invite links
+            .replace(/discord\.gg/g, 'discord\u200B.\u200Bgg')
+            // Escapes certain Markdown constructions
+            .replace(/_{1,2}([^_*]+)_{1,2}/g, '$1')
+            .replace(/\*{1,2}([^_*]+)\*{1,2}/g, '$1')
+            .replace(/\r?\n|\r|\]|\[|<|>/g, '​');
+    }
+    /**
      * Escapes a string from special regex characters
      * @see https://stackoverflow.com/a/3561711
      * @param {String} text String to escape

@@ -10,8 +10,7 @@
  */
 const Module = require('../module.js'),
       Logger = require('../../include/log.js'),
-      util = require('../../include/util.js'),
-      {mainpage} = require('../../messages/messagecache.json');
+      util = require('../../include/util.js');
 
 /**
  * Importing modules
@@ -21,7 +20,7 @@ const Discord = require('../../transports/discord/main.js');
 /**
  * Constants
  */
-const ZWS = String.fromCharCode(8203);
+const QA_REGEX = /^([a-z-]*\.)?qatestwiki\d+$/;
 
 /**
  * Main logger class
@@ -55,18 +54,11 @@ class NewWikis extends Module {
             if (message.parse()) {
                 if (
                     message.reason === 'SEO' &&
-                    mainpage.includes(message.page)
+                    this._caches.i18n.mainpage.includes(message.page) &&
+                    !message.wiki.match(QA_REGEX)
                 ) {
-                    const name = message.target
-                        .replace(/http:\/\//g, `http:/${ZWS}/`)
-                        .replace(/https:\/\//g, `https:/${ZWS}/`)
-                        .replace(/@/g, `@${ZWS}`)
-                        .replace(/discord\.gg/g, `discord${ZWS}.${ZWS}gg`)
-                        .replace(/_{1,2}([^_*]+)_{1,2}/g, '$1')
-                        .replace(/\*{1,2}([^_*]+)\*{1,2}/g, '$1')
-                        .replace(/\r?\n|\r/g, '​');
                     this._transport.execute({
-                        content: `New wiki! [${name}](${util.url(message.wiki)})`
+                        content: `New wiki! [${util.escape(message.target)}](${util.url(message.wiki)})`
                     });
                 }
             } else {

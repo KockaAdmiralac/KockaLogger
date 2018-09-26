@@ -17,4 +17,4 @@ As some translation files have been transferred from WikiaActivityLogger, they r
 - Russian (`ru`)
 - Ukrainian (`uk`)
 
-After translation updates, the patch version of KockaLogger needs to be increased by 1.
+After translation updates, the patch version of KockaLogger needs to be increased by 1. If you're confused by what some things in the messages mean, read `qqq.json` for full documentation about message and parameter meanings.

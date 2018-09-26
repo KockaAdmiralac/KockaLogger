@@ -65,6 +65,20 @@ class Filter {
         return message.type === 'discussions';
     }
     /**
+     * Filters Discussions messages but without replies unless they aren't
+     * created or edited
+     * @param {Message} message Message to be transported
+     * @returns {Boolean} If the message is from Discussions
+     */
+    _noreply(message) {
+        return message.type === 'discussions' &&
+               (
+                   message.dtype !== 'reply' ||
+                       message.action !== 'edited' &&
+                       message.action !== 'created'
+               );
+    }
+    /**
      * Filters activity in social namespaces (works only on English wikis)
      * @param {Message} message Message to be transported
      * @returns {Boolean} If the message is a comment or a thread

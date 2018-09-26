@@ -15,11 +15,11 @@ const Format = require('../format.js'),
 /**
  * Constants
  */
-const ZWS = String.fromCharCode(8203),
-      ACM = /<ac(_|$)(m|$)(e|$)(t|$)(a|$)(d|$)(a|$)(t|$)(a|$)( |$)(t|$)(i|$)(t|$)(l|$)(e|$)(=|$)("|$).*"$/;
+const ACM = /<ac(_|$)(m|$)(e|$)(t|$)(a|$)(d|$)(a|$)(t|$)(a|$)( |$)(t|$)(i|$)(t|$)(l|$)(e|$)(=|$)("|$).*"$/;
 
 /**
  * Logger format's class
+ * @augments Format
  */
 class Logger extends Format {
     /**
@@ -202,7 +202,7 @@ class Logger extends Format {
                     w,
                     l,
                     m.user,
-                    this._escape(m.page),
+                    util.escape(m.page),
                     m.reason
                 );
             case 'move':
@@ -211,11 +211,11 @@ class Logger extends Format {
                     w,
                     l,
                     m.user,
-                    this._escape(m.page),
+                    util.escape(m.page),
                     m.target,
                     m.reason
-                        .replace('\x0302', '')
-                        .replace('\x0310', '')
+                        .replace('[[\x0302', '[[')
+                        .replace('\x0310]]', ']]')
                 );
             case 'rights':
                 temp3 = this._transportType === 'Slack' ? '*' : '**';
@@ -268,7 +268,7 @@ class Logger extends Format {
                     l,
                     m.user,
                     m.target,
-                    this._escape(m.length),
+                    util.escape(m.length),
                     m.reason
                 );
             case 'protect':
@@ -341,7 +341,7 @@ class Logger extends Format {
             m.thread,
             m.reply,
             m.size,
-            this._escape(m.category),
+            util.escape(m.category),
             m.snippet
         );
     }
@@ -427,25 +427,6 @@ class Logger extends Format {
     }
     /* eslint-enable max-statements */
     /**
-     * Escapes a message parameter
-     * @param {String} param Parameter to escape
-     * @returns {String} Escaped parameter
-     */
-    _escape(param) {
-        return param
-            // Escape links
-            .replace(/http:\/\//g, `http:/${ZWS}/`)
-            .replace(/https:\/\//g, `https:/${ZWS}/`)
-            // Escape mentions
-            .replace(/@/g, `@${ZWS}`)
-            // Escape invite links
-            .replace(/discord\.gg/g, `discord${ZWS}.${ZWS}gg`)
-            // Escapes certain Markdown constructions
-            .replace(/_{1,2}([^_*]+)_{1,2}/g, '$1')
-            .replace(/\*{1,2}([^_*]+)\*{1,2}/g, '$1')
-            .replace(/\r?\n|\r/g, '​');
-    }
-    /**
      * Makes a Markdown link
      * @param {String} text Text in the link
      * @param {String} wiki Wiki for the link
@@ -455,9 +436,9 @@ class Logger extends Format {
      */
     _link(text, wiki, lang, url) {
         if (this._transportType === 'Slack') {
-            return `<${util.url(wiki, lang)}/${url.replace(/\|/g, '%7C')}|${this._escape(text)}>`;
+            return `<${util.url(wiki, lang)}/${url.replace(/\|/g, '%7C')}|${util.escape(text)}>`;
         }
-        return `[${this._escape(text)}](<${util.url(wiki, lang)}/${url.replace(/\)/g, '%29')}>)`;
+        return `[${util.escape(text)}](<${util.url(wiki, lang)}/${url.replace(/\)/g, '%29')}>)`;
     }
     /**
      * Makes a Markdown link to a wiki page
@@ -485,7 +466,7 @@ class Logger extends Format {
             case 'user':
                 // Hack for autoblocks and range blocks
                 if (args[0].startsWith('#') || util.isIPRange(args[0])) {
-                    return this._escape(args[0]);
+                    return util.escape(args[0]);
                 }
                 if (util.isIP(args[0])) {
                     return this._wikiLink(
@@ -531,7 +512,7 @@ class Logger extends Format {
                 temp1 = this._transportType === 'Slack' ? '_' : '*';
                 return temp.length === 0 ?
                     '' :
-                    `(${temp1}${this._escape(temp.replace(/(?:\n|\r|\s)+/g, ' '))}${temp1})`;
+                    `(${temp1}${util.escape(temp.replace(/(?:\n|\r|\s)+/g, ' '))}${temp1})`;
             case 'board':
                 return this._wikiLink(
                     this._msg(`board-${args[0]}`, wiki, lang, args[1]),
@@ -548,6 +529,8 @@ class Logger extends Format {
                     lang,
                     `d/p/${args[2] ? `${args[1]}/r/${args[2]}` : args[1]}`
                 );
+            case 'flags':
+                return args[0] ? `[${args[0]}] ` : '';
             default:
                 return '';
         }
