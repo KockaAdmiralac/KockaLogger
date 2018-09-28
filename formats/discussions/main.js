@@ -15,6 +15,7 @@ const Format = require('../format.js'),
  * Constants
  */
 const COLOR = {
+    post: 0x0000FF,
     reply: 0x00FF00,
     report: 0xFF0000,
     thread: 0xFFFF00
@@ -49,7 +50,7 @@ class DiscussionsFormat extends Format {
                     description: msg.snippet,
                     title: msg.title ?
                         `${msg.title} [${util.cap(msg.dtype)} ${msg.action}]` :
-                        this._processAction(msg),
+                        `${util.cap(msg.dtype)} ${msg.action}`,
                     url: msg.url
                 }
             ]

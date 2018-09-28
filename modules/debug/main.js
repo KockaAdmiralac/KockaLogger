@@ -24,6 +24,7 @@ class Debug extends Module {
     constructor(config, client) {
         super(config, client);
         this._logger = new Logger({
+            discord: config.discord,
             file: true,
             name: 'debug',
             stdout: true

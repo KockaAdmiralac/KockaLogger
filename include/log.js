@@ -17,7 +17,8 @@ const fs = require('fs'),
  */
 const LOG_LEVELS = ['debug', 'info', 'warn', 'error'],
       DEFAULT_LOG_LEVEL = 'debug',
-      DEFAULT_LOG_DIRECTORY = 'logs';
+      DEFAULT_LOG_DIRECTORY = 'logs',
+      DISCORD_ERROR = 'Discord transport error';
 
 /**
  * Simple logging interface
@@ -125,7 +126,11 @@ class Logger {
                       case 'undefined':
                           return 'undefined';
                       default:
-                          return JSON.stringify(msg);
+                          try {
+                              return JSON.stringify(msg);
+                          } catch (e) {
+                              return '[Circular?]';
+                          }
                   }
               }).join(' '),
               date = `${this._pad(now.getDate())}-${this._pad(now.getMonth() + 1)}-${now.getFullYear()}`,
@@ -138,11 +143,11 @@ class Logger {
         if (this._stream) {
             this._stream.write(`[${date} ${time}] [${logLevel}] ${str}\n`);
         }
-        if (this._url) {
+        if (this._url && !str.startsWith(DISCORD_ERROR)) {
             io.webhook(this._url, {
                 // CAUTION: May contain mentions
                 content: `**${logLevel}** ${str}`
-            });
+            }).catch(e => this.error(DISCORD_ERROR, e));
         }
     }
     /**

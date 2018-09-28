@@ -1,7 +1,7 @@
 # KockaLogger
-KockaLogger is a [Node.js](https://nodejs.org) program used to replace [WikiaActivityLogger](https://github.com/KockaAdmiralac/WikiaActivityLogger)  and, eventually, [CVNAdvanced](https://github.com/KockaAdmiralac/CVNAdvanced) in their tasks of filtering and logging [Wikia](https://c.wikia.com) activity.
+KockaLogger is a [Node.js](https://nodejs.org) program used to replace [WikiaActivityLogger](https://github.com/KockaAdmiralac/WikiaActivityLogger)  and, eventually, [CVNAdvanced](https://github.com/KockaAdmiralac/CVNAdvanced) in their tasks of filtering and logging [FANDOM](https://c.wikia.com) activity.
 
-After Wikia decided to forbid WikiaActivityLogger on 25th June 2018, they provided an alternative solution to wiki activity logging that does not consume as much server (and bot) resources. This solution, however, is not publicly available and therefore KockaLogger cannot be used by any Wikia user like WikiaActivityLogger could. If you had been running a WikiaActivityLogger instance before Wikia decided to forbid its use, contact [KockaAdmiralac](https://dev.wikia.com/wiki/User_talk:KockaAdmiralac) about it.
+After FANDOM decided to forbid WikiaActivityLogger on 25th June 2018, they provided an alternative solution to wiki activity logging that does not consume as much server (and bot) resources. This solution, however, is not publicly available and therefore KockaLogger cannot be used by any FANDOM user like WikiaActivityLogger could. If you had been running a WikiaActivityLogger instance before FANDOM decided to forbid its use, contact [KockaAdmiralac](https://dev.wikia.com/wiki/User_talk:KockaAdmiralac) about it.
 
 ## Configuration
 Configuration consists of two parts, client configuration and modules configuration. Sample configuration can be found in `config.sample.json`.
@@ -17,7 +17,7 @@ Contains following properties:
 - `users` - Same as `channels` but for names of the bots in these channels. If bots change names, just put their common prefix here
 
 ### Modules configuration
-Consists of a map of objects representing certain modules of KockaLogger. Currently, only available module is `logger`, which is meant to replace WikiaActivityLogger in function.
+Consists of a map of objects representing certain modules of KockaLogger. Currently, only documented module is `logger`, which is meant to replace WikiaActivityLogger in function.
 
 #### Logger configuration
 Logger module configuration consists of an array of objects representing combinations of wikis, transport methods and formatting methods. Currently, only supported transport method is `discord` and only supported formatting method is `logger` (default).
@@ -56,3 +56,12 @@ To contribute to KockaLogger, see `CONTRIBUTING.md`.
 - CVNAdvanced-style Discussions logs
 - Complete replacement for `#cvn-wikia` that sucks less?
 - **[BUG]** Make loader not blank the cache files after writing to them for the second time
+- If a thread is moved, the logger still shows the old board the thread is on
+- Update README to include documentation about configuring other modules and update `logger` module documentation with newly added configuration options
+- Make `vandalism` module great again
+    - Detect blank and replacement summaries on wikis where they are customized
+    - Report logged-in users when they do the same thing as anons but specified amount of times in a specified interval of time
+    - New format for messages
+    - Handle some logs (move, upload)
+    - Disregard all this if a complete replacement of `#cvn-wikia` is to be made
+- Unit tests!

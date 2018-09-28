@@ -112,8 +112,8 @@ class Message {
      */
     static update(wiki, language, messages, generated) {
         const key = `${language}:${wiki}`;
-        this._custom[key] = messages;
-        this._i18n2[key] = generated;
+        this._custom[key] = messages[key];
+        this._i18n2[key] = generated[key];
     }
     /**
      * Handles RC IRC messages
@@ -361,7 +361,7 @@ class Message {
                         }
                     }
                     return 'unknown';
-                }, this);
+                });
             } else {
                 this.flags = [];
             }

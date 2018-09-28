@@ -402,7 +402,6 @@ class Loader {
         if (!this._caches.custom) {
             this._caches.custom = {};
         }
-        this._callback = callback;
         this._caches.custom[`${language}:${wiki}`] = data;
         this._custom(true);
         (
@@ -423,7 +422,7 @@ class Loader {
      * @returns {Function} Generated callback function
      * @private
      */
-    _cbUpdateCustom(wiki, language, callback) {
+    _createUpdateCustomCallback(wiki, language, callback) {
         return function() {
             for (const w in this._caches.i18n2) {
                 for (const msg in this._caches.i18n2[w]) {

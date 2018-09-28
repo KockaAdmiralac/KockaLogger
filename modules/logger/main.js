@@ -147,7 +147,7 @@ class Logger extends Module {
                 const page = pages[keys[0]];
                 if (typeof page.title === 'string') {
                     message.page = page.title;
-                    this._cache.set(`${message.wiki}-${revids}`, page.title);
+                    this._cache.set(`${message.language}-${message.wiki}-${revids}`, page.title);
                     this._handleTitle(wikis, message);
                 }
             }
@@ -284,7 +284,6 @@ class Logger extends Module {
      */
     _handleTitle(wikis, message) {
         const ns = wikis[0].getNamespaceID(message.page.split(':')[0]);
-        message.namespace = ns;
         if (ns === 1201 || ns === 2001) {
             this._handleThreadTitle(wikis, message);
         } else {

@@ -81,7 +81,7 @@ const MAPPING = {
      * @returns {String} Regex'd log entry
      */
     'chat-chatbanremove-log-entry': e => `^${colorLink(util.escapeRegex(e))
-        .replace('\\$1', '\\[\\[(?:\x0302)?[^:]+:([^\\]]    +)(?:\x0310)?\\]\\]')
+        .replace('\\$1', '\\[\\[(?:\x0302)?[^:]+:([^\\]]+)(?:\x0310)?\\]\\]')
     }${REASON}$`,
     /**
      * Transforms the delete log entry
@@ -89,8 +89,8 @@ const MAPPING = {
      * @returns {String} Regex'd log entry
      */
     'deletedarticle': e => `^${util.escapeRegex(e).replace(
-        '\\[\\[\\$1\\]\\]',
-        '\\[\\[(?:\x0302)?([^\x03\\]]+)(?:\x0310)?\\]\\]'
+        /(?:\\\[\\\[)?\\\$1(?:\\\]\\\])?/,
+        '(?:\\[\\[)?(?:\x0302)?([^\x03\\]]+)(?:\x0310)?(?:\\]\\])?'
     )}(?:${REASON})?$`,
     /**
      * Transforms the log entry for revision deletion
@@ -130,7 +130,7 @@ const MAPPING = {
      */
     'protectedarticle': e => `^${colorLink(util.escapeRegex(e))
         .replace('\\$1', '([^\x03]+)')
-    }((?: \u200E\\[(?:edit|move|upload|create)=(?:loggedin|autoconfirmed|sysop)\\] \\([^\u200E]+\\)){1,3})(?:${REASON})?$`,
+    }((?: (?:\\u200E|\\u200F)\\[(?:edit|move|upload|create)=(?:loggedin|autoconfirmed|sysop)\\] \\([^\\u200E\\u200F]+\\)){1,3})(?:${REASON})?$`,
     /**
      * Transforms the rights log entry
      * @param {String} e Log entry
@@ -164,8 +164,8 @@ const MAPPING = {
      * @returns {String} Regex'd log entry
      */
     'uploadedimage': e => `^${util.escapeRegex(e).replace(
-        '\\[\\[\\$1\\]\\]',
-        '\\[\\[(?:\x0302)?[^:]+:([^\\]]+)(?:\x0310)?\\]\\]'
+        /(?:\\\[\\\[)?\\\$1(?:\\\]\\\])?/,
+        '(?:\\[\\[)?(?:\x0302)?[^:]+:([^\\]]+)(?:\x0310)?(?:\\]\\])?'
     )}(?:${REASON})?$`
 };
 MAPPING['reblock-logentry'] = MAPPING.blocklogentry;

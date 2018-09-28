@@ -73,7 +73,7 @@ class Filter {
     _noreply(message) {
         return message.type === 'discussions' &&
                (
-                   message.dtype !== 'reply' ||
+                   message.dtype !== 'post' ||
                        message.action !== 'edited' &&
                        message.action !== 'created'
                );

@@ -145,7 +145,7 @@ class NewUsers extends Module {
                 typeof result.query.users[0].userid === 'number'
             ) {
                 this._getInfo(result.query.users[0].userid, wiki, language);
-            } else {
+            } else if (!key.startsWith('QATest')) {
                 this._logger.error(
                     'MediaWiki API failed to fetch user ID for',
                     key, ':', result
@@ -219,9 +219,9 @@ class NewUsers extends Module {
         message.fields.push({
             inline: true,
             name: 'Report',
-            value: `!report p ${
+            value: `\`!report p ${
                 wiki === 'www' || wiki === 'community' ? 'c' : wiki
-            } ${info.username}`
+            } ${info.username}\``
         });
         this._transport.execute({embeds: [message]});
     }

@@ -137,7 +137,7 @@ class Wiki {
             c.language = this._language;
         }
         try {
-            const Format = require(`../../formats/${c.name || 'logger'}/main.js`);
+            const Format = require(`../../formats/${c.type || 'logger'}/main.js`);
             return new Format(c, transport);
         } catch (e) {
             this._logger.error('Error initializing format', e);
@@ -242,11 +242,12 @@ class Wiki {
     _identifyNamespace(message) {
         if (message.type === 'edit') {
             const index = message.page.indexOf(':');
-            if (index !== -1) {
+            if (index === -1) {
+                message.namespace = 0;
+            } else {
                 const namespace = message.page.substring(0, index);
                 message.namespace = this.getNamespaceID(namespace) || 0;
             }
-            message.namespace = 0;
         }
     }
     /**
