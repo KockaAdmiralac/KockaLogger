@@ -1,6 +1,6 @@
 {
     "client": {
-        "server": "freenode.wikia.com",
+        "server": "freenode.fandom.com",
         "port": 9999,
         "nick": "MyKockaLogger",
         "realname": "The time has come.",

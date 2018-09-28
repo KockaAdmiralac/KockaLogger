@@ -1,6 +1,4 @@
 config.json
-log.txt
 node_modules
-messages/i18n.json
-messages/messagecache.json
 cache/*.json
+logs/*.log

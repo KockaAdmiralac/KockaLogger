@@ -9,8 +9,9 @@
  * Importing modules
  */
 const irc = require('irc'),
-      fs = require('fs'),
-      Message = require('./msg.js');
+      Message = require('./msg.js'),
+      Logger = require('./log.js'),
+      Cache = require('./cache.js');
 
 /**
  * Constants
@@ -28,32 +29,29 @@ const EVENTS = [
 class Client {
     /**
      * Class constructor
+     * @param {Object} config KockaLogger configuration
+     * @param {Boolean} debug KockaLogger debug mode
+     * @param {Loader} loader Loader instance
      */
-    constructor() {
-        this._initConfig();
-        this._initLogger();
+    constructor(config, {debug}, loader) {
+        this._config = config;
+        this._debug = debug;
+        this._loader = loader;
+        this._initLogger(config.logging || {});
+        Cache.setup(config.cache || {}, debug);
         this._initModules();
-        Message.prepare();
     }
     /**
-     * Initializes configuration
+     * Initializes the debug/info/error logger
+     * @param {Object} config Logging configuration
      * @private
      */
-    _initConfig() {
-        try {
-            this._config = require('../config.json');
-        } catch (e) {
-            console.log('Configuration failed to load!', e, 'Exiting...');
-            process.exit();
-        }
-    }
-    /**
-     * Initializes the file log stream
-     * @private
-     */
-    _initLogger() {
-        this._stream = fs.createWriteStream('log.txt', {
-            flags: 'a'
+    _initLogger(config) {
+        Logger.setup(config, this._debug);
+        this._logger = new Logger({
+            file: true,
+            name: 'client',
+            stdout: true
         });
     }
     /**
@@ -68,16 +66,29 @@ class Client {
         for (const mod in this._config.modules) {
             try {
                 const Module = require(`../modules/${mod}/main.js`);
-                this._modules[mod] = new Module(this._config.modules[mod]);
+                this._modules[mod] = new Module(
+                    this._config.modules[mod],
+                    this
+                );
             } catch (e) {
-                console.log(e);
+                this._logger.error(
+                    'Error while initializing module',
+                    mod, ':', e
+                );
             }
         }
     }
     /**
      * Initializes the IRC client
+     * @param {Object} data Loader data
      */
-    run() {
+    run(data) {
+        Message.setup(data);
+        this._logger.info('Setting up modules...');
+        for (const mod in this._modules) {
+            this._modules[mod].setup(data);
+        }
+        this._logger.info('Initializing IRC client...');
         const config = this._config.client;
         this._client = new irc.Client(config.server, config.nick, {
             channels: [
@@ -85,7 +96,6 @@ class Client {
                 config.channels.discussions,
                 config.channels.newusers
             ],
-            // debug: true,
             port: config.port,
             realName: config.realname,
             retryCount: config.retries || 10,
@@ -101,7 +111,7 @@ class Client {
      * @param {Object} command IRC command sent upon joining
      */
     _registered(command) {
-        console.log(command.args[1]);
+        this._logger.info(command.args[1]);
     }
     /**
      * The client has joined an IRC channel
@@ -115,7 +125,7 @@ class Client {
                 channel === this._config.client.channels[type] &&
                 user === this._config.client.nick
             ) {
-                console.log(`Joined ${type} channel`);
+                this._logger.info('Joined', type, 'channel');
                 break;
             }
         }
@@ -126,7 +136,7 @@ class Client {
      * @param {Object} command IRC command sent upon error
      */
     _error(command) {
-        console.log('IRC error', command);
+        this._logger.error('IRC error', command);
     }
     /**
      * An IRC message has been sent
@@ -141,11 +151,21 @@ class Client {
                 user.startsWith(this._config.client.users[i]) &&
                 channel === this._config.client.channels[i]
             ) {
-                const msg = this[`_${i}Message`](message);
+                const oldOverflow = this._overflow,
+                      msg = this[`_${i}Message`](message);
                 if (msg && msg.type) {
                     this._dispatchMessage(msg);
-                } else if (i !== 'rc' || this._notFirstMessage) {
-                    this._stream.write(`${channel}: ${message}\n`);
+                } else if (msg && (i !== 'rc' || this._notFirstMessage)) {
+                    this._logger.error(
+                        'FAILED TO PARSE MESSAGE IN',
+                        channel, ':', msg.raw
+                    );
+                } else if (this._notFirstMessage) {
+                    this._logger.error(
+                        'PARSED MESSAGE IS NULL',
+                        channel, ':', oldOverflow, '(', msg,
+                        'overflow:', this._overflow, ')'
+                    );
                 }
                 if (i === 'rc') {
                     this._notFirstMessage = true;
@@ -156,17 +176,17 @@ class Client {
     }
     /**
      * Handles messages in the RC channel
+     * @private
      * @param {String} message Message to handle
      * @returns {Message} Parsed message object
-     * @private
      * @todo Edge cases:
      *  - this._overflow is a shared resource
-     *  - Overflows can start with \u000314
+     *  - Overflows can start with \x0314
      *  - Overflows may not come right after the message!
      */
     _rcMessage(message) {
         let msg = null;
-        if (message.startsWith('\u000314')) {
+        if (message.startsWith('\x0314')) {
             if (this._overflow) {
                 msg = new Message(this._overflow, 'rc');
             }
@@ -217,9 +237,35 @@ class Client {
             try {
                 this._modules[mod].execute(message);
             } catch (e) {
-                console.log(e);
+                this._logger.error(
+                    'Dispatch error to module',
+                    mod, ':', e
+                );
             }
         }
+    }
+    /**
+     * Updates custom messages
+     * @param {String} wiki Wiki to update the messages on
+     * @param {String} language Language of the wiki
+     * @param {Object} messages Map of customized messages
+     */
+    updateMessages(wiki, language, messages) {
+        this._logger.info('Updating messages for', wiki);
+        this._logger.debug(messages);
+        this._loader.updateCustom(
+            wiki,
+            language,
+            messages,
+            Message.update.bind(Message)
+        );
+    }
+    /**
+     * Gets whether the debug mode is enabled
+     * @returns {Boolean} Whether the debug mode is enabled
+     */
+    get debug() {
+        return this._debug;
     }
 }
 

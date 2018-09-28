@@ -16,6 +16,7 @@
     "overwroteimage",
     "1movedto2",
     "1movedto2_redir",
+    "blog-avatar-removed-log",
     "patrol-log-diff",
     "patrol-log-line",
     "chat-chatbanadd-log-entry",
@@ -26,5 +27,7 @@
     "block-log-flags-hiddenname",
     "block-log-flags-noautoblock",
     "block-log-flags-noemail",
-    "block-log-flags-nousertalk"
+    "block-log-flags-nousertalk",
+    "autosumm-blank",
+    "autosumm-replace"
 ]

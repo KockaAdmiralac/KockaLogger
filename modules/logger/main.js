@@ -11,7 +11,9 @@
 const Module = require('../module.js'),
       io = require('../../include/io.js'),
       util = require('../../include/util.js'),
-      Cache = require('../../include/cache.js');
+      Cache = require('../../include/cache.js'),
+      Logging = require('../../include/log.js'),
+      Wiki = require('./wiki.js');
 
 /**
  * Constants
@@ -32,7 +34,15 @@ class Logger extends Module {
         if (!(config instanceof Array)) {
             throw new Error('Logger configuration invalid!');
         }
-        this._wikis = [];
+        this._initCache();
+        this._initLogging();
+        this._initWikis(config);
+    }
+    /**
+     * Initializes cache
+     * @private
+     */
+    _initCache() {
         this._cache = new Cache({
             check: 60000,
             expiry: 3 * 24 * 60 * 60 * 1000,
@@ -40,34 +50,43 @@ class Logger extends Module {
             save: 60000
         });
         this._cache.load();
+    }
+    /**
+     * Initializes the logger
+     * @private
+     */
+    _initLogging() {
+        this._logger = new Logging({
+            file: true,
+            name: 'logger',
+            stdout: true
+        });
+    }
+    /**
+     * Initializes wiki objects
+     * @param {Array<Object>} config Configuration array
+     * @private
+     */
+    _initWikis(config) {
+        this._wikis = config
+            .map(wiki => new Wiki(wiki))
+            .filter(wiki => wiki.initialized);
+        this._wikiMap = {};
+        this._intervals = {};
         this._fetching = [];
-        config.forEach(function(wiki) {
-            if (
-                typeof wiki !== 'object' ||
-                typeof wiki.wiki !== 'string' ||
-                typeof wiki.transport !== 'object'
-            ) {
-                return;
-            }
-            const format = wiki.format || {};
-            try {
-                const Transport = require(`../../transports/${wiki.transport.name || 'discord'}/main.js`),
-                      Format = require(`../../formats/${format.name || 'logger'}/main.js`);
-                const transport = new Transport(wiki.transport);
-                this._wikis.push({
-                    bots: wiki.bots || ['FANDOM', 'FANDOMbot'],
-                    format: new Format(format, transport),
-                    transport,
-                    wiki: wiki.wiki
-                });
-                if (!this._fetching.includes(wiki.wiki)) {
-                    this._fetching.push(wiki.wiki);
-                }
-            } catch (e) {
-                console.log(e);
+        this._wikis.forEach(function(wiki, i) {
+            if (this._wikiMap[wiki.key]) {
+                this._wikiMap[wiki.key].push(i);
+            } else {
+                this._wikiMap[wiki.key] = [i];
+                this._fetching.push(wiki.key);
             }
         }, this);
-        for (let i = 0; i < this._fetching.length && i < INFO_THREADS; ++i) {
+        for (
+            let i = 0, l = this._fetching.length;
+            i < l && i < INFO_THREADS;
+            ++i
+        ) {
             this._fetchWikiInfo();
         }
     }
@@ -76,11 +95,14 @@ class Logger extends Module {
      * @private
      */
     _fetchWikiInfo() {
-        const wiki = this._fetching.shift();
-        if (!wiki) {
+        const key = this._fetching.shift();
+        if (!key) {
             return;
         }
-        io.query(wiki, {
+        const spl = key.split('.'),
+              lang = spl.shift(),
+              wiki = spl.join('.');
+        io.query(wiki, lang, {
             meta: 'siteinfo',
             siprop: [
                 'general',
@@ -95,31 +117,22 @@ class Logger extends Module {
                 typeof d.error !== 'object'
             ) {
                 const {query} = d;
-                this._wikis.filter(w => w.wiki === wiki).forEach(function(w) {
-                    w.id = Number(query.wikidesc.id);
-                    w.sitename = query.general.sitename;
-                    w.path = query.general.articlepath;
-                    w.namespaces = {};
-                    for (const i in query.namespaces) {
-                        const ns = query.namespaces[i];
-                        w.namespaces[ns['*']] = ns.id;
-                        w.namespaces[ns.canonical] = ns.id;
-                    }
-                    w.statistics = query.statistics;
+                this._wikiMap[key].forEach(function(index) {
+                    this._wikis[index].setData(query);
                 }, this);
             }
             this._fetchWikiInfo();
-        }.bind(this)).catch(e => console.log(e));
+        }.bind(this)).catch(e => this._logger.error('Fetching wiki info', e));
     }
     /**
      * Fetches information about page that was edited
      * @param {Message} message Edit message
-     * @param {Array<Object>} wikis Wiki handlers to sent the message to
+     * @param {Array<Object>} wikis Wiki handlers to send the message to
      * @private
      */
     _fetchPageInfo(message, wikis) {
         const revids = message.params.diff || message.params.oldid;
-        io.query(message.wiki, {revids}).then(function(d) {
+        io.query(message.wiki, message.language, {revids}).then(function(d) {
             if (
                 typeof d !== 'object' ||
                 typeof d.query !== 'object' ||
@@ -134,11 +147,11 @@ class Logger extends Module {
                 const page = pages[keys[0]];
                 if (typeof page.title === 'string') {
                     message.page = page.title;
-                    this._cache.set(`${message.wiki}-${revids}`, page.title);
+                    this._cache.set(`${message.language}-${message.wiki}-${revids}`, page.title);
                     this._handleTitle(wikis, message);
                 }
             }
-        }.bind(this)).catch(e => console.log(e));
+        }.bind(this)).catch(e => this._logger.error('Fetching page info', e));
     }
     /**
      * Fetches information about thread pages
@@ -148,7 +161,7 @@ class Logger extends Module {
      * @private
      */
     _fetchThreadInfo(wikis, message, parent) {
-        io.query(message.wiki, {
+        io.query(message.wiki, message.language, {
             prop: 'revisions',
             rvprop: 'content',
             titles: parent
@@ -178,15 +191,15 @@ class Logger extends Module {
             if (res) {
                 message.threadid = Number(page.pageid);
                 message.threadtitle = util.decodeHTML(res[1]);
-                this._cache.set(`${message.wiki}-${parent}`, {
+                this._cache.set(`${message.language}-${message.wiki}-${parent}`, {
                     id: message.threadid,
                     title: message.threadtitle
                 });
                 this._execute(wikis, message);
             } else {
-                console.log(`Failed to parse message title: ${text}`);
+                this._logger.error('Failed to parse message title:', text);
             }
-        }.bind(this)).catch(e => console.log(e));
+        }.bind(this)).catch(e => this._logger.error('Fetching thread info', e));
     }
     /**
      * Fetches information about closed/removed/deleted/restored threads
@@ -195,7 +208,7 @@ class Logger extends Module {
      * @private
      */
     _fetchThreadLogInfo(message, wikis) {
-        io.query(message.wiki, {
+        io.query(message.wiki, message.language, {
             list: 'recentchanges',
             rcprop: 'user|comment|title|loginfo',
             rctype: 'log'
@@ -218,26 +231,36 @@ class Logger extends Module {
                 message.reason = rc.comment;
                 this._handleThreadTitle(wikis, message);
             }
-        }.bind(this));
+        }.bind(this))
+        .catch(e => this._logger.error('Fetch thread log info', e));
     }
     /**
      * Handles messages
      * @param {Message} message Received message
      */
     execute(message) {
-        const wikis = this._wikis.filter(w => w.wiki === message.wiki);
-        if (!wikis.length || wikis.some(w => !w.id)) {
+        const indexes = this._wikiMap[`${message.language}.${message.wiki}`];
+        if (
+            !(indexes instanceof Array) ||
+            !indexes.length
+        ) {
             return;
         }
+        const wikis = [];
+        indexes.forEach(function(index) {
+            if (this._wikis[index] && this._wikis[index].id) {
+                wikis.push(this._wikis[index]);
+            }
+        }, this);
         if (message.type === 'edit' && !message.flags.includes('B')) {
             if (message.params.diff) {
-                const key = `${message.wiki}-${message.params.oldid}`,
+                const key = `${message.language}-${message.wiki}-${message.params.oldid}`,
                       title = this._cache.get(key);
                 if (title) {
                     message.page = title;
                     this._cache.delete(key);
                     this._cache.set(
-                        `${message.wiki}-${message.params.diff}`,
+                        `${message.language}-${message.wiki}-${message.params.diff}`,
                         title
                     );
                     this._handleTitle(wikis, message);
@@ -249,7 +272,7 @@ class Logger extends Module {
             }
         } else if (message.type === 'log' && message.log === '0') {
             this._fetchThreadLogInfo(message, wikis);
-        } else {
+        } else if (message.type !== 'edit') {
             this._execute(wikis, message);
         }
     }
@@ -260,8 +283,7 @@ class Logger extends Module {
      * @private
      */
     _handleTitle(wikis, message) {
-        const ns = wikis[0].namespaces[message.page.split(':')[0]];
-        message.namespace = ns;
+        const ns = wikis[0].getNamespaceID(message.page.split(':')[0]);
         if (ns === 1201 || ns === 2001) {
             this._handleThreadTitle(wikis, message);
         } else {
@@ -276,7 +298,7 @@ class Logger extends Module {
      */
     _handleThreadTitle(wikis, message) {
         const parent = message.page.split('/').slice(0, 2).join('/'),
-        data = this._cache.get(`${message.wiki}-${parent}`);
+        data = this._cache.get(`${message.language}-${message.wiki}-${parent}`);
         message.isMain = parent === message.page;
         if (data) {
             message.threadtitle = data.title;
@@ -294,20 +316,19 @@ class Logger extends Module {
      */
     _execute(wikis, message) {
         if (!message.parse()) {
-            console.log('Logger format: cannot parse');
+            this._logger.error('Logger format: cannot parse:', message);
             return;
         }
         wikis.forEach(function(w) {
-            if (w.bots.includes(message.user)) {
-                return;
-            }
             try {
-                const formatted = w.format.execute(message);
-                if (formatted) {
-                    w.transport.execute(formatted);
-                }
+                w.execute(message);
             } catch (e) {
-                console.log(e);
+                this._logger.error(
+                    'Error while handling message',
+                    e,
+                    message,
+                    w.name
+                );
             }
         }, this);
     }

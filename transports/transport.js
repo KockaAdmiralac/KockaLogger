@@ -6,6 +6,11 @@
 'use strict';
 
 /**
+ * Importing modules
+ */
+const Logger = require('../include/log.js');
+
+/**
  * Base transport class
  */
 class Transport {
@@ -15,6 +20,10 @@ class Transport {
      */
     constructor(config) {
         this._config = config;
+        this._logger = new Logger({
+            file: true,
+            name: `${config.type}-transport`
+        });
     }
     /**
      * Executes the transport

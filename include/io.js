@@ -24,11 +24,12 @@ class IO {
     /**
      * Queries the MediaWiki API
      * @param {String} wiki Wiki to query
+     * @param {String} lang Language of the wiki to query
      * @param {Object} options Query parameters
      * @param {Function} transform Transformation function
      * @returns {Promise} Promise to listen for response
      */
-    static query(wiki, options, transform) {
+    static query(wiki, lang, options, transform) {
         if (
             typeof wiki !== 'string' ||
             typeof options !== 'object'
@@ -45,7 +46,7 @@ class IO {
             method: 'GET',
             qs: options,
             transform,
-            uri: `${util.url(wiki)}/api.php`
+            uri: `${util.url(wiki, lang)}/api.php`
         });
     }
     /**
@@ -64,6 +65,20 @@ class IO {
             json: true,
             method: 'POST',
             uri: url
+        });
+    }
+    /**
+     * Gets user info for a user with specified user ID
+     * @param {Number} id User ID of the user
+     * @returns {Promise} Promise to listen on for response
+     */
+    static userInfo(id) {
+        return http({
+            headers: {
+                'User-Agent': USER_AGENT
+            },
+            method: 'GET',
+            uri: `https://services.wikia.com/user-attribute/user/bulk?id=${id}`
         });
     }
 }

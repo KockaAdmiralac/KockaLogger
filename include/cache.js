@@ -8,12 +8,14 @@
 /**
  * Importing modules
  */
-const fs = require('fs');
+const fs = require('fs'),
+      path = require('path'),
+      Logger = require('./log.js');
 
 /**
  * Constants
  */
-const CACHE_DIRECTORY = 'cache',
+const DEFAULT_CACHE_DIRECTORY = 'cache',
       DEFAULT_CACHE_EXPIRY = 60000;
 
 /**
@@ -26,14 +28,25 @@ class Cache {
      * @param {Number} save Interval on which to save the cache
      * @param {Number} expiry Time after cache entries expire
      * @param {Number} check Interval on which to check for cache expiry
+     * @param {String} dir Directory to save cache in
      */
-    constructor({name, save, expiry, check, debug, pop}) {
+    constructor({name, save, expiry, check, debug, pop, dir}) {
         this._data = {};
         this._name = typeof name === 'string' ? name : null;
         this._expiry = typeof expiry === 'number' ?
             expiry :
             DEFAULT_CACHE_EXPIRY;
-        this._debugMode = Boolean(debug);
+        this._debugMode = Boolean(debug) || Boolean(Cache._debug);
+        this._dir = typeof dir === 'string' && !dir.startsWith('_') ?
+            dir :
+            Cache._dir;
+        this._absDir = path.resolve(this._dir);
+        if (this._debugMode) {
+            this._logger = new Logger({
+                file: true,
+                name: 'cache'
+            });
+        }
         if (this._name && typeof save === 'number') {
             this._saveInterval = setInterval(this._save.bind(this), save);
         }
@@ -43,13 +56,23 @@ class Cache {
         this._pop = typeof pop === 'function' ? pop : null;
     }
     /**
+     * Sets up global caching configuration
+     * @param {String} dir Cache directory
+     * @param {Boolean} debug KockaLogger debug mode
+     * @static
+     */
+    static setup({dir}, debug) {
+        this._dir = dir || DEFAULT_CACHE_DIRECTORY;
+        this._debug = debug;
+    }
+    /**
      * Saves the cache to a file
      * @private
      */
     _save() {
         this._saving = true;
         fs.writeFile(
-            `${CACHE_DIRECTORY}/${this._name}.json`,
+            `${this._dir}/${this._name}.json`,
             this._debugMode ?
                 JSON.stringify(this._data, null, '    ') :
                 JSON.stringify(this._data),
@@ -86,7 +109,7 @@ class Cache {
             if (typeof this._reject === 'function') {
                 this._reject(e);
             } else {
-                this._debug('Cache save error:', e);
+                this._debug('error', 'Cache save error:', e);
             }
         } else if (typeof this._resolve === 'function') {
             this._resolve(e);
@@ -102,15 +125,14 @@ class Cache {
         for (const i in this._data) {
             if (now - this._data[i].touched > this._expiry) {
                 if (this._pop) {
-                    delete this._data[i].touched;
-                    this._pop(this._data[i]);
+                    this._pop(i, this._data[i].value);
                 }
                 ++number;
                 delete this._data[i];
             }
         }
         if (number > 0) {
-            this._debug(`${number} entries cleaned from cache`);
+            this._debug('info', number, 'entries cleaned from cache');
         }
     }
     /**
@@ -118,9 +140,9 @@ class Cache {
      */
     load() {
         try {
-            this._data = require(`../${CACHE_DIRECTORY}/${this._name}.json`);
+            this._data = require(`${this._absDir}/${this._name}.json`);
         } catch (e) {
-            this._debug(`${this._name} cache created anew`);
+            this._debug('info', this._name, 'cache created anew');
         }
     }
     /**
@@ -131,7 +153,7 @@ class Cache {
      */
     get(key) {
         if (typeof this._data[key] !== 'object') {
-            this._debug(`Cache miss for ${key}`);
+            this._debug('debug', 'Cache miss for', key);
             return null;
         }
         this._data[key].touched = Date.now();
@@ -158,13 +180,14 @@ class Cache {
         }
     }
     /**
-     * Logs debug output to console if in debug mode
-     * @param {String} content Content to log
+     * Logs debug output to stdout if in debug mode
+     * @param {String} level Log level
+     * @param {Array<String>} messages Content to log
      * @private
      */
-    _debug(content) {
+    _debug(level, ...messages) {
         if (this._debugMode) {
-            console.log(content);
+            this._logger[level](...messages);
         }
     }
 }
