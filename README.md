@@ -47,21 +47,5 @@ $ node main.js
 ## Contributing
 To contribute to KockaLogger, see `CONTRIBUTING.md`.
 
-## To do
-- Link directly to replies in thread links
-- Cache for Discussions thread titles
-- Handle "Created page with" summaries
-- Memory usage checking and optimization
-- Article/blog comments displaying prettier
-- CVNAdvanced-style Discussions logs
-- Complete replacement for `#cvn-wikia` that sucks less?
-- **[BUG]** Make loader not blank the cache files after writing to them for the second time
-- If a thread is moved, the logger still shows the old board the thread is on
-- Update README to include documentation about configuring other modules and update `logger` module documentation with newly added configuration options
-- Make `vandalism` module great again
-    - Detect blank and replacement summaries on wikis where they are customized
-    - Report logged-in users when they do the same thing as anons but specified amount of times in a specified interval of time
-    - New format for messages
-    - Handle some logs (move, upload)
-    - Disregard all this if a complete replacement of `#cvn-wikia` is to be made
-- Unit tests!
+## Issues
+KockaLogger bugs and feature requests are tracked through [GitHub issues](https://github.com/KockaAdmiralac/KockaLogger/issues) in this repository. Feel free to open one if you need help with setting up, want to report a bug or suggest a feature or just ask for general information about KockaLogger.
