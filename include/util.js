@@ -41,7 +41,7 @@ class Util {
             // Escapes certain Markdown constructions
             .replace(/_{1,2}([^_*]+)_{1,2}/g, '$1')
             .replace(/\*{1,2}([^_*]+)\*{1,2}/g, '$1')
-            .replace(/\r?\n|\r|\]|\[|<|>/g, '​');
+            .replace(/\r?\n|\r/g, '');
     }
     /**
      * Escapes a string from special regex characters

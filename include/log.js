@@ -102,7 +102,7 @@ class Logger {
     /**
      * Logs specified messages with the specified level
      * @param {String} level Log level
-     * @param {Array<String>} messages Messages to log
+     * @param {Array} messages Messages to log
      * @private
      */
     _log(level, ...messages) {
@@ -113,28 +113,10 @@ class Logger {
             return;
         }
         const now = new Date(),
-              str = messages.map(function(msg) {
-                  const type = typeof msg;
-                  switch (type) {
-                      case 'string':
-                          return msg;
-                      case 'number':
-                      case 'boolean':
-                          return String(msg);
-                      case 'function':
-                          return msg.toString();
-                      case 'undefined':
-                          return 'undefined';
-                      default:
-                          try {
-                              return JSON.stringify(msg);
-                          } catch (e) {
-                              return '[Circular?]';
-                          }
-                  }
-              }).join(' '),
+              str = messages.map(this._mapFile).join(' '),
+              dstr = messages.map(this._mapDiscord).join(' '),
               date = `${this._pad(now.getDate())}-${this._pad(now.getMonth() + 1)}-${now.getFullYear()}`,
-              time = `${this._pad(now.getHours())}-${this._pad(now.getMinutes())}-${this._pad(now.getSeconds())}`,
+              time = `${this._pad(now.getHours())}:${this._pad(now.getMinutes())}:${this._pad(now.getSeconds())}`,
               logLevel = level.toUpperCase(),
               levelColor = this._color(this._colorLevel(logLevel));
         if (this._console) {
@@ -143,11 +125,64 @@ class Logger {
         if (this._stream) {
             this._stream.write(`[${date} ${time}] [${logLevel}] ${str}\n`);
         }
-        if (this._url && !str.startsWith(DISCORD_ERROR)) {
+        if (this._url && !dstr.startsWith(DISCORD_ERROR)) {
             io.webhook(this._url, {
                 // CAUTION: May contain mentions
-                content: `**${logLevel}** ${str}`
+                content: `**${logLevel}:** ${dstr}`
             }).catch(e => this.error(DISCORD_ERROR, e));
+        }
+    }
+    /**
+     * Maps objects to how they should be represented in logfiles
+     * @param {*} msg Message to map
+     * @returns {String} String representation of the message
+     */
+    _mapFile(msg) {
+        const type = typeof msg;
+        switch (type) {
+            case 'string':
+                return msg;
+            case 'number':
+            case 'boolean':
+                return String(msg);
+            case 'function':
+                return msg.toString();
+            case 'undefined':
+                return 'undefined';
+            default:
+                try {
+                    return JSON.stringify(msg);
+                } catch (e) {
+                    return '[Circular?]';
+                }
+        }
+    }
+    /**
+     * Maps objects to how they should be represented in Discord
+     * @param {*} msg Message to map
+     * @returns {String} String representation of the message
+     */
+    _mapDiscord(msg) {
+        const type = typeof msg;
+        switch (type) {
+            case 'string':
+                return msg;
+            case 'number':
+            case 'boolean':
+                return `\`${String(msg)}\``;
+            case 'function':
+                return `\`\`\`javascript\n${msg.toString()}\`\`\``;
+            case 'undefined':
+                return '`undefined`';
+            default:
+                if (msg === null) {
+                    return '`null`';
+                }
+                try {
+                    return `\`\`\`json\n${JSON.stringify(msg)}\`\`\``;
+                } catch (e) {
+                    return '`[Circular?]`';
+                }
         }
     }
     /**

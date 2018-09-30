@@ -16,7 +16,7 @@ const util = require('./util.js');
 const REGEXES = {
     edit: /^\x0314\[\[\x0307([^\]]+)\x0314\]\]\x034 ([!NBM]*)\x0310 \x0302https?:\/\/([a-z0-9-.]+)\.(?:wikia|fandom)\.com\/(?:([a-z-]+)\/)?index\.php\?(\S+)\x03 \x035\*\x03 \x0303([^\x03]+)\x03 \x035\*\x03 \(\x02?(\+|-)(\d+)\x02?\) \x0310(.*)$/,
     log: /^\x0314\[\[\x0307[^:]+:Log\/([^\x03]+)\x0314\]\]\x034 ([^\x03]+)\x0310 \x0302https?:\/\/([a-z0-9-.]+)\.(?:wikia|fandom)\.com\/(?:([a-z-]+)\/)?wiki\/[^:]+:Log\/[^\x03]+\x03 \x035\*\x03 \x0303([^\x03]+)\x03 \x035\*\x03\s{2}\x0310(.*)$/
-}, AF_REGEX = /https?:\/\/[a-z0-9-.]+\.(?:wikia|fandom)\.com\/(?:[a-z-]+\/)?wiki\/[^:]+:AbuseFilter\/(\d+) \(https?:\/\/[a-z0-9-.]+\.(?:wikia|fandom)\.com\/(?:[a-z-]+\/)?wiki\/[^:]+:AbuseFilter\/history\/\d+\/diff\/prev\/(\d+)\)$/,
+}, AF_REGEX = /https?:\/\/[a-z0-9-.]+\.(?:wikia|fandom)\.com\/(?:[a-z-]+\/)?wiki\/[^:]+:[^/]+\/(\d+) \(https?:\/\/[a-z0-9-.]+\.(?:wikia|fandom)\.com\/(?:[a-z-]+\/)?wiki\/[^:]+:[^/]+\/history\/\d+\/diff\/prev\/(\d+)\)$/,
 BLOCK_FLAGS = [
     'angry-autoblock',
     'anononly',
@@ -37,12 +37,15 @@ BLOCK_FLAGS = [
     },
     delete: {
         delete: 'deletedarticle',
-        restore: 'undeletedarticle'
+        event: 'logentry-delete-event-legacy',
+        restore: 'undeletedarticle',
+        revision: 'logentry-delete-revision-legacy'
     },
     move: {
         move: '1movedto2',
         // eslint-disable-next-line
-        move_redir: '1movedto2_redir'
+        move_redir: '1movedto2_redir',
+        restore: '1movedto2'
     },
     patrol: {
         patrol: 'patrol-log-line'
@@ -52,6 +55,7 @@ BLOCK_FLAGS = [
         // eslint-disable-next-line
         move_prot: 'movedarticleprotection',
         protect: 'protectedarticle',
+        restore: 'protectedarticle',
         unprotect: 'unprotectedarticle'
     },
     rights: {
@@ -69,7 +73,7 @@ BLOCK_FLAGS = [
 }, NEWUSERS_REGEX = /^(.+) New user registration https?:\/\/([a-z0-9-.]+)\.(?:wikia|fandom)\.com\/(?:([a-z-]+)\/)?wiki\/Special:Log\/newusers$/,
 DISCUSSIONS_URL_REGEX = /^https?:\/\/([a-z0-9-.]+)\.(?:wikia|fandom)\.com\/(?:([a-z-]+)\/)?d\/p\/(\d{19,})(?:\/r\/(\d{19,}))?$/,
 DISCUSSIONS_TYPE_REGEX = /^discussion-(thread|post|report)$/,
-WIKIFEATURES_REGEX = /^wikifeatures\s?: set extension option: ([^=]+) = (true|false)$/;
+WIKIFEATURES_REGEX = /^wikifeatures\s?: set extension option\s?(?:：|:)\s?(\w+) = (true|false)$/;
 
 /**
  * Represents an RC message
@@ -317,6 +321,31 @@ class Message {
                 return ret;
             }
         }
+        return this._handleProtectSite();
+    }
+    /**
+     * ProtectSite sucks
+     * @returns {Array|null} Array of parsing results
+     * @private
+     */
+    _handleProtectSite() {
+        if (
+            this.log === 'protect' &&
+            this.action === 'protect' &&
+            this._summary.includes(':Allpages')
+        ) {
+            const arr = Message._messagecache['protectsite-log-suppressed'];
+            for (let i = 0, l = arr.length; i < l; ++i) {
+                const construct = `${arr[i]}; `,
+                      index = this._summary.indexOf(construct);
+                if (index !== -1) {
+                    return [
+                        'Special:AllPages',
+                        this._summary.slice(index + construct.length)
+                    ];
+                }
+            }
+        }
         return null;
     }
     /**
@@ -449,8 +478,17 @@ class Message {
      */
     _rights(res) {
         this.target = res.shift();
-        this.oldgroups = res.shift().split(',').map(s => s.trim());
-        this.newgroups = res.shift().split(',').map(s => s.trim());
+        const oldgroups = res.shift(),
+              newgroups = res.shift();
+        if (!oldgroups || !newgroups) {
+            console.log('No oldgroups/newgroups', this);
+        }
+        if (oldgroups) {
+            this.oldgroups = oldgroups.split(',').map(s => s.trim());
+        }
+        if (newgroups) {
+            this.newgroups = newgroups.split(',').map(s => s.trim());
+        }
         this.reason = res.shift();
     }
     /**

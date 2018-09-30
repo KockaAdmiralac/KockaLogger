@@ -65,6 +65,14 @@ class Filter {
         return message.type === 'discussions';
     }
     /**
+     * Filters out Discussions messages
+     * @param {Message} message Message to be transported
+     * @returns {Boolean} If the message is from Discussions
+     */
+    _noDiscussions(message) {
+        return message.type !== 'discussions';
+    }
+    /**
      * Filters Discussions messages but without replies unless they aren't
      * created or edited
      * @param {Message} message Message to be transported
