@@ -37,7 +37,7 @@ const MAPPING = {
      */
     '1movedto2': e => `^${colorLink(util.escapeRegex(e))
         .replace('\\$1', '([^\x03]+)')
-        .replace('\\$2', '([^\\]]+)')
+        .replace('\\$2', '([^\\]\x03]+)')
     }(?:${REASON})?$`,
     /**
      * Transforms the replacement autosummary
@@ -71,7 +71,10 @@ const MAPPING = {
      * @returns {String} Regex'd log entry
      */
     'chat-chatbanadd-log-entry': e => `^${colorLink(util.escapeRegex(e))
-        .replace('\\$1', '\\[\\[(?:\x0302)?[^:]+:([^\x03]+)(?:\x0310)?\\]\\]')
+        .replace(
+            '\\$1',
+            '\\[\\[(?:\x0302)?[^:]+:([^\\]\x03]+)(?:\x0310)?\\]\\]'
+        )
         .replace('\\$2', '([^:]*)')
         .replace('\\$3', '(.*)')
     }${REASON}$`,
@@ -81,7 +84,10 @@ const MAPPING = {
      * @returns {String} Regex'd log entry
      */
     'chat-chatbanremove-log-entry': e => `^${colorLink(util.escapeRegex(e))
-        .replace('\\$1', '\\[\\[(?:\x0302)?[^:]+:([^\\]]+)(?:\x0310)?\\]\\]')
+        .replace(
+            '\\$1',
+            '\\[\\[(?:\x0302)?[^:]+:([^\\]\x03]+)(?:\x0310)?\\]\\]'
+        )
     }${REASON}$`,
     /**
      * Transforms the delete log entry
@@ -109,7 +115,7 @@ const MAPPING = {
     'movedarticleprotection': e => `^${util.escapeRegex(e)
         .replace(
             '\\[\\[\\$1\\]\\]',
-            '\\[\\[(?:\x0302)?([^\\]]+)(?:\x0310)?\\]\\]'
+            '\\[\\[(?:\x0302)?([^\\]\x03]+)(?:\x0310)?\\]\\]'
         )
         .replace('\\$2', '([^\x03]+)')
     }(?:${REASON})?$`,
@@ -120,7 +126,7 @@ const MAPPING = {
      */
     'patrol-log-line': e => `^${colorLink(util.escapeRegex(e))
         .replace('\\$1', '(\\d+)')
-        .replace('\\$2', '\\[\\[(?:\x0302)?([^\\]]+)(?:\x0310)?\\]\\]')
+        .replace('\\$2', '\\[\\[(?:\x0302)?([^\\]\x03]+)(?:\x0310)?\\]\\]')
         .replace('\\$3', '')
     }$`,
     /**
@@ -165,7 +171,7 @@ const MAPPING = {
      */
     'uploadedimage': e => `^${util.escapeRegex(e).replace(
         /(?:\\\[\\\[)?\\\$1(?:\\\]\\\])?/,
-        '(?:\\[\\[)?(?:\x0302)?[^:]+:([^\\]]+)(?:\x0310)?(?:\\]\\])?'
+        '(?:\\[\\[)?(?:\x0302)?[^:]+:([^\\]\x03]+)(?:\x0310)?(?:\\]\\])?'
     )}(?:${REASON})?$`
 };
 MAPPING['reblock-logentry'] = MAPPING.blocklogentry;

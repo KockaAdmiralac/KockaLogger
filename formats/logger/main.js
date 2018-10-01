@@ -213,7 +213,7 @@ class Logger extends Format {
                     m.user,
                     util.escape(m.page),
                     m.target,
-                    m.reason
+                    (m.reason || '')
                         .replace('[[\x0302', '[[')
                         .replace('\x0310]]', ']]')
                 );
@@ -436,9 +436,23 @@ class Logger extends Format {
      */
     _link(text, wiki, lang, url) {
         if (this._transportType === 'Slack') {
-            return `<${util.url(wiki, lang)}/${url.replace(/\|/g, '%7C')}|${util.escape(text)}>`;
+            // Slack link: <link|text>
+            return `<${
+                util.url(wiki, lang)
+            }/${
+                url.replace(/\|/g, '%7C')
+            }|${
+                util.escape(text).replace(/<|>/g, '')
+            }>`;
         }
-        return `[${util.escape(text)}](<${util.url(wiki, lang)}/${url.replace(/\)/g, '%29')}>)`;
+        // Markdown link: [Text](Link)
+        return `[${
+            util.escape(text).replace(/\[|\]/g, '')
+        }](<${
+            util.url(wiki, lang)
+        }/${
+            url.replace(/\)/g, '%29')
+        }>)`;
     }
     /**
      * Makes a Markdown link to a wiki page

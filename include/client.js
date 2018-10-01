@@ -144,15 +144,19 @@ class Client {
      * @param {String} user User sending the message
      * @param {String} channel Channel the message was sent to
      * @param {String} message Message contents
+     * @param {Object} debug IRC message object
      */
-    _message(user, channel, message) {
+    _message(user, channel, message, debug) {
+        if (!message) {
+            this._logger.error('IRC message is null', debug);
+            return;
+        }
         for (const i in this._config.client.channels) {
             if (
                 user.startsWith(this._config.client.users[i]) &&
                 channel === this._config.client.channels[i]
             ) {
-                const oldOverflow = this._overflow,
-                      msg = this[`_${i}Message`](message);
+                const msg = this[`_${i}Message`](message);
                 if (msg && msg.type) {
                     this._dispatchMessage(msg);
                 } else if (msg && (i !== 'rc' || this._notFirstMessage)) {
@@ -163,7 +167,7 @@ class Client {
                 } else if (this._notFirstMessage) {
                     this._logger.error(
                         'PARSED MESSAGE IS NULL',
-                        channel, ':', oldOverflow, '(', msg,
+                        channel, ':', this._toParse, '(', msg,
                         'overflow:', this._overflow, ')'
                     );
                 }
@@ -180,7 +184,6 @@ class Client {
      * @param {String} message Message to handle
      * @returns {Message} Parsed message object
      * @todo Edge cases:
-     *  - this._overflow is a shared resource
      *  - Overflows can start with \x0314
      *  - Overflows may not come right after the message!
      */
@@ -188,11 +191,13 @@ class Client {
         let msg = null;
         if (message.startsWith('\x0314')) {
             if (this._overflow) {
+                this._toParse = this._overflow;
                 msg = new Message(this._overflow, 'rc');
             }
             this._overflow = message;
         } else {
-            msg = new Message(`${this._overflow}${message}`, 'rc');
+            this._toParse = `${this._overflow}${message}`;
+            msg = new Message(this._toParse, 'rc');
             this._overflow = '';
         }
         return msg;

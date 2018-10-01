@@ -58,7 +58,12 @@ class NewWikis extends Module {
                     !message.wiki.match(QA_REGEX)
                 ) {
                     this._transport.execute({
-                        content: `New wiki! [${util.escape(message.target)}](${util.url(message.wiki)})`
+                        content: `New wiki! [${
+                            util.escape(message.target)
+                                .replace(/\[|\]/g, '')
+                        }](${
+                            util.url(message.wiki)
+                        })`
                     });
                 }
             } else {

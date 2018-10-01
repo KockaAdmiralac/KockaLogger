@@ -15,8 +15,7 @@ const Format = require('../format.js'),
  * Constants
  */
 const COLOR = {
-    post: 0x0000FF,
-    reply: 0x00FF00,
+    post: 0x00FF00,
     report: 0xFF0000,
     thread: 0xFFFF00
 };
