@@ -1,18 +1,18 @@
 /**
  * main.js
  *
- * Module for the Discussions format
+ * Module for the Discussions format.
  */
 'use strict';
 
 /**
- * Importing modules
+ * Importing modules.
  */
 const Format = require('../format.js'),
       util = require('../../include/util.js');
 
 /**
- * Constants
+ * Constants.
  */
 const COLOR = {
     post: 0x00FF00,
@@ -21,12 +21,12 @@ const COLOR = {
 };
 
 /**
- * Main class
+ * Main class.
  * @augments Format
  */
 class DiscussionsFormat extends Format {
     /**
-     * Main class method
+     * Main class method.
      * @param {Message} msg Message to format
      * @returns {Object} Formatted embed
      */
@@ -41,9 +41,9 @@ class DiscussionsFormat extends Format {
             embeds: [
                 {
                     author: {
-                        // TODO: Change when HTTPS is released globally
+                        // TODO: Change when HTTPS is released globally.
                         name: `${msg.user} [${msg.wiki}]`,
-                        url: `${util.url(msg.wiki, msg.language)}/wiki/Special:Contribs/${util.encode(msg.user)}`
+                        url: `${util.url(msg.wiki, msg.language, msg.domain)}/wiki/Special:Contribs/${util.encode(msg.user)}`
                     },
                     color: COLOR[msg.dtype],
                     description: msg.snippet,

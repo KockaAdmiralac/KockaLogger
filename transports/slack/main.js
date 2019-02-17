@@ -1,27 +1,28 @@
 /**
  * main.js
  *
- * Main module for the Slack transport
+ * Main module for the Slack transport.
  */
 'use strict';
 
 /**
- * Importing modules
+ * Importing modules.
  */
 const Transport = require('../transport.js'),
-      io = require('../../include/io.js');
+      IO = require('../../include/io.js');
 
 /**
- * Constants
+ * Constants.
  */
 const PREFIX = 'https://hooks.slack.com/services/';
 
 /**
- * Slack transport class
+ * Slack transport class.
+ * @augments Transport
  */
 class Slack extends Transport {
     /**
-     * Class constructor
+     * Class constructor.
      * @param {Object} config Transport configuration
      */
     constructor(config) {
@@ -35,13 +36,14 @@ class Slack extends Transport {
             throw new Error('Invalid Slack transport configuration!');
         }
         this._url = url;
+        this._io = new IO();
     }
     /**
-     * Executes the transport
+     * Executes the transport.
      * @param {Object} message Formatted message to transport
      */
     execute(message) {
-        io.webhook(this._url, message).catch(function(e) {
+        this._io.webhook(this._url, message).catch(function(e) {
             this._logger.error('Slack transport error:', e);
         }.bind(this));
     }

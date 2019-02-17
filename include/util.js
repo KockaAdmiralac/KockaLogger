@@ -1,50 +1,55 @@
 /**
  * util.js
  *
- * Module for shared utilities through the project
+ * Module for shared utilities throughout the project.
  */
 'use strict';
 
 /**
- * Class for shared utilities through the project
+ * Class for shared utilities through the project.
  */
 class Util {
     /**
-     * Returns a FANDOM wiki URL
+     * Returns a Fandom wiki URL.
      * @param {String} wiki Subdomain of the wiki
      * @param {String} lang Language of the wiki
+     * @param {String} domain Domain of the wiki
      * @returns {String} URL to the requested wiki
      * @static
      */
-    static url(wiki, lang) {
-        const w = wiki || 'c',
-              prefix = `${w.includes('.') ? 'http' : 'https'}://${w}.wikia.com`;
-        if (!lang || lang === 'en') {
-            return prefix;
+    static url(wiki, lang, domain) {
+        if (lang && lang !== 'en') {
+            return `https://${wiki}.${domain}/${lang}`;
+        } else if (domain === 'wikia.com') {
+            if (wiki.includes('.')) {
+                return `http://${wiki}.wikia.com`;
+            }
+            return `https://${wiki}.wikia.com`;
         }
-        return `${prefix}/${lang}`;
+        return `https://${wiki}.${domain}`;
     }
     /**
-     * Makes Markdown safe to post through a webhook
+     * Makes Markdown safe to post through a webhook.
      * @param {String} text Markdown to escape
      * @returns {String} Escaped parameter
+     * @static
      */
     static escape(text) {
         return text
-            // Escape links
+            // Escape links.
             .replace(/http:\/\//g, 'http:/\u200B/')
             .replace(/https:\/\//g, 'https:/\u200B/')
-            // Escape mentions
+            // Escape mentions.
             .replace(/@/g, '@\u200B')
-            // Escape invite links
+            // Escape invite links.
             .replace(/discord\.gg/g, 'discord\u200B.\u200Bgg')
-            // Escapes certain Markdown constructions
+            // Escapes certain Markdown constructions.
             .replace(/_{1,2}([^_*]+)_{1,2}/g, '$1')
             .replace(/\*{1,2}([^_*]+)\*{1,2}/g, '$1')
             .replace(/\r?\n|\r/g, '');
     }
     /**
-     * Escapes a string from special regex characters
+     * Escapes a string from special regex characters.
      * @see https://stackoverflow.com/a/3561711
      * @param {String} text String to escape
      * @returns {String} String with special regex characters escaped
@@ -54,8 +59,8 @@ class Util {
         return text.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
     }
     /**
-     * Encodes URL components MediaWiki-style
-     * Based on mw.util.wikiUrlencode
+     * Encodes URL components MediaWiki-style.
+     * Based on mw.util.wikiUrlencode.
      * @param {String} url URL to encode
      * @returns {String} Encoded URL
      * @static
@@ -73,22 +78,23 @@ class Util {
             .replace(/%2F/g, '/');
     }
     /**
-     * Decodes HTML
-     * Reverse of mw.html.encode
+     * Decodes HTML.
+     * Reverse of mw.html.encode.
      * @param {String} html HTML to decode
      * @returns {String} Decoded HTML
      * @static
      */
     static decodeHTML(html) {
         return String(html)
-            .replace(/&#039;/g, '\'')
+            .replace(/&#0?39;/g, '\'')
+            .replace(/&#0?10;/g, ' ')
             .replace(/&quot;/g, '"')
             .replace(/&lt;/g, '<')
             .replace(/&gt;/g, '>')
             .replace(/&amp;/g, '&');
     }
     /**
-     * Capitalizes the first letter in a string
+     * Capitalizes the first letter in a string.
      * @param {String} str String to capitalize
      * @returns {String} String with the first letter capitalized
      * @static
@@ -97,7 +103,7 @@ class Util {
         return `${str.charAt(0).toUpperCase()}${str.substring(1)}`;
     }
     /**
-     * Checks if a string is an IP address
+     * Checks if a string is an IP address.
      * @param {String} str String to check
      * @returns {Boolean} If the supplied string is an IP address
      * @static
@@ -110,7 +116,7 @@ class Util {
                    const num = Number(v);
                    return num >= 0 && num < 256;
                }) ||
-               spl2.length === 6 &&
+               spl2.length === 8 &&
                spl2.every(function(v) {
                    if (v === '') {
                        return true;
@@ -120,7 +126,7 @@ class Util {
                });
     }
     /**
-     * Checks if a string is an IP range
+     * Checks if a string is an IP range.
      * @param {String} str String to check
      * @returns {Boolean} If the supplied string is an IP address/range
      * @static
@@ -130,10 +136,10 @@ class Util {
         if (spl.length !== 2 || !this.isIP(spl[0])) {
             return false;
         }
-        // See $wgBlockCIDRLimit configuration variable
+        // See $wgBlockCIDRLimit configuration variable.
         const cidrLimit = spl[0].includes(':') ? 19 : 16,
               range = Number(spl[1]);
-        return !isNaN(range) && range <= cidrLimit;
+        return !isNaN(range) && range >= cidrLimit;
     }
 }
 

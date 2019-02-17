@@ -1,29 +1,36 @@
 /**
  * main.js
  *
- * Main module for the vandalism module
+ * Main module for the possible vandalism detector.
  */
 'use strict';
 
 /**
- * Importing modules
+ * Importing modules.
  */
 const Module = require('../module.js'),
-      Cache = require('../../include/cache.js'),
       util = require('../../include/util.js'),
       Format = require('../../formats/logger/main.js'),
-      Discord = require('../../transports/discord/main.js');
+      Discord = require('../../transports/discord/main.js'),
+      Logger = require('../../include/log.js');
 
 /**
- * Main vandalism filter class
+ * Constants.
+ */
+const CACHE_EXPIRY = 3 * 60 * 60;
+
+/**
+ * Vandalism filter module.
+ * @augments Module
  */
 class Vandalism extends Module {
     /**
      * Class constructor
      * @param {Object} config Module configuration
+     * @param {Client} client Client instance
      */
-    constructor(config) {
-        super(config);
+    constructor(config, client) {
+        super(config, client);
         if (config.summaries instanceof Array) {
             this._summaries = config.summaries.map(s => new RegExp(s, 'i'));
         } else {
@@ -37,58 +44,70 @@ class Vandalism extends Module {
         transport.type = 'discord-vandalism';
         this._transport = new Discord(transport);
         this._format = new Format({}, this._transport);
-        this._cache = new Cache({
-            check: 60000,
-            debug: true,
-            // 3 hours vandalism cooldown
-            expiry: 3 * 60 * 60 * 1000,
+        this._logger = new Logger({
+            file: true,
             name: 'vandalism',
-            save: 60000
+            stdout: true
         });
-        this._cache.load();
     }
     /**
-     * Handles messages
-     * @param {Message} message Received message
+     * Determines whether the module is interested to receive the message
+     * and which set of properties does it expect to receive.
+     * @param {Message} message Message to check
+     * @returns {Boolean} Whether the module is interested in receiving
      */
-    execute(message) {
-        const key = `${message.user}:${message.language}:${message.wiki}`;
-        if (
-            // If it's not an edit
-            message.type !== 'edit' ||
-            // or the wiki is ignored
-            this._wikiwl.includes(message.wiki) ||
-            // or the user is already reported
-            this._cache.get(key) ||
-            // or vandalism conditions aren't satisfied:
-            !(
-                // Summary matching
+    interested(message) {
+        // Only return true if it's an edit,
+        return message.type === 'edit' &&
+            // the wiki isn't ignored
+            !this._wikiwl.includes(message.wiki) &&
+            // and vandalism conditions are satisfied:
+            (
+                // Summary matching.
                 this._summaries.some(s => s.test(message.summary)) ||
                 // Large removal/replacement/blanking by anons condition:
                 util.isIP(message.user) &&
                 (
-                    // Page was blanked
+                    // Page was blanked.
                     this._caches.i18n['autosumm-blank']
                         .includes(message.summary) ||
-                    // Page was replaced
+                    // Page was replaced.
                     this._caches.i18n['autosumm-replace']
                         .some(s => s.test(message.summary)) ||
-                    // Large removal of content
+                    // Large removal of content.
                     message.diff <= -this._removal
                 )
-            )
-        ) {
-            return;
-        }
-        this._cache.set(key, true);
-        const formatted = this._format.execute(message);
-        if (
-            typeof formatted === 'object' &&
-            typeof formatted.content === 'string'
-        ) {
-            formatted.content = `[${message.wiki}] ${formatted.content}`;
-            this._transport.execute(formatted);
-        }
+            );
+    }
+    /**
+     * Handles messages.
+     * @param {Message} message Received message
+     */
+    execute(message) {
+        const key = `vandalism:${message.user}:${message.language}:${message.wiki}:${message.domain}`;
+        this._cache.exists(key, function(error, exists) {
+            if (error) {
+                this._logger.error('Redis error:', error);
+            } else if (!exists) {
+                this._cache
+                    .batch()
+                    .setbit(key, 0, 1)
+                    .expire(key, CACHE_EXPIRY)
+                    .exec(this._redisCallback.bind(this));
+                const formatted = this._format.execute(message);
+                if (
+                    typeof formatted === 'object' &&
+                    typeof formatted.content === 'string'
+                ) {
+                    let wiki = `${message.wiki}.${message.domain}`;
+                    if (message.language && message.language !== 'en') {
+                        wiki = `${wiki}/${message.language}`;
+                    }
+                    formatted.content = `[${wiki}] ${formatted.content}`;
+                    this._transport.execute(formatted);
+                }
+            }
+        }.bind(this));
     }
 }
 

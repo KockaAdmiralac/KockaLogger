@@ -1,16 +1,16 @@
 /**
  * filter.js
  *
- * Module for filtering wiki activity
+ * Module for filtering wiki activity.
  */
 'use strict';
 
 /**
- * Class for filtering wiki activity
+ * Class for filtering wiki activity.
  */
 class Filter {
     /**
-     * Class constructor
+     * Class constructor.
      * @param {Object} config Filter configuration
      */
     constructor(config) {
@@ -36,7 +36,7 @@ class Filter {
         }
     }
     /**
-     * Filters a message
+     * Filters a message.
      * @param {Message} message Message to filter
      * @returns {String} The transport name for the message
      */
@@ -50,14 +50,14 @@ class Filter {
         }
     }
     /**
-     * Filters all messages
+     * Filters all messages.
      * @returns {Boolean} If the message should be transported
      */
     _all() {
         return true;
     }
     /**
-     * Filters Discussions messages
+     * Filters Discussions messages.
      * @param {Message} message Message to be transported
      * @returns {Boolean} If the message is from Discussions
      */
@@ -65,7 +65,7 @@ class Filter {
         return message.type === 'discussions';
     }
     /**
-     * Filters out Discussions messages
+     * Filters out Discussions messages.
      * @param {Message} message Message to be transported
      * @returns {Boolean} If the message is from Discussions
      */
@@ -74,7 +74,7 @@ class Filter {
     }
     /**
      * Filters Discussions messages but without replies unless they aren't
-     * created or edited
+     * created or edited.
      * @param {Message} message Message to be transported
      * @returns {Boolean} If the message is from Discussions
      */
@@ -87,7 +87,7 @@ class Filter {
                );
     }
     /**
-     * Filters activity in social namespaces (works only on English wikis)
+     * Filters activity in social namespaces (works only on English wikis).
      * @param {Message} message Message to be transported
      * @returns {Boolean} If the message is a comment or a thread
      */
@@ -99,7 +99,7 @@ class Filter {
             message.log === 'thread';
     }
     /**
-     * Filters activity in certain namespaces
+     * Filters activity in certain namespaces.
      * @param {Message} message Message to be transported
      * @returns {Boolean} If the message is in the specified namespace(s)
      */
@@ -109,7 +109,7 @@ class Filter {
                this._namespaceFilter.includes(message.namespace);
     }
     /**
-     * Filters activity by log type
+     * Filters activity by log type.
      * @param {Message} message Message to be transported
      * @returns {Boolean} If the message is a log of specified type
      */

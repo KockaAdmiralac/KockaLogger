@@ -29,10 +29,8 @@ class Transport {
      * Executes the transport
      * @param {Message} message Message to transport
      */
-    execute(message) {
-        if (message.type) {
-            throw new Error('Implement this method!');
-        }
+    execute() {
+        throw new Error('Implement this method!');
     }
 }
 

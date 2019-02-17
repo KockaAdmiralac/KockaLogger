@@ -1,23 +1,23 @@
 /**
  * messages.js
  *
- * Script for building message cache
+ * Script for building message cache.
  */
 'use strict';
 
 /**
- * Importing modules
+ * Importing modules.
  */
 const path = require('path'),
       fs = require('fs'),
       messages = require('./messages.json'),
       MAPPING = require('./map.js'),
-      io = require('../include/io.js'),
+      IO = require('../include/io.js'),
       util = require('../include/util.js'),
       Logger = require('../include/log.js');
 
 /**
- * Constants
+ * Constants.
  */
 const DEFAULT_CACHE_DIRECTORY = 'cache',
       THREADS = 10,
@@ -52,7 +52,7 @@ const DEFAULT_CACHE_DIRECTORY = 'cache',
  */
 class Loader {
     /**
-     * Class constructor
+     * Class constructor.
      * @param {Object} config KockaLogger configuration
      * @param {String} cache Loader cache directory
      * @param {Boolean} debug KockaLogger debug mode
@@ -75,9 +75,23 @@ class Loader {
             i18n2: this._loadCache('i18n2'),
             messagecache: this._loadCache('messagecache')
         };
+        this._io = new IO();
     }
     /**
-     * Runs the loading
+     * Serializes RegExp objects into plain strings.
+     * Used as a replacer function for JSON.stringify.
+     * @param {String} key Key of the current property
+     * @param {*} value Value of the current property
+     * @returns {*} Serialized RegExp or original value
+     */
+    _replacer(key, value) {
+        if (value instanceof RegExp) {
+            return value.toString().slice(1, -1);
+        }
+        return value;
+    }
+    /**
+     * Runs the loading.
      * @param {Function} callback Callback function after loading finishes
      * @param {*} context Context to bind the callback to
      */
@@ -87,7 +101,7 @@ class Loader {
             name: 'loader',
             stdout: true
         });
-        this._logger.info('KockaLogger started');
+        this._logger.info('KockaLogger started.');
         if (typeof callback === 'function') {
             this._callback = callback;
             this._context = context;
@@ -111,7 +125,7 @@ class Loader {
         }
     }
     /**
-     * Loads a JSON file
+     * Loads a JSON file.
      * @param {String} file File to load
      * @returns {Object|undefined} Loaded file
      * @private
@@ -124,7 +138,7 @@ class Loader {
         }
     }
     /**
-     * Loads a file from cache
+     * Loads a file from cache.
      * @param {String} file File to load
      * @returns {Object|undefined} Loaded file
      * @private
@@ -142,7 +156,7 @@ class Loader {
         return this._cache[file];
     }
     /**
-     * Saves a file to cache
+     * Saves a file to cache.
      * @param {String} file File to save to cache
      * @param {Object} object Object to save to cache
      * @returns {Promise} Promise for file saving
@@ -152,15 +166,15 @@ class Loader {
         const filename = file ? `_loader_${file}` : '_loader';
         return new Promise(function(resolve, reject) {
             if (!object) {
-                // Don't save if there's nothing to save
+                // Don't save if there's nothing to save.
                 resolve();
                 return;
             }
             fs.writeFile(
                 `${this._cacheDir}/${filename}.json`,
                 this._debug ?
-                    JSON.stringify(object, null, '    ') :
-                    JSON.stringify(object),
+                    JSON.stringify(object, this._replacer, '    ') :
+                    JSON.stringify(object, this._replacer),
                 function(err) {
                     if (err) {
                         reject(err);
@@ -172,7 +186,7 @@ class Loader {
         }.bind(this));
     }
     /**
-     * Fetches required system messages for all languages
+     * Fetches required system messages for all languages.
      * @private
      */
     _fetch() {
@@ -186,18 +200,18 @@ class Loader {
         );
     }
     /**
-     * Fetches all languages from the API
+     * Fetches all languages from the API.
      * @returns {Promise} Promise to listen on for response
      * @private
      */
     _fetchLanguages() {
-        return io.query('community', 'en', {
+        return this._io.query('community', 'en', 'fandom.com', {
             meta: 'siteinfo',
             siprop: 'languages'
         });
     }
     /**
-     * Callback after fetching languages from the API
+     * Callback after fetching languages from the API.
      * @param {Object} data MediaWiki API response
      * @private
      */
@@ -209,7 +223,7 @@ class Loader {
         }
     }
     /**
-     * Fetches messages for a specific language
+     * Fetches messages for a specific language.
      * @private
      */
     _fetchMessages() {
@@ -223,7 +237,7 @@ class Loader {
             return;
         }
         this._logger.debug('Fetching messages for', lang);
-        io.query('community', 'en', {
+        this._io.query('community', 'en', 'fandom.com', {
             amlang: lang,
             ammessages: messages.join('|'),
             amprop: 'default',
@@ -232,7 +246,7 @@ class Loader {
         .catch(this._errMessages.bind(this));
     }
     /**
-     * Callback after fetching messages
+     * Callback after fetching messages.
      * @param {Object} data MediaWiki API response
      * @private
      */
@@ -254,17 +268,17 @@ class Loader {
         this._fetchMessages();
     }
     /**
-     * Callback after fetching messages fails
+     * Callback after fetching messages fails.
      * @param {Error} e Fetching error
      * @private
      */
     _errMessages(e) {
         this._logger.error('Error while fetching messages', e);
-        // Continue anyways
+        // Continue anyways.
         this._fetchMessages();
     }
     /**
-     * Processes i18n messages
+     * Processes i18n messages.
      * @private
      */
     _process() {
@@ -282,7 +296,7 @@ class Loader {
     }
     /**
      * Processes {{GENDER:}} magic words in system messages and maps
-     * them using respective regular expressions
+     * them using respective regular expressions.
      * @param {String} i Key of the mapping message
      * @returns {Function} Mapping function
      * @private
@@ -306,7 +320,7 @@ class Loader {
         };
     }
     /**
-     * Processes custom messages
+     * Processes custom messages.
      * @param {Boolean} noFinish If _finish shouldn't be called
      * @private
      */
@@ -330,7 +344,7 @@ class Loader {
         }
     }
     /**
-     * Finishes a job
+     * Finishes a job.
      * @private
      */
     _finish() {
@@ -339,7 +353,7 @@ class Loader {
         }
     }
     /**
-     * Callback after everything has finished
+     * Callback after everything has finished.
      * @param {Boolean} noSave If caches should not be saved
      * @private
      */
@@ -368,19 +382,25 @@ class Loader {
         }
     }
     /**
-     * Processes messages into RegExp objects and calls client callback
+     * Processes messages into RegExp objects and calls client callback.
      * @private
      */
     _finalize() {
         this._logger.info('Exiting loader...');
         MESSAGES.forEach(function(msg) {
-            this._caches.i18n[msg] = this._caches.i18n[msg]
-                .map(m => new RegExp(m));
+            this._caches.i18n[msg] = this._caches.i18n[msg].map(function(m) {
+                if (m instanceof RegExp) {
+                    return m;
+                }
+                return new RegExp(m);
+            });
         }, this);
         for (const wiki in this._caches.i18n2) {
             const w = this._caches.i18n2[wiki];
             for (const msg in w) {
-                w[msg] = new RegExp(w[msg]);
+                if (!(w[msg] instanceof RegExp)) {
+                    w[msg] = new RegExp(w[msg]);
+                }
             }
         }
         if (this._doFetch || this._generate) {
@@ -391,18 +411,19 @@ class Loader {
         }
     }
     /**
-     * Updates custom messages and saves them to cache
+     * Updates custom messages and saves them to cache.
      * @param {String} wiki Wiki to update the custom messages for
      * @param {String} language Language of the wiki
+     * @param {String} domain Domain of the wiki
      * @param {Object} data Custom messages for the wiki
      * @param {Function} callback Callback function after the update
      * @todo DRY?
      */
-    updateCustom(wiki, language, data, callback) {
+    updateCustom(wiki, language, domain, data, callback) {
         if (!this._caches.custom) {
             this._caches.custom = {};
         }
-        this._caches.custom[`${language}:${wiki}`] = data;
+        this._caches.custom[`${language}:${wiki}:${domain}`] = data;
         this._custom(true);
         (
             this._debug ?
@@ -411,18 +432,20 @@ class Loader {
                     this._saveCache('i18n2', this._caches.i18n2)
                 ]) :
                 this._saveCache('', this._caches)
-        ).then(this._createUpdateCustomCallback(wiki, language, callback))
-        .catch(e => this._logger.error('Error while saving custom cache', e));
+        ).then(
+            this._createUpdateCustomCallback(wiki, language, domain, callback)
+        ).catch(e => this._logger.error('Error while saving custom cache', e));
     }
     /**
-     * Callback after custom cache has been updated
+     * Callback after custom cache has been updated.
      * @param {String} wiki Wiki to update the custom messages for
      * @param {String} language Language of the wiki
+     * @param {String} domain Domain of the wiki
      * @param {Function} callback Callback function after the update
      * @returns {Function} Generated callback function
      * @private
      */
-    _createUpdateCustomCallback(wiki, language, callback) {
+    _createUpdateCustomCallback(wiki, language, domain, callback) {
         return function() {
             for (const w in this._caches.i18n2) {
                 for (const msg in this._caches.i18n2[w]) {
@@ -434,6 +457,7 @@ class Loader {
                 callback(
                     wiki,
                     language,
+                    domain,
                     this._caches.custom,
                     this._caches.i18n2
                 );

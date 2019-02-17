@@ -1,38 +1,40 @@
 /**
  * main.js
  *
- * Main module for the Discord transport
+ * Main module for the Discord transport.
  */
 'use strict';
 
 /**
- * Importing modules
+ * Importing modules.
  */
 const Transport = require('../transport.js'),
-      io = require('../../include/io.js');
+      IO = require('../../include/io.js');
 
 /**
- * Discord transport class
+ * Discord transport class.
+ * @augments Transport
  */
 class Discord extends Transport {
     /**
-     * Class constructor
+     * Class constructor.
      * @param {Object} config Transport configuration
      */
     constructor(config) {
         super(config);
         this._url = `https://discordapp.com/api/webhooks/${config.id}/${config.token}`;
         this._queue = [];
+        this._io = new IO();
     }
     /**
-     * Executes the transport
+     * Executes the transport.
      * @param {Object} message Formatted message to transport
      */
     execute(message) {
         if (this._ratelimit) {
             this._queue.push(message);
         } else {
-            io.webhook(this._url, message).catch(function(e) {
+            this._io.webhook(this._url, message).catch(function(e) {
                 if (e.statusCode === 429) {
                     this._ratelimit = true;
                     this._queue.push(message);
@@ -49,7 +51,7 @@ class Discord extends Transport {
         }
     }
     /**
-     * Executed after Discord's wait time finishes
+     * Executed after Discord's wait time finishes.
      * @private
      */
     _timeout() {
