@@ -1,27 +1,26 @@
 /**
  * main.js
  *
- * Main module for the newusers module
+ * Main module for the new user creation log and spam profile finder.
  */
 'use strict';
 
 /**
- * Importing modules
+ * Importing modules.
  */
-const Module = require('../module.js'),
+const redis = require('redis'),
+      Module = require('../module.js'),
       Logger = require('../../include/log.js'),
-      Cache = require('../../include/cache.js'),
-      io = require('../../include/io.js'),
       util = require('../../include/util.js'),
       Discord = require('../../transports/discord/main.js'),
       mysql = require('mysql2/promise');
 
 /**
- * Constants
+ * Constants.
  */
-const QUERY = 'INSERT INTO `newusers` (`name`, `wiki`, `language`) ' +
-              'VALUES(?, ?, ?)',
-/* eslint-disable */
+const QUERY = 'INSERT INTO `newusers` (`name`, `wiki`, `language`, `domain`) ' +
+              'VALUES(?, ?, ?, ?)',
+/* eslint-disable camelcase, sort-keys */
 PROPERTY_MAP = {
     website: 'Website',
     name: 'aka',
@@ -31,28 +30,33 @@ PROPERTY_MAP = {
     fbPage: 'Facebook',
     twitter: 'Twitter',
     bio: 'Bio'
-}, /* eslint-enable */ PREFIXES = {
+},
+/* eslint-enable */
+PREFIXES = {
     fbPage: 'https://facebook.com/',
     twitter: 'https://twitter.com/'
-};
+},
+CACHE_EXPIRY = 30 * 60;
 
 /**
- * New users module class
+ * Module for recording account creations and reporting possible profile spam.
+ * @augments Module
  */
 class NewUsers extends Module {
     /**
-     * Class constructor
+     * Class constructor.
      * @param {Object} config Module configuration
+     * @param {Client} client Client instance
      */
-    constructor(config) {
-        super(config);
+    constructor(config, client) {
+        super(config, client);
         this._initLogger();
         this._initDB(config.db);
-        this._initCache();
+        this._initSubscriber();
         this._initTransport(config.transport);
     }
     /**
-     * Sets up a logger
+     * Sets up a logger.
      * @private
      */
     _initLogger() {
@@ -63,7 +67,7 @@ class NewUsers extends Module {
         });
     }
     /**
-     * Initializes the database connection
+     * Initializes the database connection.
      * @param {Object} config Database configuration
      * @private
      */
@@ -78,64 +82,111 @@ class NewUsers extends Module {
         });
     }
     /**
-     * Initializes cache
+     * Initializes a new Redis client used for subscribing to key expiry.
      * @private
      */
-    _initCache() {
-        this._cache = new Cache({
-            check: 60000,
-            expiry: 30 * 60 * 1000,
-            name: 'profiles',
-            pop: this._pop.bind(this),
-            save: 60000
-        });
-        this._cache.load();
+    _initSubscriber() {
+        this._subscriber = redis.createClient({
+            path: '/tmp/redis_kockalogger.sock'
+        })
+        .on('connect', this._redisConnected.bind(this))
+        .on('end', this._redisDisconnected.bind(this))
+        .on('error', this._redisError.bind(this))
+        .on('reconnecting', this._redisReconnecting.bind(this))
+        .on('message', this._redisMessage.bind(this));
+        this._subscriber.subscribe('__keyevent@0__:expired');
     }
     /**
-     * Initializes the Discord transport
+     * Event emitted when the Redis client connects.
+     * @private
+     */
+    _redisConnected() {
+        this._logger.info('Connected to Redis.');
+    }
+    /**
+     * Event emitted when the Redis client connects.
+     * @private
+     */
+    _redisDisconnected() {
+        this._logger.error('Disconnected from Redis.');
+    }
+    /**
+     * Event emitted when an error occurs with Redis.
+     * @param {Error} error Error that occurred
+     * @private
+     */
+    _redisError(error) {
+        if (error) {
+            if (error.code === 'ENOENT') {
+                this._logger.error('Redis not started up.');
+            } else {
+                this._logger.error('Redis error:', error);
+            }
+        }
+    }
+    /**
+     * Event emitted when Redis starts attempting to reconnect.
+     * @private
+     */
+    _redisReconnecting() {
+        this._logger.warn('Redis is reconnecting...');
+    }
+    /**
+     * Initializes the Discord transport.
      * @param {Object} config Transport configuration
      * @private
      */
     _initTransport(config) {
         if (typeof config !== 'object') {
-            throw new Error('Discord configuration invalid!');
+            throw new Error('Discord configuration is invalid!');
         }
         config.type = 'discord-newusers';
         this._transport = new Discord(config);
     }
     /**
-     * Handles messages
+     * Determines whether the module is interested to receive the message
+     * and which set of properties does it expect to receive.
+     * @param {Message} message Message to check
+     * @returns {Boolean} Whether the module is interested in receiving
+     */
+    interested(message) {
+        return message.type === 'log' && message.log === 'newusers';
+    }
+    /**
+     * Handles messages.
      * @param {Message} message Message to handle
      */
     execute(message) {
-        if (message.type === 'log' && message.log === 'newusers') {
-            this._insert(message.user, message.wiki, message.language);
-        }
-    }
-    /**
-     * Inserts a new user into the database and cache
-     * @param {String} user User to insert
-     * @param {String} wiki Wiki of account creation
-     * @param {String} language Language path of the wiki
-     * @private
-     */
-    _insert(user, wiki, language) {
         this._db.getConnection().then(function(db) {
-            db.execute(QUERY, [user, wiki, language]);
+            db.execute(QUERY, [
+                message.user,
+                message.wiki,
+                message.language,
+                message.domain
+            ]);
             db.release();
         }).catch(e => this._logger.error('Query error', e));
-        this._cache.set(user, [wiki, language]);
+        const key = `newusers:${message.user}:${message.wiki}:${message.language}:${message.domain}`;
+        this._cache
+            .batch()
+            .setbit(key, 0, 1)
+            .expire(key, CACHE_EXPIRY)
+            .exec(this._redisCallback.bind(this));
     }
     /**
-     * Gets called when an entry is removed from cache
-     * @param {String} key Key for the entry
-     * @param {String} value Value for the entry
+     * Callback after a key expires in Redis.
+     * @param {String} channel Subscription channel
+     * @param {String} message Message sent in the channel
      * @private
      */
-    _pop(key, [wiki, language]) {
-        io.query('community', 'en', {
+    _redisMessage(channel, message) {
+        const [type, user, wiki, language, domain] = message.split(':');
+        if (channel !== '__keyevent@0__:expired' || type !== 'newusers') {
+            return;
+        }
+        this._io.query('community', 'en', 'fandom.com', {
             list: 'users',
-            ususers: key
+            ususers: user
         }).then(function(result) {
             if (
                 typeof result === 'object' &&
@@ -144,23 +195,29 @@ class NewUsers extends Module {
                 typeof result.query.users[0] === 'object' &&
                 typeof result.query.users[0].userid === 'number'
             ) {
-                this._getInfo(result.query.users[0].userid, wiki, language);
-            } else if (!key.startsWith('QATest')) {
+                this._getInfo(
+                    result.query.users[0].userid,
+                    wiki,
+                    language,
+                    domain
+                );
+            } else if (!user.startsWith('QATest')) {
                 this._logger.error(
-                    'MediaWiki API failed to fetch user ID for',
-                    key, ':', result
+                    'Failed to fetch user ID for',
+                    user, ':', result
                 );
             }
         }.bind(this)).catch(e => this._logger.error('MediaWiki API error', e));
     }
     /**
-     * Gets profile information about a specified user
+     * Gets profile information about a specified user.
      * @param {Number} id User ID of the user
      * @param {String} wiki Wiki the user created their account on
      * @param {String} language Language path of the wiki
+     * @param {String} domain Domain of the wiki
      */
-    _getInfo(id, wiki, language) {
-        io.userInfo(id).then(function(json) {
+    _getInfo(id, wiki, language, domain) {
+        this._io.userInfo(id).then(function(json) {
             let data = null;
             try {
                 data = JSON.parse(json);
@@ -175,7 +232,7 @@ class NewUsers extends Module {
             ) {
                 const info = data.users[id];
                 if (info.website) {
-                    this._post(info, wiki, language);
+                    this._post(info, wiki, language, domain);
                 }
             } else {
                 this._logger.error(
@@ -186,18 +243,20 @@ class NewUsers extends Module {
         }.bind(this)).catch(e => this._logger.error('Service API error', e));
     }
     /**
-     * Posts profile information to a Discord channel
+     * Posts profile information to a Discord channel.
      * @param {Object} info User information
      * @param {String} wiki Wiki the user created their account on
      * @param {String} language Language path of the wiki
+     * @param {String} domain Domain of the wiki
      */
-    _post(info, wiki, language) {
+    _post(info, wiki, language, domain) {
         const message = {
             fields: [],
             title: info.username,
             url: `${util.url(
                 wiki === 'www' ? 'c' : wiki,
-                language
+                language,
+                domain
             )}/wiki/Special:Contribs/${util.encode(info.username)}`
         };
         if (info.avatar) {
@@ -216,14 +275,12 @@ class NewUsers extends Module {
                 });
             }
         }
-        message.fields.push({
-            inline: true,
-            name: 'Report',
-            value: `\`!report p ${
+        this._transport.execute({
+            content: `\`!report p ${
                 wiki === 'www' || wiki === 'community' ? 'c' : wiki
-            } ${info.username}\``
+            } ${info.username}\``,
+            embeds: [message]
         });
-        this._transport.execute({embeds: [message]});
     }
 }
 

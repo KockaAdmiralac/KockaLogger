@@ -1,29 +1,29 @@
 /**
  * main.js
  *
- * Logger format's main module
+ * Logger format's main module.
  */
 'use strict';
 
 /**
- * Importing modules
+ * Importing modules.
  */
 const Format = require('../format.js'),
       util = require('../../include/util.js'),
       Logging = require('../../include/log.js');
 
 /**
- * Constants
+ * Constants.
  */
 const ACM = /<ac(_|$)(m|$)(e|$)(t|$)(a|$)(d|$)(a|$)(t|$)(a|$)( |$)(t|$)(i|$)(t|$)(l|$)(e|$)(=|$)("|$).*"$/;
 
 /**
- * Logger format's class
+ * Logger format's class.
  * @augments Format
  */
 class Logger extends Format {
     /**
-     * Class constructor
+     * Class constructor.
      * @param {Object} config Format configuration
      * @param {Transport} transport Transport used for the format
      */
@@ -40,13 +40,21 @@ class Logger extends Format {
                 const i18n = require(`./i18n/${config.language}.json`);
                 this._i18n = Object.assign({}, this._i18n, i18n);
             } catch (e) {
-                this._logger.error('Loading i18n failed', e);
+                if (e.code === 'ENOENT') {
+                    this._logger.warn(
+                        'Translation for language',
+                        config.language,
+                        'does not exist!'
+                    );
+                } else {
+                    this._logger.error('Loading i18n failed:', e);
+                }
             }
         }
         this._transportType = this._transport.constructor.name;
     }
     /**
-     * Formats the RC message
+     * Formats the RC message.
      * @param {Message} message Message to format
      * @returns {Object} Formatted message
      */
@@ -67,7 +75,7 @@ class Logger extends Format {
         return null;
     }
     /**
-     * Handles edits
+     * Handles edits.
      * @param {Message} m Message to format
      * @returns {Object} Formatted message
      * @private
@@ -83,6 +91,7 @@ class Logger extends Format {
                 }`,
                 m.wiki,
                 m.language,
+                m.domain,
                 m.user,
                 m.threadid,
                 m.threadtitle,
@@ -97,6 +106,7 @@ class Logger extends Format {
                 'new',
                 m.wiki,
                 m.language,
+                m.domain,
                 m.user,
                 m.page,
                 m.diff,
@@ -107,6 +117,7 @@ class Logger extends Format {
             'edit',
             m.wiki,
             m.language,
+            m.domain,
             m.user,
             m.page,
             m.diff,
@@ -116,7 +127,7 @@ class Logger extends Format {
     }
     /* eslint-disable complexity */
     /**
-     * Handles logs
+     * Handles logs.
      * @param {Message} m Message to format
      * @returns {Object} Formatted message
      * @private
@@ -124,13 +135,15 @@ class Logger extends Format {
      */
     _handleLog(m) {
         const w = m.wiki,
-              l = m.language;
+              l = m.language,
+              d = m.domain;
         let temp = null, temp2 = null, temp3 = null;
         switch (m.log) {
             case 'thread':
                 temp = [
                     w,
                     l,
+                    d,
                     m.user,
                     m.threadid,
                     m.threadtitle,
@@ -157,6 +170,7 @@ class Logger extends Format {
                             m.action,
                             w,
                             l,
+                            d,
                             m.user,
                             m.target,
                             m.expiry,
@@ -168,6 +182,7 @@ class Logger extends Format {
                             'unblock',
                             w,
                             l,
+                            d,
                             m.user,
                             m.target,
                             m.reason
@@ -176,13 +191,20 @@ class Logger extends Format {
                         return '';
                 }
             case 'newusers':
-                return this._msg('newusers', w, l, m.user);
+                return this._msg('newusers', w, l, d, m.user);
             case 'useravatar':
                 switch (m.action) {
                     case 'avatar_chn':
-                        return this._msg('avatar', w, l, m.user);
+                        return this._msg('avatar', w, l, d, m.user);
                     case 'avatar_rem':
-                        return this._msg('remavatar', w, l, m.user, m.target);
+                        return this._msg(
+                            'remavatar',
+                            w,
+                            l,
+                            d,
+                            m.user,
+                            m.target
+                        );
                     default:
                         return '';
                 }
@@ -192,6 +214,7 @@ class Logger extends Format {
                         m.action === 'revision' ? 'revdel' : 'logdel',
                         w,
                         l,
+                        d,
                         m.user,
                         m.target,
                         m.reason
@@ -201,6 +224,7 @@ class Logger extends Format {
                     m.action,
                     w,
                     l,
+                    d,
                     m.user,
                     util.escape(m.page),
                     m.reason
@@ -210,6 +234,7 @@ class Logger extends Format {
                     m.action === 'move_redir' ? 'moveredir' : 'move',
                     w,
                     l,
+                    d,
                     m.user,
                     util.escape(m.page),
                     m.target,
@@ -235,6 +260,7 @@ class Logger extends Format {
                     'rights',
                     w,
                     l,
+                    d,
                     m.user,
                     m.target,
                     temp,
@@ -246,6 +272,7 @@ class Logger extends Format {
                     m.action === 'overwrite' ? 'reupload' : 'upload',
                     w,
                     l,
+                    d,
                     m.user,
                     `File:${m.file}`,
                     m.file,
@@ -257,6 +284,7 @@ class Logger extends Format {
                         'chatbanremove',
                         w,
                         l,
+                        d,
                         m.user,
                         m.target,
                         m.reason
@@ -266,6 +294,7 @@ class Logger extends Format {
                     m.action,
                     w,
                     l,
+                    d,
                     m.user,
                     m.target,
                     util.escape(m.length),
@@ -277,6 +306,7 @@ class Logger extends Format {
                         'unprotect',
                         w,
                         l,
+                        d,
                         m.user,
                         m.page,
                         m.reason
@@ -286,6 +316,7 @@ class Logger extends Format {
                         'moveprotect',
                         w,
                         l,
+                        d,
                         m.user,
                         m.page,
                         m.target,
@@ -296,6 +327,7 @@ class Logger extends Format {
                     m.action === 'modify' ? 'reprotect' : 'protect',
                     w,
                     l,
+                    d,
                     m.user,
                     m.page,
                     m.level
@@ -310,6 +342,7 @@ class Logger extends Format {
                     'wikifeatures',
                     w,
                     l,
+                    d,
                     m.user,
                     this._i18n[`feature-${m.value ? 'enable' : 'disable'}`],
                     this._i18n[`feature-${m.feature}`]
@@ -321,7 +354,7 @@ class Logger extends Format {
     }
     /* eslint-enable complexity */
     /**
-     * Handles Discussions
+     * Handles Discussions.
      * @param {Message} m Message to format
      * @returns {Object} Formatted message
      * @private
@@ -331,6 +364,7 @@ class Logger extends Format {
             'discussions',
             m.wiki,
             m.language,
+            m.domain,
             m.user,
             m.dtype === 'report' ?
                 this._i18n['discussions-create-report'] :
@@ -347,16 +381,17 @@ class Logger extends Format {
     }
     /* eslint-disable max-statements */
     /**
-     * Formats an RC message by type
+     * Formats an RC message by type.
      * @param {String} key I18n message key
      * @param {String} wiki Wiki where the message occurred
      * @param {String} lang Language of the wiki
+     * @param {String} domain Domain of the wiki
      * @param {Array} args Arguments for the message
      * @returns {Object} Formatted message
      * @todo Nested templates support
      * @todo Split this up somehow
      */
-    _msg(key, wiki, lang, ...args) {
+    _msg(key, wiki, lang, domain, ...args) {
         const string = this._i18n[key];
         if (!string) {
             return key ?
@@ -401,6 +436,7 @@ class Logger extends Format {
                     result = templates.pop() + this._template(
                         wiki,
                         lang,
+                        domain,
                         ...tArgs.splice(0)
                     );
                     char = '';
@@ -427,18 +463,19 @@ class Logger extends Format {
     }
     /* eslint-enable max-statements */
     /**
-     * Makes a Markdown link
+     * Makes a Markdown link.
      * @param {String} text Text in the link
      * @param {String} wiki Wiki for the link
      * @param {String} lang Language for the wiki
+     * @param {String} domain Domain of the wiki
      * @param {String} url URL in the link
      * @returns {String} Markdown link
      */
-    _link(text, wiki, lang, url) {
+    _link(text, wiki, lang, domain, url) {
         if (this._transportType === 'Slack') {
             // Slack link: <link|text>
             return `<${
-                util.url(wiki, lang)
+                util.url(wiki, lang, domain)
             }/${
                 url.replace(/\|/g, '%7C')
             }|${
@@ -449,32 +486,34 @@ class Logger extends Format {
         return `[${
             util.escape(text).replace(/\[|\]/g, '')
         }](<${
-            util.url(wiki, lang)
+            util.url(wiki, lang, domain)
         }/${
             url.replace(/\)/g, '%29')
         }>)`;
     }
     /**
-     * Makes a Markdown link to a wiki page
+     * Makes a Markdown link to a wiki page.
      * @param {String} text Text in the link
      * @param {String} wiki Wiki to link to
      * @param {String} lang Language of the wiki
+     * @param {String} domain Domain of the wiki
      * @param {String} page Page to link to
      * @returns {String} Markdown link
      * @todo Fix for new language paths
      */
-    _wikiLink(text, wiki, lang, page) {
-        return this._link(text, wiki, lang, `wiki/${util.encode(page)}`);
+    _wikiLink(text, wiki, lang, domain, page) {
+        return this._link(text, wiki, lang, domain, `wiki/${util.encode(page)}`);
     }
     /**
-     * Processes templates in i18n strings
+     * Processes templates in i18n strings.
      * @param {String} wiki Related wiki for linking
      * @param {String} lang Language of the wiki for linking
+     * @param {String} domain Domain of the wiki
      * @param {String} type Template type
      * @param {Array<String>} args Template arguments
      * @returns {String} Processed template
      */
-    _template(wiki, lang, type, ...args) {
+    _template(wiki, lang, domain, type, ...args) {
         let temp = null, temp1 = null;
         switch (type) {
             case 'user':
@@ -487,16 +526,24 @@ class Logger extends Format {
                         args[0],
                         wiki,
                         lang,
+                        domain,
                         `Special:Contribs/${args[0]}`
                     );
                 }
                 return `${
-                    this._wikiLink(args[0], wiki, lang, `User:${args[0]}`)
+                    this._wikiLink(
+                        args[0],
+                        wiki,
+                        lang,
+                        domain,
+                        `User:${args[0]}`
+                    )
                 } (${
                     this._wikiLink(
                         this._i18n.talk,
                         wiki,
                         lang,
+                        domain,
                         `User talk:${args[0]}`
                     )
                 }|${
@@ -504,13 +551,26 @@ class Logger extends Format {
                         this._i18n.contribs,
                         wiki,
                         lang,
+                        domain,
                         `Special:Contribs/${args[0]}`
                     )
                 })`;
             case 'link':
-                return this._wikiLink(args[1] || args[0], wiki, lang, args[0]);
+                return this._wikiLink(
+                    args[1] || args[0],
+                    wiki,
+                    lang,
+                    domain,
+                    args[0]
+                );
             case 'diff':
-                return `(${this._link(this._i18n.diff, wiki, lang, `?diff=${args[0]}`)})`;
+                return `(${this._link(
+                    this._i18n.diff,
+                    wiki,
+                    lang,
+                    domain,
+                    `?diff=${args[0]}`
+                )})`;
             case 'diffSize':
                 if (this._transportType === 'Slack') {
                     temp = args[0] > 500 || args[0] < -500 ? '*' : '_';
@@ -529,9 +589,10 @@ class Logger extends Format {
                     `(${temp1}${util.escape(temp.replace(/(?:\n|\r|\s)+/g, ' '))}${temp1})`;
             case 'board':
                 return this._wikiLink(
-                    this._msg(`board-${args[0]}`, wiki, lang, args[1]),
+                    this._msg(`board-${args[0]}`, wiki, lang, domain, args[1]),
                     wiki,
                     lang,
+                    domain,
                     `${Number(args[0]) === 1201 ?
                         'Message Wall' :
                         'Board'}:${args[1]}`
@@ -541,6 +602,7 @@ class Logger extends Format {
                     args[0] || this._i18n['discussions-reply'],
                     wiki,
                     lang,
+                    domain,
                     `d/p/${args[2] ? `${args[1]}/r/${args[2]}` : args[1]}`
                 );
             case 'flags':

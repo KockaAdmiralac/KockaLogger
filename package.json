@@ -1,14 +1,14 @@
 {
     "name": "kocka-logger",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "The time has come.",
     "keywords": [
         "wikia",
-        "FANDOM",
+        "Fandom",
         "countervandalism",
         "logger"
     ],
-    "license": "GPLv3",
+    "license": "GPL-3.0-or-later",
     "author": {
         "name": "KockaAdmiralac",
         "email": "1405223@gmail.com",
@@ -24,10 +24,11 @@
         "url": "https://github.com/KockaAdmiralac/KockaLogger.git"
     },
     "dependencies": {
-        "irc": ">=0.5.2",
-        "eslint": ">=5.0.0",
-        "request": ">=2.87.0",
-        "request-promise-native": ">=1.0.5",
-        "mysql2": ">=1.6.1"
+        "eslint": ">=5.14.0",
+        "irc-upd": ">=0.10.0",
+        "mysql2": ">=1.5.3",
+        "redis": ">=2.8.0",
+        "request": ">=2.88.0",
+        "request-promise-native": ">=1.0.5"
     }
 }

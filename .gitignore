@@ -1,4 +1,5 @@
-config.json
-node_modules
 cache/*.json
+cache/redis.rdb
+config.json
 logs/*.log
+node_modules

@@ -22,10 +22,8 @@ class Format {
      * Formats the RC message
      * @param {Message} message Message to be transported
      */
-    execute(message) {
-        if (message.type) {
-            throw new Error('Implement this method!');
-        }
+    execute() {
+        throw new Error('Implement this method!');
     }
 }
 

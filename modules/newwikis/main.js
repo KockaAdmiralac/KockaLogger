@@ -1,75 +1,69 @@
 /**
  * main.js
  *
- * Main module for the logger module
+ * Main module for the new wikis transport.
  */
 'use strict';
 
 /**
- * Importing modules
+ * Importing modules.
  */
 const Module = require('../module.js'),
-      Logger = require('../../include/log.js'),
-      util = require('../../include/util.js');
+      util = require('../../include/util.js'),
+      Discord = require('../../transports/discord/main.js');
 
 /**
- * Importing modules
- */
-const Discord = require('../../transports/discord/main.js');
-
-/**
- * Constants
+ * Constants.
  */
 const QA_REGEX = /^([a-z-]*\.)?qatestwiki\d+$/;
 
 /**
- * Main logger class
+ * New wiki transport module.
+ * @augments Module
  */
 class NewWikis extends Module {
     /**
-     * Class constructor
+     * Class constructor.
      * @param {Object} config Module configuration
+     * @param {Client} client Client instance
      */
-    constructor(config) {
-        super(config);
-        this._logger = new Logger({
-            file: true,
-            name: 'newwikis',
-            stdout: true
-        });
+    constructor(config, client) {
+        super(config, client);
         config.type = 'discord-newwikis';
         this._transport = new Discord(config);
     }
     /**
-     * Handles messages
+     * Determines whether the module is interested to receive the message
+     * and which set of properties does it expect to receive.
+     * @param {Message} message Message to check
+     * @returns {Boolean} Whether the module is interested in receiving
+     */
+    interested(message) {
+        return message.user === 'FANDOM' &&
+               message.type === 'log' &&
+               message.log === 'move' &&
+               message.action === 'move' &&
+               message.reason === 'SEO' &&
+               this._caches.i18n.mainpage.includes(message.page) &&
+               !message.wiki.match(QA_REGEX);
+    }
+    /**
+     * Handles messages.
      * @param {Message} message Received message
      */
     execute(message) {
-        if (
-            message.user === 'FANDOM' &&
-            message.type === 'log' &&
-            message.log === 'move' &&
-            message.action === 'move'
-        ) {
-            if (message.parse()) {
-                if (
-                    message.reason === 'SEO' &&
-                    this._caches.i18n.mainpage.includes(message.page) &&
-                    !message.wiki.match(QA_REGEX)
-                ) {
-                    this._transport.execute({
-                        content: `New wiki! [${
-                            util.escape(message.target)
-                                .replace(/\[|\]/g, '')
-                        }](${
-                            util.url(message.wiki)
-                        })`
-                    });
-                }
-            } else {
-                this._logger.error('Cannot parse', message);
-            }
-        }
+        this._transport.execute({
+            content: `New wiki! [${
+                util.escape(message.target)
+                    .replace(/\[|\]/g, '')
+            }](<${
+                util.url(
+                    message.wiki,
+                    message.language,
+                    message.domain
+                )
+            }>)`
+        });
     }
 }
 

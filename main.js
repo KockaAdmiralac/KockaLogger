@@ -1,12 +1,12 @@
 /**
  * main.js
  *
- * CLI entry point of KockaLogger
+ * CLI entry point of KockaLogger.
  */
 'use strict';
 
 /**
- * Importing modules
+ * Importing modules.
  */
 const Client = require('./include/client.js'),
       Loader = require('./messages/main.js');
@@ -17,7 +17,7 @@ const Client = require('./include/client.js'),
 const optionCache = {};
 
 /**
- * Checks whether an option is in executable arguments
+ * Checks whether an option is in executable arguments.
  * @param {String} opt Option to check
  * @returns {Boolean} Whether the specified option is in arguments
  */
@@ -31,7 +31,7 @@ function option(opt) {
 }
 
 /**
- * Load the configuration
+ * Load the configuration.
  */
 let config = {};
 try {
@@ -45,7 +45,7 @@ try {
 }
 
 /**
- * Initialize client and loader
+ * Initialize client and loader.
  */
 const loader = new Loader(config, {
     debug: option('debug'),
@@ -56,6 +56,6 @@ const loader = new Loader(config, {
 }, loader);
 
 /**
- * Load system messages and run the client
+ * Load system messages and run the client.
  */
 loader.run(client.run, client);

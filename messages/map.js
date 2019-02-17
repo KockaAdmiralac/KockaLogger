@@ -136,7 +136,7 @@ const MAPPING = {
      */
     'protectedarticle': e => `^${colorLink(util.escapeRegex(e))
         .replace('\\$1', '([^\x03]+)')
-    }((?: (?:\\u200E|\\u200F)\\[(?:edit|move|upload|create)=(?:loggedin|autoconfirmed|sysop)\\] \\([^\\u200E\\u200F]+\\)){1,3})(?:${REASON})?$`,
+    }((?: (?:\\u200E|\\u200F)\\[(?:edit|move|upload|create|everything)=\\w+\\] \\([^\\u200E\\u200F]+\\)){1,3})(?:${REASON})?$`,
     /**
      * Transforms the rights log entry
      * @param {String} e Log entry

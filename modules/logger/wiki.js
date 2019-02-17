@@ -1,27 +1,34 @@
 /**
  * wiki.js
  *
- * Module for wiki data handling
+ * Module for wiki data handling.
  */
 'use strict';
 
 /**
- * Importing modules
+ * Importing modules.
  */
 const Logger = require('../../include/log.js'),
       Filter = require('./filter.js');
 
 /**
- * Constants
+ * Constants.
  */
-const DEFAULT_BOTS = ['FANDOM', 'FANDOMbot'];
+const DEFAULT_BOTS = [
+    'Fandom',
+    'FandomBot',
+    'FANDOM',
+    'FANDOMbot',
+    'Wikia',
+    'WikiaBot'
+];
 
 /**
- * Wiki data
+ * Container for wiki data.
  */
 class Wiki {
     /**
-     * Class constructor
+     * Class constructor.
      * @param {Object} config Wiki configuration
      */
     constructor(config) {
@@ -35,13 +42,14 @@ class Wiki {
             return;
         }
         this._name = config.wiki;
+        this._domain = config.domain || 'fandom.com';
         this._bots = config.bots instanceof Array ?
             config.bots :
             DEFAULT_BOTS;
         this._language = typeof config.language === 'string' ?
             config.language :
             'en';
-        this._key = `${this._language}.${config.wiki}`;
+        this._key = `${this._language}.${this._name}.${this._domain}`;
         this._initFilters(config.filters);
         if (!this._initTransports(config.transports, config.transport)) {
             return;
@@ -50,7 +58,7 @@ class Wiki {
         this._initialized = true;
     }
     /**
-     * Initializes filters
+     * Initializes filters.
      * @param {Array<Object>} filters Filters to initialize
      * @private
      */
@@ -62,7 +70,7 @@ class Wiki {
         }
     }
     /**
-     * Initializes transports
+     * Initializes transports.
      * @param {Object} transports Transports to initialize
      * @param {Object} transport Single transport to initialize
      * @returns {Boolean} Whether transports managed to initialize
@@ -82,7 +90,7 @@ class Wiki {
         return true;
     }
     /**
-     * Initializes a single transport
+     * Initializes a single transport.
      * @param {Object} config Transport configuration
      * @returns {Transport|undefined} Initialized transport on success
      * @private
@@ -97,7 +105,7 @@ class Wiki {
         }
     }
     /**
-     * Initializes formats
+     * Initializes formats.
      * @param {Object} formats Formats to initialize
      * @param {Object} format Single format to initialize
      * @private
@@ -125,7 +133,7 @@ class Wiki {
         }
     }
     /**
-     * Initializes a single format
+     * Initializes a single format,
      * @param {Object} config Format configuration
      * @param {Transport} transport Transport the format is for
      * @returns {Format|undefined} Initialized format or nothing on failure
@@ -144,7 +152,7 @@ class Wiki {
         }
     }
     /**
-     * Sets data from MediaWiki API response
+     * Sets data from MediaWiki API response,
      * @param {Object} data MediaWiki API response
      * @todo Use the statistics somehow
      */
@@ -168,7 +176,7 @@ class Wiki {
         this._statistics = data.statistics;
     }
     /**
-     * Gets namespace ID by its name
+     * Gets namespace ID by its name.
      * @param {String} name Namespace name
      * @returns {Number} Namespace ID
      */
@@ -176,7 +184,7 @@ class Wiki {
         return this._namespaces[name];
     }
     /**
-     * Gets namespace local name by its ID
+     * Gets namespace local name by its ID.
      * @param {Number} id Namespace ID
      * @returns {String} Namespace local name
      */
@@ -184,7 +192,7 @@ class Wiki {
         return this._namespaceNames[id];
     }
     /**
-     * Gets namespace canonical name by its ID
+     * Gets namespace canonical name by its ID.
      * @param {Number} id Namespace ID
      * @returns {String} Namespace canonical name
      */
@@ -192,7 +200,7 @@ class Wiki {
         return this._canonicalNamespaces[id];
     }
     /**
-     * Dispatches a message to the appropriate transport
+     * Dispatches a message to the appropriate transport.
      * @param {Message} message Message to dispatch
      */
     execute(message) {
@@ -219,7 +227,7 @@ class Wiki {
         }
     }
     /**
-     * Passes a message through filters
+     * Passes a message through filters.
      * @param {Message} message Message to filter
      * @returns {String} Transport to use, if the message should be transported
      */
@@ -236,7 +244,7 @@ class Wiki {
         }
     }
     /**
-     * Identifies the namespace an event happened in
+     * Identifies the namespace an event happened in.
      * @param {Message} message Message to identify
      */
     _identifyNamespace(message) {
@@ -251,35 +259,42 @@ class Wiki {
         }
     }
     /**
-     * Gets if the wiki's configuration was initialized
+     * Gets if the wiki's configuration was initialized.
      * @returns {Boolean} If the wiki's configuration was initialized
      */
     get initialized() {
         return this._initialized;
     }
     /**
-     * Gets wiki's subdomain
+     * Gets wiki's subdomain.
      * @returns {String} Wiki's subdomain
      */
     get name() {
         return this._name;
     }
     /**
-     * Gets a unique identifier for a wiki
+     * Gets the wiki's domain.
+     * @returns {String} Wiki's domain
+     */
+    get domain() {
+        return this._domain;
+    }
+    /**
+     * Gets a unique identifier for a wiki.
      * @returns {String} Wiki language concatenated with wiki domain
      */
     get key() {
         return this._key;
     }
     /**
-     * Gets the wiki's ID
+     * Gets the wiki's ID.
      * @returns {Number} Wiki's ID
      */
     get id() {
         return this._id;
     }
     /**
-     * Gets the wiki's name
+     * Gets the wiki's name.
      * @returns {String} Wiki's name
      */
     get sitename() {

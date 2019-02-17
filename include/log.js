@@ -1,19 +1,18 @@
 /**
  * log.js
  *
- * Provides a simple logging interface
+ * Provides a simple logging interface.
  */
 'use strict';
 
 /**
- * Importing modules
+ * Importing modules.
  */
 const fs = require('fs'),
-      path = require('path'),
-      io = require('./io.js');
+      path = require('path');
 
 /**
- * Constants
+ * Constants.
  */
 const LOG_LEVELS = ['debug', 'info', 'warn', 'error'],
       DEFAULT_LOG_LEVEL = 'debug',
@@ -21,11 +20,18 @@ const LOG_LEVELS = ['debug', 'info', 'warn', 'error'],
       DISCORD_ERROR = 'Discord transport error';
 
 /**
- * Simple logging interface
+ * Simple logging interface.
  */
 class Logger {
     /**
-     * Class constructor
+     * Class constructor.
+     * @param {String} name Logger's name
+     * @param {Boolean} stdout Whether logs should be logged to standard output
+     * @param {Boolean} file Whether logs should be logged to a file
+     * @param {Object} discord Configuration for logging to Discord
+     * @param {String} level Log level
+     * @param {String} dir Directory for logs
+     * @param {Boolean} debug Whether the logger itself should debug content
      */
     constructor({name, stdout, file, discord, level, dir, debug}) {
         if (typeof name !== 'string') {
@@ -51,19 +57,21 @@ class Logger {
         }
     }
     /**
-     * Sets up global logging configuration
+     * Sets up global logging configuration.
      * @param {String} level Logging level
      * @param {Boolean} debug Whether debug mode is enabled
+     * @param {IO} io HTTP client
      * @param {String} dir Logging directory
      * @static
      */
-    static setup({level, dir}, debug) {
+    static setup({level, dir}, debug, io) {
         this._level = LOG_LEVELS.indexOf(level || DEFAULT_LOG_LEVEL);
         this._dir = dir || DEFAULT_LOG_DIRECTORY;
         this._debug = debug;
+        this._io = io;
     }
     /**
-     * Formats a console color based on color number
+     * Formats a console color based on color number.
      * @param {Number} num Color number
      * @returns {String} Console color
      */
@@ -71,7 +79,7 @@ class Logger {
         return `\x1b[${num}m`;
     }
     /**
-     * Gets console color number for a log level
+     * Gets console color number for a log level.
      * @param {String} level Log level
      * @returns {Number} Console color of the log level
      * @private
@@ -91,7 +99,7 @@ class Logger {
         }
     }
     /**
-     * Pads a number to two digits in length
+     * Pads a number to two digits in length.
      * @param {Number} num Number to pad
      * @returns {String} Padded number
      * @private
@@ -100,7 +108,7 @@ class Logger {
         return String(num).padStart(2, 0);
     }
     /**
-     * Logs specified messages with the specified level
+     * Logs specified messages with the specified level.
      * @param {String} level Log level
      * @param {Array} messages Messages to log
      * @private
@@ -120,20 +128,20 @@ class Logger {
               logLevel = level.toUpperCase(),
               levelColor = this._color(this._colorLevel(logLevel));
         if (this._console) {
-            console.log(`${this._color(34)}[${this._name}]${this._color(2)}[${date} ${time}]${this._color(0)} ${levelColor}[${logLevel}]${this._color(0)}`, ...messages);
+            console[level](`${this._color(34)}[${this._name}]${this._color(2)}[${date} ${time}]${this._color(0)} ${levelColor}[${logLevel}]${this._color(0)}`, ...messages);
         }
         if (this._stream) {
             this._stream.write(`[${date} ${time}] [${logLevel}] ${str}\n`);
         }
         if (this._url && !dstr.startsWith(DISCORD_ERROR)) {
-            io.webhook(this._url, {
+            Logger._io.webhook(this._url, {
                 // CAUTION: May contain mentions
                 content: `**${logLevel}:** ${dstr}`
             }).catch(e => this.error(DISCORD_ERROR, e));
         }
     }
     /**
-     * Maps objects to how they should be represented in logfiles
+     * Maps objects to how they should be represented in logfiles.
      * @param {*} msg Message to map
      * @returns {String} String representation of the message
      */
@@ -158,7 +166,7 @@ class Logger {
         }
     }
     /**
-     * Maps objects to how they should be represented in Discord
+     * Maps objects to how they should be represented in Discord.
      * @param {*} msg Message to map
      * @returns {String} String representation of the message
      */
@@ -186,28 +194,28 @@ class Logger {
         }
     }
     /**
-     * Debugs specified messages
+     * Debugs specified messages.
      * @param {Array<String>} messages Messages to debug
      */
     debug(...messages) {
         this._log('debug', ...messages);
     }
     /**
-     * Outputs specified information
+     * Outputs specified information.
      * @param {Array<String>} messages Information to output
      */
     info(...messages) {
         this._log('info', ...messages);
     }
     /**
-     * Outputs specified warnings
+     * Outputs specified warnings.
      * @param {Array<String>} messages Warnings to output
      */
     warn(...messages) {
         this._log('warn', ...messages);
     }
     /**
-     * Outputs specified errors
+     * Outputs specified errors.
      * @param {Array<String>} messages Errors to output
      */
     error(...messages) {

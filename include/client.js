@@ -1,20 +1,21 @@
 /**
  * main.js
  *
- * Entry point of KockaLogger
+ * Main controller of KockaLogger components.
  */
 'use strict';
 
 /**
  * Importing modules
  */
-const irc = require('irc'),
-      Message = require('./msg.js'),
+const irc = require('irc-upd'),
+      redis = require('redis'),
+      IO = require('./io.js'),
       Logger = require('./log.js'),
-      Cache = require('./cache.js');
+      Parser = require('../parser/parser.js');
 
 /**
- * Constants
+ * Constants.
  */
 const EVENTS = [
     'registered',
@@ -24,11 +25,11 @@ const EVENTS = [
 ];
 
 /**
- * IRC client class
+ * IRC client class.
  */
 class Client {
     /**
-     * Class constructor
+     * Class constructor.
      * @param {Object} config KockaLogger configuration
      * @param {Boolean} debug KockaLogger debug mode
      * @param {Loader} loader Loader instance
@@ -37,25 +38,78 @@ class Client {
         this._config = config;
         this._debug = debug;
         this._loader = loader;
-        this._initLogger(config.logging || {});
-        Cache.setup(config.cache || {}, debug);
+        this._io = new IO();
+        this._fetching = {};
+        this._initLogger(config.logging || {}, config.client.discord);
+        this._initCache();
         this._initModules();
     }
     /**
-     * Initializes the debug/info/error logger
+     * Initializes the debug/info/error logger.
      * @param {Object} config Logging configuration
+     * @param {Object} discord Discord logging configuration
      * @private
      */
-    _initLogger(config) {
-        Logger.setup(config, this._debug);
+    _initLogger(config, discord) {
+        Logger.setup(config, this._debug, this._io);
         this._logger = new Logger({
+            discord,
             file: true,
             name: 'client',
             stdout: true
         });
     }
     /**
-     * Initializes KockaLogger modules
+     * Initializes a Redis client used for caching.
+     * @private
+     */
+    _initCache() {
+        this._cache = redis.createClient({
+            path: '/tmp/redis_kockalogger.sock'
+        })
+        .on('connect', this._redisConnected.bind(this))
+        .on('end', this._redisDisconnected.bind(this))
+        .on('error', this._redisError.bind(this))
+        .on('reconnecting', this._redisReconnecting.bind(this));
+    }
+    /**
+     * Event emitted when the Redis client connects.
+     * @private
+     */
+    _redisConnected() {
+        this._logger.info('Connected to Redis.');
+    }
+    /**
+     * Event emitted when the Redis client connects.
+     * @private
+     */
+    _redisDisconnected() {
+        this._logger.error('Disconnected from Redis.');
+    }
+    /**
+     * Event emitted when an error occurs with Redis.
+     * @param {Error} error Error that occurred
+     * @private
+     */
+    _redisError(error) {
+        if (error) {
+            if (error.code === 'ENOENT') {
+                this._logger.error('Redis not started up, exiting...');
+                process.exit();
+            } else {
+                this._logger.error('Redis error:', error);
+            }
+        }
+    }
+    /**
+     * Event emitted when Redis starts attempting to reconnect.
+     * @private
+     */
+    _redisReconnecting() {
+        this._logger.warn('Redis is reconnecting...');
+    }
+    /**
+     * Initializes KockaLogger modules.
      * @private
      */
     _initModules() {
@@ -79,11 +133,12 @@ class Client {
         }
     }
     /**
-     * Initializes the IRC client
+     * Initializes the IRC client.
      * @param {Object} data Loader data
      */
     run(data) {
-        Message.setup(data);
+        this._caches = data;
+        this._parser = new Parser(this, data);
         this._logger.info('Setting up modules...');
         for (const mod in this._modules) {
             this._modules[mod].setup(data);
@@ -106,7 +161,7 @@ class Client {
         }, this);
     }
     /**
-     * The client has joined the IRC server
+     * The client has joined the IRC server.
      * @private
      * @param {Object} command IRC command sent upon joining
      */
@@ -114,7 +169,7 @@ class Client {
         this._logger.info(command.args[1]);
     }
     /**
-     * The client has joined an IRC channel
+     * The client has joined an IRC channel.
      * @private
      * @param {String} channel Channel that was joined
      * @param {String} user User that joined the channel
@@ -131,7 +186,7 @@ class Client {
         }
     }
     /**
-     * An IRC error occurred
+     * An IRC error occurred.
      * @private
      * @param {Object} command IRC command sent upon error
      */
@@ -139,7 +194,7 @@ class Client {
         this._logger.error('IRC error', command);
     }
     /**
-     * An IRC message has been sent
+     * An IRC message has been sent.
      * @private
      * @param {String} user User sending the message
      * @param {String} channel Channel the message was sent to
@@ -157,29 +212,29 @@ class Client {
                 channel === this._config.client.channels[i]
             ) {
                 const msg = this[`_${i}Message`](message);
-                if (msg && msg.type) {
-                    this._dispatchMessage(msg);
-                } else if (msg && (i !== 'rc' || this._notFirstMessage)) {
+                if (msg && typeof msg === 'object') {
+                    if (msg.error) {
+                        this._dispatchError(msg);
+                    } else {
+                        this._dispatchMessage(msg);
+                    }
+                } else if (
+                    i === 'rc' && !this._overflow ||
+                    i === 'discussions' && !this._dOverflow ||
+                    i === 'newusers'
+                ) {
                     this._logger.error(
-                        'FAILED TO PARSE MESSAGE IN',
-                        channel, ':', msg.raw
-                    );
-                } else if (this._notFirstMessage) {
-                    this._logger.error(
-                        'PARSED MESSAGE IS NULL',
+                        'Parsed message is null |',
                         channel, ':', this._toParse, '(', msg,
                         'overflow:', this._overflow, ')'
                     );
-                }
-                if (i === 'rc') {
-                    this._notFirstMessage = true;
                 }
                 break;
             }
         }
     }
     /**
-     * Handles messages in the RC channel
+     * Handles messages in the RC channel.
      * @private
      * @param {String} message Message to handle
      * @returns {Message} Parsed message object
@@ -192,18 +247,18 @@ class Client {
         if (message.startsWith('\x0314')) {
             if (this._overflow) {
                 this._toParse = this._overflow;
-                msg = new Message(this._overflow, 'rc');
+                msg = this._parser.parse(this._overflow, 'rc');
             }
             this._overflow = message;
         } else {
             this._toParse = `${this._overflow}${message}`;
-            msg = new Message(this._toParse, 'rc');
+            msg = this._parser.parse(this._toParse, 'rc');
             this._overflow = '';
         }
         return msg;
     }
     /**
-     * Handles messages in the Discussions channel
+     * Handles messages in the Discussions channel.
      * @param {String} message Message to handle
      * @returns {Message} Parsed message object
      * @private
@@ -212,35 +267,48 @@ class Client {
         const start = message.startsWith('{'),
               end = message.endsWith('}');
         if (start && end) {
-            return new Message(message, 'discussions');
+            return this._parser.parse(message, 'discussions');
         } else if (start) {
             this._dOverflow = message;
         } else if (end && this._dOverflow) {
             const overflow = this._dOverflow;
             this._dOverflow = '';
-            return new Message(`${overflow}${end}`, 'discussions');
+            return this._parser.parse(`${overflow}${end}`, 'discussions');
         }
     }
     /**
-     * Handles messages in the new users channel
+     * Handles messages in the new users channel.
      * @param {String} message Message to handle
      * @returns {Message} Parsed message object
      * @private
      */
     _newusersMessage(message) {
         if (message.endsWith('newusers')) {
-            return new Message(message, 'newusers');
+            return this._parser.parse(message, 'newusers');
         }
+        this._logger.error('Newusers message overflowed?', message);
     }
     /**
-     * Dispatches the message to modules
+     * Dispatches the message to modules.
      * @param {Message} message Message to dispatch
      * @private
      */
     _dispatchMessage(message) {
+        const interested = [];
+        let properties = [];
         for (const mod in this._modules) {
             try {
-                this._modules[mod].execute(message);
+                const m = this._modules[mod],
+                      interest = m.interested(message);
+                if (interest === true) {
+                    m.execute(message);
+                } else if (typeof interest === 'string') {
+                    properties.push(interest);
+                    interested.push(mod);
+                } else if (interest instanceof Array) {
+                    properties = properties.concat(interest);
+                    interested.push(mod);
+                }
             } catch (e) {
                 this._logger.error(
                     'Dispatch error to module',
@@ -248,29 +316,120 @@ class Client {
                 );
             }
         }
+        if (properties.length > 0) {
+            message.fetch(this, properties).then(function() {
+                interested.forEach(function(mod) {
+                    try {
+                        this._modules[mod].execute(message);
+                    } catch (e) {
+                        this._logger.error(
+                            'Dispatch error to module',
+                            mod, ':', e
+                        );
+                    }
+                }, this);
+            }.bind(this)).catch(() => this._logger.error(
+                'Failed to fetch message information:',
+                message.toJSON()
+            ));
+        }
     }
     /**
-     * Updates custom messages
-     * @param {String} wiki Wiki to update the messages on
-     * @param {String} language Language of the wiki
-     * @param {Object} messages Map of customized messages
+     * Dispatches a message that failed to parse.
+     * @param {Message} message Message that failed to parse
+     * @private
      */
-    updateMessages(wiki, language, messages) {
-        this._logger.info('Updating messages for', wiki);
-        this._logger.debug(messages);
-        this._loader.updateCustom(
-            wiki,
-            language,
-            messages,
-            Message.update.bind(Message)
-        );
+    _dispatchError(message) {
+        if (message.type === 'error') {
+            this._logger.error(
+                'Message failed to parse (early stages)',
+                message.toJSON()
+            );
+            return;
+        }
+        const key = `${message.language}:${message.wiki}:${message.domain}`;
+        // NOTE: This only works while logged out due to amlang.
+        if (!this._fetching[key]) {
+            this._fetching[key] = message;
+            this._io.query(message.wiki, message.language, message.domain, {
+                amcustomized: 'modified',
+                ammessages: Object.keys(this._caches.i18n).join('|'),
+                amprop: 'default',
+                meta: 'allmessages'
+            }).then(
+                this._messageFetchCallback(
+                    message.wiki,
+                    message.language,
+                    message.domain
+                )
+            ).catch(
+                e => this._logger.error('Error while fetching messages', e)
+            );
+        }
     }
     /**
-     * Gets whether the debug mode is enabled
+     * Creates a callback function for handling message fetching responses
+     * @param {String} wiki Wiki to handle the responses from
+     * @param {String} language Language of the wiki
+     * @param {String} domain Domain of the wiki
+     * @returns {Function} Generated handler function
+     * @private
+     */
+    _messageFetchCallback(wiki, language, domain) {
+        return function(data) {
+            if (
+                typeof data !== 'object' ||
+                typeof data.query !== 'object' ||
+                !(data.query.allmessages instanceof Array)
+            ) {
+                this._logger.error('Unusual MediaWiki API response', data);
+                return;
+            }
+            const messages = {};
+            data.query.allmessages.forEach(function(msg) {
+                if (msg.default) {
+                    messages[msg.name] = msg['*'];
+                }
+            });
+            delete messages.mainpage;
+            if (Object.entries(messages).length) {
+                this._loader.updateCustom(
+                    wiki,
+                    language,
+                    domain,
+                    messages,
+                    this._parser.update.bind(this._parser)
+                );
+            } else {
+                const key = `${language}:${wiki}:${domain}`;
+                this._logger.error(
+                    'Message failed to parse',
+                    this._fetching[key].toJSON()
+                );
+                delete this._fetching[key];
+            }
+        }.bind(this);
+    }
+    /**
+     * Gets whether the debug mode is enabled.
      * @returns {Boolean} Whether the debug mode is enabled
      */
     get debug() {
         return this._debug;
+    }
+    /**
+     * Gets the Redis client.
+     * @returns {Redis} The Redis client shared among modules
+     */
+    get cache() {
+        return this._cache;
+    }
+    /**
+     * Gets the HTTP client.
+     * @returns {IO} The HTTP client shared among KockaLogger components
+     */
+    get io() {
+        return this._io;
     }
 }
 
