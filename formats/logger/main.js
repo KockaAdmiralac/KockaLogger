@@ -40,7 +40,7 @@ class Logger extends Format {
                 const i18n = require(`./i18n/${config.language}.json`);
                 this._i18n = Object.assign({}, this._i18n, i18n);
             } catch (e) {
-                if (e.code === 'ENOENT') {
+                if (e.code === 'MODULE_NOT_FOUND') {
                     this._logger.warn(
                         'Translation for language',
                         config.language,

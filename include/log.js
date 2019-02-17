@@ -137,7 +137,12 @@ class Logger {
             Logger._io.webhook(this._url, {
                 // CAUTION: May contain mentions
                 content: `**${logLevel}:** ${dstr}`
-            }).catch(e => this.error(DISCORD_ERROR, e));
+            }).catch(e => this.error(
+                DISCORD_ERROR,
+                e.statusCode === 429 ?
+                    '| Rate limited!' :
+                    e.error
+            ));
         }
     }
     /**
