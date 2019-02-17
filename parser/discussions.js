@@ -91,7 +91,7 @@ class DiscussionsMessage extends Message {
     _extractType(type) {
         const res = TYPE_REGEX.exec(type);
         if (res) {
-            this.type = res[1];
+            this.dtype = res[1];
         } else {
             this._error(
                 'discussionstype',
