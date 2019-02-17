@@ -166,7 +166,7 @@ class LogMessage extends RCMessage {
             if (res) {
                 const ret = Array(res.length - 1);
                 let max = 0;
-                originalClone[i].match(/\$(\d+)/g).forEach(function(m, j) {
+                originalClone[i].match(/(?<!GENDER:)\$(\d+)/g).forEach(function(m, j) {
                     const n = Number(m.substring(1));
                     if (n > max) {
                         max = n;

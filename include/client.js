@@ -393,7 +393,13 @@ class Client {
             });
             delete messages.mainpage;
             if (Object.entries(messages).length) {
-                this._updateMessages(wiki, language, domain, messages);
+                this._loader.updateCustom(
+                    wiki,
+                    language,
+                    domain,
+                    messages,
+                    this._parser.update.bind(this._parser)
+                );
             } else {
                 const key = `${language}:${wiki}:${domain}`;
                 this._logger.error(
@@ -403,23 +409,6 @@ class Client {
                 delete this._fetching[key];
             }
         }.bind(this);
-    }
-    /**
-     * Updates custom messages.
-     * @param {String} wiki Wiki to update the messages on
-     * @param {String} language Language of the wiki
-     * @param {String} domain Domain of the wiki
-     * @param {Object} messages Map of customized messages
-     * @private
-     */
-    _updateMessages(wiki, language, domain, messages) {
-        this._loader.updateCustom(
-            wiki,
-            language,
-            domain,
-            messages,
-            this._parser.update.bind(this._parser)
-        );
     }
     /**
      * Gets whether the debug mode is enabled.
