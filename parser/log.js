@@ -339,13 +339,15 @@ class LogMessage extends RCMessage {
      * @private
      */
     _rights(res) {
+        const regex = res.slice(0, 3);
         this.target = res.shift();
         const oldgroups = res.shift(),
               newgroups = res.shift();
         if (!oldgroups || !newgroups) {
             this._error(
                 'missinggroups',
-                'Groups missing from rights log entry.'
+                'Groups missing from rights log entry.',
+                {regex}
             );
         }
         if (oldgroups) {

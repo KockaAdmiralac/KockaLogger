@@ -47,9 +47,9 @@ class RCMessage extends Message {
     _getParentThread() {
         if (!this._cached.parentThread) {
             this._cached.parentThread = this.page
-                .split('/')
+                .split('/@comment-')
                 .slice(0, 2)
-                .join('/');
+                .join('/@comment-');
         }
         return this._cached.parentThread;
     }
