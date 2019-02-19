@@ -218,16 +218,6 @@ class Client {
                     } else {
                         this._dispatchMessage(msg);
                     }
-                } else if (
-                    i === 'rc' && !this._overflow ||
-                    i === 'discussions' && !this._dOverflow ||
-                    i === 'newusers'
-                ) {
-                    this._logger.error(
-                        'Parsed message is null |',
-                        channel, ':', this._toParse, '(', msg,
-                        'overflow:', this._overflow, ')'
-                    );
                 }
                 break;
             }
@@ -246,13 +236,20 @@ class Client {
         let msg = null;
         if (message.startsWith('\x0314')) {
             if (this._overflow) {
-                this._toParse = this._overflow;
                 msg = this._parser.parse(this._overflow, 'rc');
             }
             this._overflow = message;
         } else {
-            this._toParse = `${this._overflow}${message}`;
-            msg = this._parser.parse(this._toParse, 'rc');
+            const concat = `${this._overflow}${message}`;
+            if (concat.startsWith('\x0314')) {
+                msg = this._parser.parse(concat, 'rc');
+                if (
+                    msg.type === 'error' && msg.error === 'rcerror' ||
+                    msg.type === 'log' && msg.error === 'logparsefail'
+                ) {
+                    msg = this._parser.parse(`${this._overflow} ${message}`, 'rc');
+                }
+            }
             this._overflow = '';
         }
         return msg;

@@ -37,8 +37,9 @@ class IO {
         ) {
             return;
         }
-        options.format = 'json';
         options.action = 'query';
+        options.cb = Date.now();
+        options.format = 'json';
         return http({
             headers: {
                 'User-Agent': USER_AGENT
