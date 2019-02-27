@@ -402,7 +402,7 @@ class LogMessage extends RCMessage {
      */
     fetch(client, properties, interested) {
         const promise = super.fetch(client, properties, interested);
-        if (properties.includes('threadlog')) {
+        if (this._properties.includes('threadlog')) {
             this._client.io.query(
                 this.wiki,
                 this.language,

@@ -62,7 +62,7 @@ class EditMessage extends RCMessage {
      */
     fetch(client, properties, interested) {
         const promise = super.fetch(client, properties, interested);
-        if (properties.includes('pageinfo')) {
+        if (this._properties.includes('pageinfo')) {
             if (this.params.diff) {
                 client.cache.get(
                     this._getTitleKey(this.params.oldid),
