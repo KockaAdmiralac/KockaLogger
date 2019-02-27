@@ -22,7 +22,9 @@ const EVENTS = [
     'join',
     'error',
     'message'
-];
+],
+FETCH_MAX_RETRIES = 3,
+FETCH_DELAY = 10000;
 
 /**
  * IRC client class.
@@ -314,22 +316,54 @@ class Client {
             }
         }
         if (properties.length > 0) {
-            message.fetch(this, properties).then(function() {
-                interested.forEach(function(mod) {
-                    try {
-                        this._modules[mod].execute(message);
-                    } catch (e) {
-                        this._logger.error(
-                            'Dispatch error to module',
-                            mod, ':', e
-                        );
-                    }
-                }, this);
-            }.bind(this)).catch(() => this._logger.error(
-                'Failed to fetch message information:',
-                message.toJSON()
-            ));
+            message.fetch(this, properties, interested)
+                .then(this._generateMessageFetchCallback(message))
+                .catch(this._generateMessageFetchFail(message));
         }
+    }
+    /**
+     * Generates callback after fetching additional message information.
+     * @param {Message} message Message whose additional information is fetched
+     * @returns {Function} Callback after fetching message information
+     * @private
+     */
+    _generateMessageFetchCallback(message) {
+        return function() {
+            message.interested.forEach(function(mod) {
+                try {
+                    this._modules[mod].execute(message);
+                } catch (e) {
+                    this._logger.error(
+                        'Dispatch error to module',
+                        mod, ':', e
+                    );
+                }
+            }, this);
+        }.bind(this);
+    }
+    /**
+     * Generates callback after fetching additional message information failed.
+     * @param {Message} message Message whose additional information is fetched
+     * @returns {Function} Callback after failing to fetch message information
+     * @private
+     */
+    _generateMessageFetchFail(message) {
+        return function() {
+            if (message.retries === FETCH_MAX_RETRIES) {
+                this._logger.error(
+                    'Failed to fetch message information:',
+                    message.toJSON()
+                );
+            } else {
+                message.cleanup();
+                // TODO: Closure scope.
+                setTimeout(function() {
+                    message.fetch(this)
+                        .then(this._generateMessageFetchCallback(message))
+                        .catch(this._generateMessageFetchFail(message));
+                }.bind(this), FETCH_DELAY);
+            }
+        }.bind(this);
     }
     /**
      * Dispatches a message that failed to parse.
@@ -348,6 +382,17 @@ class Client {
         // NOTE: This only works while logged out due to amlang.
         if (!this._fetching[key]) {
             this._fetching[key] = message;
+            if (
+                typeof message.wiki !== 'string' ||
+                typeof message.language !== 'string' ||
+                typeof message.domain !== 'string'
+            ) {
+                this._logger.error(
+                    'Message to fetch messages from is invalid',
+                    message.toJSON()
+                );
+                return;
+            }
             this._io.query(message.wiki, message.language, message.domain, {
                 amcustomized: 'modified',
                 ammessages: Object.keys(this._caches.i18n).join('|'),

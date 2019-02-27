@@ -24,11 +24,13 @@
         "url": "https://github.com/KockaAdmiralac/KockaLogger.git"
     },
     "dependencies": {
-        "eslint": ">=5.14.0",
         "irc-upd": ">=0.10.0",
-        "mysql2": ">=1.5.3",
+        "mysql2": ">=1.6.5",
         "redis": ">=2.8.0",
         "request": ">=2.88.0",
-        "request-promise-native": ">=1.0.5"
+        "request-promise-native": ">=1.0.7"
+    },
+    "devDependencies": {
+        "eslint": ">=5.14.1"
     }
 }

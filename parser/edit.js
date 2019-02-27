@@ -57,10 +57,11 @@ class EditMessage extends RCMessage {
      * Starts fetching more details about the message.
      * @param {Client} client Client instance to get external clients from
      * @param {Array<String>} properties Details to fetch
+     * @param {Array<String>} interested Modules interested in the message
      * @returns {Promise} Promise that resolves when the details are fetched
      */
-    fetch(client, properties) {
-        const promise = super.fetch(client, properties);
+    fetch(client, properties, interested) {
+        const promise = super.fetch(client, properties, interested);
         if (properties.includes('pageinfo')) {
             if (this.params.diff) {
                 client.cache.get(

@@ -8,8 +8,8 @@
 /**
  * Importing modules.
  */
-const Module = require('../module.js'),
-      util = require('../../include/util.js'),
+const net = require('net'),
+      Module = require('../module.js'),
       Format = require('../../formats/logger/main.js'),
       Discord = require('../../transports/discord/main.js'),
       Logger = require('../../include/log.js');
@@ -66,7 +66,7 @@ class Vandalism extends Module {
                 // Summary matching.
                 this._summaries.some(s => s.test(message.summary)) ||
                 // Large removal/replacement/blanking by anons condition:
-                util.isIP(message.user) &&
+                net.isIP(message.user) &&
                 (
                     // Page was blanked.
                     this._caches.i18n['autosumm-blank']

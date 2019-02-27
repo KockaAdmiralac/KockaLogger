@@ -6,6 +6,11 @@
 'use strict';
 
 /**
+ * Importing modules.
+ */
+const net = require('net');
+
+/**
  * Class for shared utilities through the project.
  */
 class Util {
@@ -103,29 +108,6 @@ class Util {
         return `${str.charAt(0).toUpperCase()}${str.substring(1)}`;
     }
     /**
-     * Checks if a string is an IP address.
-     * @param {String} str String to check
-     * @returns {Boolean} If the supplied string is an IP address
-     * @static
-     */
-    static isIP(str) {
-        const spl1 = str.split('.'),
-              spl2 = str.split(':');
-        return spl1.length === 4 &&
-               spl1.every(function(v) {
-                   const num = Number(v);
-                   return num >= 0 && num < 256;
-               }) ||
-               spl2.length === 8 &&
-               spl2.every(function(v) {
-                   if (v === '') {
-                       return true;
-                   }
-                   const num = parseInt(v, 16);
-                   return num >= 0 && num < 65536;
-               });
-    }
-    /**
      * Checks if a string is an IP range.
      * @param {String} str String to check
      * @returns {Boolean} If the supplied string is an IP address/range
@@ -133,7 +115,7 @@ class Util {
      */
     static isIPRange(str) {
         const spl = str.split('/');
-        if (spl.length !== 2 || !this.isIP(spl[0])) {
+        if (spl.length !== 2 || !net.isIP(spl[0])) {
             return false;
         }
         // See $wgBlockCIDRLimit configuration variable.

@@ -143,7 +143,7 @@ const MAPPING = {
      * @returns {String} Regex'd log entry
      */
     'rightslogentry': e => `^${util.escapeRegex(e)
-        .replace('\\$1', '[^:]+:([^:]+)')
+        .replace('\\$1', '[^:]+:(.+)')
         .replace('\\$2', '([^:]+)')
         .replace('\\$3', '([^:]+)')
     }(?:${REASON})?$`,

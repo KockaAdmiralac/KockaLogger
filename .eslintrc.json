@@ -142,7 +142,7 @@
         "prefer-promise-reject-errors": "off",
         "radix": "error",
         "require-await": "error",
-        "vars-on-top": "warn",
+        "vars-on-top": "error",
         "wrap-iife": "error",
         "yoda": [
             "error",
