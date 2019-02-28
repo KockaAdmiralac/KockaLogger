@@ -65,7 +65,6 @@ class Message {
         this.error = false;
         delete this.errmsg;
         delete this.errdetails;
-        delete this._cached;
         delete this._client;
         delete this._resolve;
         delete this._reject;
