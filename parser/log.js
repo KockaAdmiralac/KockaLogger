@@ -71,7 +71,7 @@ BLOCK_FLAGS = [
     }
 },
 WIKIFEATURES_REGEX = /^wikifeatures\s?(?:：|:)\s?set extension option\s?(?:：|:)\s?(\w+) = (true|false)$/,
-PROTECTSITE_HOURS_REGEX = / (\d+ hours)?: (.*)$/,
+PROTECTSITE_HOURS_REGEX = / (\d+ hours)?(?:\s?(?::|：)\s?(.*))?$/,
 // TODO: DRY?
 CACHE_EXPIRY = 3 * 24 * 60 * 60,
 TITLE_REGEX = /<ac_metadata [^>]*title="([^"]+)"[^>]*>\s*<\/ac_metadata>$/;
@@ -194,7 +194,7 @@ class LogMessage extends RCMessage {
                 this.action === 'unprotect'
             ) &&
             this._summary.includes(':Allpages') &&
-            !this._protectsite
+            !this.protectsite
         ) {
             const res = PROTECTSITE_HOURS_REGEX.exec(this._summary);
             if (res) {
@@ -203,7 +203,7 @@ class LogMessage extends RCMessage {
                     PROTECTSITE_HOURS_REGEX,
                     ' \u200E[everything=restricted] ($1): $2'
                 );
-                this._protectsite = true;
+                this.protectsite = true;
                 return this._i18n();
             }
         }
@@ -397,11 +397,12 @@ class LogMessage extends RCMessage {
      * Starts fetching more details about the message.
      * @param {Client} client Client instance to get external clients from
      * @param {Array<String>} properties Details to fetch
+     * @param {Array<String>} interested Modules interested in the message
      * @returns {Promise} Promise that resolves when the details are fetched
      */
-    fetch(client, properties) {
-        const promise = super.fetch(client, properties);
-        if (properties.includes('threadlog')) {
+    fetch(client, properties, interested) {
+        const promise = super.fetch(client, properties, interested);
+        if (this._properties.includes('threadlog')) {
             this._client.io.query(
                 this.wiki,
                 this.language,

@@ -8,7 +8,8 @@
 /**
  * Importing modules.
  */
-const Format = require('../format.js'),
+const net = require('net'),
+      Format = require('../format.js'),
       util = require('../../include/util.js'),
       Logging = require('../../include/log.js');
 
@@ -521,7 +522,7 @@ class Logger extends Format {
                 if (args[0].startsWith('#') || util.isIPRange(args[0])) {
                     return util.escape(args[0]);
                 }
-                if (util.isIP(args[0])) {
+                if (net.isIP(args[0])) {
                     return this._wikiLink(
                         args[0],
                         wiki,
