@@ -28,6 +28,13 @@ class RCMessage extends Message {
         res.shift();
     }
     /**
+     * Cleans up after a failed fetch.
+     */
+    cleanup() {
+        super.cleanup();
+        this._cached = {};
+    }
+    /**
      * Trims the unnecessary character off the summary
      * @param {String} summary Summary to trim
      * @returns {String} Trimmed summary
