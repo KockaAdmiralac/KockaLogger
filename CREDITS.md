@@ -21,7 +21,7 @@ Thank you for your contributions, everybody!
 - [Mobius-One](https://github.com/Mobius-One) — Brazillian Portuguese translation **[WAL]**
 - [Ultragustavo25](https://community.fandom.com/wiki/User:Ultragustavo25) — Brazillian Portuguese translation fixes **[WAL]**
 - [ChromeCircus](https://community.fandom.com/wiki/User:ChromeCircus) — German translation **[WAL]**
-- [Railfail536](https://spolecznoscommunity.fandom.com/wiki/User:Railfail536) — Polish translation **[WAL]**
+- [Rail01](https://dev.fandom.com/wiki/User:Rail01) — Polish translation **[WAL]**
 - [Mix Gerder](https://dev.fandom.com/wiki/User:Mix_Gerder) — Belarusian and Ukrainian translations, along with Russian translation fixes **[WAL]**
 - [Lady Furude](https://dev.fandom.com/wiki/User:Lady_Furude) — [Russian translation](https://github.com/KockaAdmiralac/KockaLogger/pull/1)
 - [Dorumin](https://dev.fandom.com/wiki/User:Dorumin) — [Spanish translation and fixes](https://github.com/KockaAdmiralac/KockaLogger/pull/3)

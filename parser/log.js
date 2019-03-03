@@ -71,7 +71,7 @@ BLOCK_FLAGS = [
     }
 },
 WIKIFEATURES_REGEX = /^wikifeatures\s?(?:：|:)\s?set extension option\s?(?:：|:)\s?(\w+) = (true|false)$/,
-PROTECTSITE_HOURS_REGEX = / (\d+ (?:second|minute|hour|day|week|month|year)s?)?(?:\s?(?::|：)\s?(.*))?$/,
+PROTECTSITE_REGEX = / (\d+ (?:second|minute|hour|day|week|month|year)s?)?(?:\s?(?::|：)\s?(.*))?$/,
 // TODO: DRY?
 CACHE_EXPIRY = 3 * 24 * 60 * 60,
 TITLE_REGEX = /<ac_metadata [^>]*title="([^"]+)"[^>]*>\s*<\/ac_metadata>$/;
@@ -196,11 +196,11 @@ class LogMessage extends RCMessage {
             this._summary.includes(':Allpages') &&
             !this.protectsite
         ) {
-            const res = PROTECTSITE_HOURS_REGEX.exec(this._summary);
+            const res = PROTECTSITE_REGEX.exec(this._summary);
             if (res) {
                 // This is a major hack but, to be fair, so is ProtectSite.
                 this._summary = this._summary.replace(
-                    PROTECTSITE_HOURS_REGEX,
+                    PROTECTSITE_REGEX,
                     ' \u200E[everything=restricted] ($1): $2'
                 );
                 this.protectsite = true;
