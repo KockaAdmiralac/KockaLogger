@@ -1,7 +1,9 @@
 ---
+about: Create a report to help fix unexpected behavior in KockaLogger.
+assignees: KockaAdmiralac
+labels: bug
 name: Bug report
-about: Create a report to help us improve
-
+title: Bug report
 ---
 
 ## Description
@@ -22,6 +24,3 @@ If applicable, add screenshots, videos, etc. to help explain your problem.
 
 ## Notes
 Add additional notes about the problem here.
-
-## Pings
-@KockaAdmiralac

@@ -10,6 +10,7 @@
  */
 const irc = require('irc-upd'),
       redis = require('redis'),
+      util = require('./util.js'),
       IO = require('./io.js'),
       Logger = require('./log.js'),
       Parser = require('../parser/parser.js');
@@ -21,7 +22,8 @@ const EVENTS = [
     'registered',
     'join',
     'error',
-    'message'
+    'message',
+    'ctcp-version'
 ],
 FETCH_MAX_RETRIES = 3,
 FETCH_DELAY = 10000;
@@ -159,7 +161,10 @@ class Client {
             userName: config.username || config.nick
         });
         EVENTS.forEach(function(e) {
-            this._client.on(e, this[`_${e}`].bind(this));
+            this._client.on(e, this[`_${e.replace(
+                /-(\w)/,
+                (_, m) => m.toUpperCase()
+            )}`].bind(this));
         }, this);
     }
     /**
@@ -358,9 +363,13 @@ class Client {
                 message.cleanup();
                 // TODO: Closure scope.
                 setTimeout(function() {
-                    message.fetch(this)
-                        .then(this._generateMessageFetchCallback(message))
-                        .catch(this._generateMessageFetchFail(message));
+                    try {
+                        message.fetch(this)
+                            .then(this._generateMessageFetchCallback(message))
+                            .catch(this._generateMessageFetchFail(message));
+                    } catch (e) {
+                        this._logger.error('Re-fetch timeout failure:', e);
+                    }
                 }.bind(this), FETCH_DELAY);
             }
         }.bind(this);
@@ -451,6 +460,17 @@ class Client {
                 delete this._fetching[key];
             }
         }.bind(this);
+    }
+    /**
+     * Handles a CTCP VERSION.
+     * @param {String} from User sending the CTCP
+     * @param {String} to User receiving the CTCP
+     * @private
+     */
+    _ctcpVersion(from, to) {
+        if (to === this._client.nick) {
+            this._client.notice(from, `VERSION ${util.USER_AGENT}`);
+        }
     }
     /**
      * Gets whether the debug mode is enabled.

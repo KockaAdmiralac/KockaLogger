@@ -15,7 +15,7 @@ const RCMessage = require('./rc.js'),
 /**
  * Constants.
  */
-const AF_REGEX = /https?:\/\/[a-z0-9-.]+\.(?:wikia|fandom)\.com\/(?:[a-z-]+\/)?wiki\/[^:]+:[^/]+\/(\d+).*\(https?:\/\/[a-z0-9-.]+\.(?:wikia|fandom)\.com\/(?:[a-z-]+\/)?wiki\/[^:]+:[^/]+\/history\/\d+\/diff\/prev\/(\d+)\)$/,
+const AF_REGEX = /https?:\/\/[a-z0-9-.]+\.(?:fandom\.com|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:[a-z-]+\/)?wiki\/[^:]+:[^/]+\/(\d+).*\(https?:\/\/[a-z0-9-.]+\.(?:fandom\.com|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:[a-z-]+\/)?wiki\/[^:]+:[^/]+\/history\/\d+\/diff\/prev\/(\d+)\)$/,
 BLOCK_FLAGS = [
     'angry-autoblock',
     'anononly',
@@ -71,7 +71,7 @@ BLOCK_FLAGS = [
     }
 },
 WIKIFEATURES_REGEX = /^wikifeatures\s?(?:：|:)\s?set extension option\s?(?:：|:)\s?(\w+) = (true|false)$/,
-PROTECTSITE_HOURS_REGEX = / (\d+ hours)?(?:\s?(?::|：)\s?(.*))?$/,
+PROTECTSITE_HOURS_REGEX = / (\d+ (?:second|minute|hour|day|week|month|year)s?)?(?:\s?(?::|：)\s?(.*))?$/,
 // TODO: DRY?
 CACHE_EXPIRY = 3 * 24 * 60 * 60,
 TITLE_REGEX = /<ac_metadata [^>]*title="([^"]+)"[^>]*>\s*<\/ac_metadata>$/;

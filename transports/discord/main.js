@@ -45,7 +45,7 @@ class Discord extends Transport {
                         );
                     }
                 } else {
-                    this._logger.error('Discord transport error:', e);
+                    this._logger.error('Error:', e);
                 }
             }.bind(this));
         }
@@ -55,9 +55,13 @@ class Discord extends Transport {
      * @private
      */
     _timeout() {
-        this._timer = false;
-        this._ratelimit = false;
-        this._queue.splice(0).forEach(this.execute, this);
+        try {
+            this._timer = false;
+            this._ratelimit = false;
+            this._queue.splice(0).forEach(this.execute, this);
+        } catch (e) {
+            this._logger.error('Error in timeout:', e);
+        }
     }
 }
 

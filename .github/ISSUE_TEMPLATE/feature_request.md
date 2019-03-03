@@ -1,7 +1,9 @@
 ---
+about: Suggest an idea to implement into KockaLogger.
+assignees: KockaAdmiralac
+labels: feature
 name: Feature request
-about: Suggest an idea for this project
-
+title: Feature request
 ---
 
 ## Description
@@ -15,6 +17,3 @@ A clear and concise description of any alternative solutions or features you've 
 
 ## Notes and media
 Add any other context or screenshots about the feature request here.
-
-## Pings
-@KockaAdmiralac

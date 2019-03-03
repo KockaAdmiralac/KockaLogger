@@ -1,7 +1,7 @@
 # KockaLogger
-KockaLogger is a [Node.js](https://nodejs.org) program used to replace [WikiaActivityLogger](https://github.com/KockaAdmiralac/WikiaActivityLogger)  and, eventually, [CVNAdvanced](https://github.com/KockaAdmiralac/CVNAdvanced) in their tasks of filtering and logging [Fandom](https://c.wikia.com) activity.
+KockaLogger is a [Node.js](https://nodejs.org) program used to replace [WikiaActivityLogger](https://github.com/KockaAdmiralac/WikiaActivityLogger)  and, eventually, [CVNAdvanced](https://github.com/KockaAdmiralac/CVNAdvanced) in their tasks of filtering and logging [Fandom](https://community.fandom.com) activity.
 
-After Fandom decided to forbid WikiaActivityLogger on 25th June 2018, they provided an alternative solution to wiki activity logging that does not consume as much server (and bot) resources. This solution, however, is not publicly available and therefore KockaLogger cannot be used by any Fandom user like WikiaActivityLogger could. If you had been running a WikiaActivityLogger instance before Fandom decided to forbid its use, contact [KockaAdmiralac](https://dev.wikia.com/wiki/User_talk:KockaAdmiralac) about it.
+After Fandom decided to forbid WikiaActivityLogger on 25th June 2018, they provided an alternative solution to wiki activity logging that does not consume as much server (and bot) resources. This solution, however, is not publicly available and therefore KockaLogger cannot be used by any Fandom user like WikiaActivityLogger could. If you had been running a WikiaActivityLogger instance before Fandom decided to forbid its use, contact [KockaAdmiralac](https://dev.fandom.com/wiki/User_talk:KockaAdmiralac) about it.
 
 ## Configuration
 Configuration consists of two parts, client configuration and modules configuration. Sample configuration can be found in `config.sample.json`.
