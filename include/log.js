@@ -205,6 +205,7 @@ class Logger {
     close(callback) {
         if (this._stream) {
             this._stream.close();
+            delete this._stream;
         }
         callback();
     }

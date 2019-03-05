@@ -524,6 +524,13 @@ class Client {
      * @private
      */
     _kill() {
+        if (this._killing) {
+            this._logger.error(
+                'KockaLogger already shutting down, please wait. ' +
+                'If shutting down lasts over 60 seconds, use CTRL+Z.'
+            );
+            return;
+        }
         const cb = this._killCallback.bind(this);
         this._killing = true;
         // Redis + logger + init.
@@ -554,6 +561,7 @@ class Client {
     }
     /**
      * Callback after cleaning up a resource.
+     * @private
      */
     _killCallback() {
         if (--this._awaitingKill === 0 && this._killInitFinished) {
