@@ -524,6 +524,8 @@ class Client {
      * @private
      */
     _kill() {
+        // Clear ^C from console line.
+        process.stdout.write(`${String.fromCharCode(27)}[0G`);
         if (this._killing) {
             this._logger.error(
                 'KockaLogger already shutting down, please wait. ' +
@@ -535,8 +537,6 @@ class Client {
         this._killing = true;
         // Redis + logger + init.
         this._awaitingKill = 3;
-        // Clear ^C from console line.
-        process.stdout.write(`${String.fromCharCode(27)}[0G`);
         // Quit client's logger.
         this._logger.info('Shutting down by user request...');
         this._logger.close(cb);
