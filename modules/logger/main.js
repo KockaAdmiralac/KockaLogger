@@ -159,6 +159,17 @@ class Logger extends Module {
             }
         }, this);
     }
+    /**
+     * Cleans up the resources after a kill has been requested.
+     * @param {Function} callback Callback to call after cleaning up
+     * @returns {Number} Number of upcoming callback calls
+     */
+    kill(callback) {
+        this._logger.close(callback);
+        this._wikis.forEach(wiki => wiki.kill(callback));
+        return this._wikis.length + 1;
+        // TODO: Clean up loggers in wikis.
+    }
 }
 
 module.exports = Logger;

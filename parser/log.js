@@ -201,7 +201,13 @@ class LogMessage extends RCMessage {
                 // This is a major hack but, to be fair, so is ProtectSite.
                 this._summary = this._summary.replace(
                     PROTECTSITE_REGEX,
-                    ' \u200E[everything=restricted] ($1): $2'
+                    (
+                        _,
+                        duration,
+                        reason
+                    ) => ` \u200E[everything=restricted] (${duration}): ${
+                        reason.replace(`${duration}: `, '').trim()
+                    }`
                 );
                 this.protectsite = true;
                 return this._i18n();

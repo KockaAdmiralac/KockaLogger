@@ -22,10 +22,15 @@ const EVENTS = [
     'registered',
     'join',
     'error',
+    'netError',
     'message',
     'ctcp-version'
 ],
-FETCH_MAX_RETRIES = 3,
+HANDLED_COMMANDS = [
+    '338',
+    'rpl_whoismodes'
+],
+FETCH_MAX_RETRIES = 5,
 FETCH_DELAY = 10000;
 
 /**
@@ -47,6 +52,7 @@ class Client {
         this._initLogger(config.logging || {}, config.client.discord);
         this._initCache();
         this._initModules();
+        process.on('SIGINT', this._kill.bind(this));
     }
     /**
      * Initializes the debug/info/error logger.
@@ -88,7 +94,9 @@ class Client {
      * @private
      */
     _redisDisconnected() {
-        this._logger.error('Disconnected from Redis.');
+        if (!this._killing) {
+            this._logger.error('Disconnected from Redis.');
+        }
     }
     /**
      * Event emitted when an error occurs with Redis.
@@ -150,6 +158,8 @@ class Client {
         this._logger.info('Initializing IRC client...');
         const config = this._config.client;
         this._client = new irc.Client(config.server, config.nick, {
+            autoRejoin: true,
+            autoRenick: true,
             channels: [
                 config.channels.rc,
                 config.channels.discussions,
@@ -157,9 +167,10 @@ class Client {
             ],
             port: config.port,
             realName: config.realname,
-            retryCount: config.retries || 10,
+            showErrors: true,
             userName: config.username || config.nick
         });
+        this._client.out.error = this._errorOverride.bind(this);
         EVENTS.forEach(function(e) {
             this._client.on(e, this[`_${e.replace(
                 /-(\w)/,
@@ -168,12 +179,40 @@ class Client {
         }, this);
     }
     /**
+     * Overrides irc-upd's error output.
+     * @param {Array} args Error arguments
+     */
+    _errorOverride(...args) {
+        if (
+            // Bogus unhandled commands.
+            args[0] === 'Unhandled message:' &&
+            typeof args[1].command === 'string' &&
+            (
+                HANDLED_COMMANDS.includes(args[1].command) ||
+                // Error while killing.
+                this._killing &&
+                args[1].command === 'ERROR' &&
+                args[1].args instanceof Array &&
+                typeof args[1].args[0] === 'string' &&
+                args[1].args[0].startsWith('Closing Link: ')
+            ) ||
+            // Already logged errors.
+            typeof args[0] === 'object' &&
+            args[0].commandType === 'error'
+        ) {
+            return;
+        }
+        this._logger.error(...args);
+    }
+    /**
      * The client has joined the IRC server.
      * @private
      * @param {Object} command IRC command sent upon joining
      */
     _registered(command) {
-        this._logger.info(command.args[1]);
+        if (!this._killing) {
+            this._logger.info(command.args[1]);
+        }
     }
     /**
      * The client has joined an IRC channel.
@@ -187,7 +226,7 @@ class Client {
                 channel === this._config.client.channels[type] &&
                 user === this._config.client.nick
             ) {
-                this._logger.info('Joined', type, 'channel');
+                this._logger.info('Joined', type, 'channel.');
                 break;
             }
         }
@@ -198,7 +237,15 @@ class Client {
      * @param {Object} command IRC command sent upon error
      */
     _error(command) {
-        this._logger.error('IRC error', command);
+        this._logger.error('IRC error:', command);
+    }
+    /**
+     * A network error with the IRC socket occurred,
+     * @private
+     * @param {Error} error Error event that occurred in the socket
+     */
+    _netError(error) {
+        this._logger.error('Socket error:', error);
     }
     /**
      * An IRC message has been sent.
@@ -210,7 +257,7 @@ class Client {
      */
     _message(user, channel, message, debug) {
         if (!message) {
-            this._logger.error('IRC message is null', debug);
+            this._logger.error('IRC message is null:', debug);
             return;
         }
         for (const i in this._config.client.channels) {
@@ -370,7 +417,7 @@ class Client {
                     } catch (e) {
                         this._logger.error('Re-fetch timeout failure:', e);
                     }
-                }.bind(this), FETCH_DELAY);
+                }.bind(this), FETCH_DELAY * message.retries);
             }
         }.bind(this);
     }
@@ -470,6 +517,47 @@ class Client {
     _ctcpVersion(from, to) {
         if (to === this._client.nick) {
             this._client.notice(from, `VERSION ${util.USER_AGENT}`);
+        }
+    }
+    /**
+     * Cleans up the resources after a kill has been requested.
+     * @private
+     */
+    _kill() {
+        const cb = this._killCallback.bind(this);
+        this._killing = true;
+        // Redis + logger + init.
+        this._awaitingKill = 3;
+        // Clear ^C from console line.
+        process.stdout.write(`${String.fromCharCode(27)}[0G`);
+        // Quit client's logger.
+        this._logger.info('Shutting down by user request...');
+        this._logger.close(cb);
+        // Quit IRC.
+        if (
+            typeof this._client === 'object' &&
+            typeof this._client.disconnect === 'function'
+        ) {
+            ++this._awaitingKill;
+            this._client.disconnect('User-requested shutdown.', cb);
+        }
+        // Quit Redis client.
+        this._cache.quit();
+        // Let modules quit what they have to quit.
+        for (const mod in this._modules) {
+            const num = this._modules[mod].kill(cb) || 1;
+            this._awaitingKill += num;
+        }
+        // Initialization of kill callbacks finished.
+        this._killInitFinished = true;
+        this._killCallback();
+    }
+    /**
+     * Callback after cleaning up a resource.
+     */
+    _killCallback() {
+        if (--this._awaitingKill === 0 && this._killInitFinished) {
+            process.exit();
         }
     }
     /**

@@ -259,6 +259,13 @@ class Wiki {
         }
     }
     /**
+     * Cleans up the resources after a kill has been requested.
+     * @param {Function} callback Callback to call after cleaning up
+     */
+    kill(callback) {
+        this._logger.close(callback);
+    }
+    /**
      * Gets if the wiki's configuration was initialized.
      * @returns {Boolean} If the wiki's configuration was initialized
      */
