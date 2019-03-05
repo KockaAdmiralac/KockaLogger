@@ -8,7 +8,8 @@
 /**
  * Importing modules.
  */
-const net = require('net');
+const net = require('net'),
+      pkg = require('../package.json');
 
 /**
  * Class for shared utilities through the project.
@@ -42,8 +43,7 @@ class Util {
     static escape(text) {
         return text
             // Escape links.
-            .replace(/http:\/\//g, 'http:/\u200B/')
-            .replace(/https:\/\//g, 'https:/\u200B/')
+            .replace(/(https?):\/\//g, '$1:/\u200B/')
             // Escape mentions.
             .replace(/@/g, '@\u200B')
             // Escape invite links.
@@ -124,5 +124,8 @@ class Util {
         return !isNaN(range) && range >= cidrLimit;
     }
 }
+
+// Share the user agent string between modules.
+Util.USER_AGENT = `${pkg.name} v${pkg.version}: ${pkg.description}`;
 
 module.exports = Util;

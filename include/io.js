@@ -9,13 +9,7 @@
  * Importing modules
  */
 const http = require('request-promise-native'),
-      pkg = require('../package.json'),
       util = require('./util.js');
-
-/**
- * Constants
- */
-const USER_AGENT = `${pkg.name} v${pkg.version}: ${pkg.description}`;
 
 /**
  * HTTP communication handler.
@@ -42,7 +36,7 @@ class IO {
         options.format = 'json';
         return http({
             headers: {
-                'User-Agent': USER_AGENT
+                'User-Agent': util.USER_AGENT
             },
             json: true,
             method: 'GET',
@@ -62,7 +56,7 @@ class IO {
             body,
             headers: {
                 'Content-Type': 'application/json',
-                'User-Agent': USER_AGENT
+                'User-Agent': util.USER_AGENT
             },
             json: true,
             method: 'POST',
@@ -77,7 +71,7 @@ class IO {
     userInfo(id) {
         return http({
             headers: {
-                'User-Agent': USER_AGENT
+                'User-Agent': util.USER_AGENT
             },
             method: 'GET',
             uri: `https://services.fandom.com/user-attribute/user/bulk?id=${id}`

@@ -108,7 +108,9 @@ class NewUsers extends Module {
      * @private
      */
     _redisDisconnected() {
-        this._logger.error('Disconnected from Redis.');
+        if (!this._killing) {
+            this._logger.error('Disconnected from Redis.');
+        }
     }
     /**
      * Event emitted when an error occurs with Redis.
@@ -281,6 +283,18 @@ class NewUsers extends Module {
             } ${info.username}\``,
             embeds: [message]
         });
+    }
+    /**
+     * Cleans up the resources after a kill has been requested.
+     * @param {Function} callback Callback to call after cleaning up
+     * @returns {Number} Number of upcoming callback calls
+     */
+    kill(callback) {
+        this._killing = true;
+        this._logger.close(callback);
+        this._db.end().then(callback);
+        this._subscriber.quit(callback);
+        return 3;
     }
 }
 

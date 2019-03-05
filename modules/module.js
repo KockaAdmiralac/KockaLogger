@@ -46,6 +46,15 @@ class Module {
         }
     }
     /**
+     * Cleans up the resources after a kill has been requested.
+     * @param {Function} callback Callback to call after cleaning up
+     * @returns {Number} Number of upcoming callback calls
+     */
+    kill(callback) {
+        callback();
+        return 1;
+    }
+    /**
      * Standard Redis callback.
      * @param {Error} error Error that occurred
      */

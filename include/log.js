@@ -199,6 +199,17 @@ class Logger {
         }
     }
     /**
+     * Closes all open resources.
+     * @param {Function} callback Callback to call after closing
+     */
+    close(callback) {
+        if (this._stream) {
+            this._stream.close();
+            delete this._stream;
+        }
+        callback();
+    }
+    /**
      * Debugs specified messages.
      * @param {Array<String>} messages Messages to debug
      */
