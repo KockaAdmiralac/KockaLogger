@@ -151,10 +151,9 @@ const MAPPING = {
      * Transforms the unblock log entry
      * @param {String} e Log entry
      * @returns {String} Regex'd log entry
-     * @todo Edge case: User has : in username
      */
     'unblocklogentry': e => `^${util.escapeRegex(e)
-        .replace('\\$1', '[^:]+:([^:]+)')
+        .replace('\\$1', '[^:]+:(.+)')
     }(?:${REASON})?$`,
     /**
      * Transforms the unprotect log entry

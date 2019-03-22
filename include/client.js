@@ -369,57 +369,51 @@ class Client {
         }
         if (properties.length > 0) {
             message.fetch(this, properties, interested)
-                .then(this._generateMessageFetchCallback(message))
-                .catch(this._generateMessageFetchFail(message));
+                .then(this._messageFetchCallback.bind(this, message))
+                .catch(this._messageFetchFail.bind(this, message));
         }
     }
     /**
-     * Generates callback after fetching additional message information.
+     * Callback after fetching additional message information.
      * @param {Message} message Message whose additional information is fetched
-     * @returns {Function} Callback after fetching message information
      * @private
      */
-    _generateMessageFetchCallback(message) {
-        return function() {
-            message.interested.forEach(function(mod) {
-                try {
-                    this._modules[mod].execute(message);
-                } catch (e) {
-                    this._logger.error(
-                        'Dispatch error to module',
-                        mod, ':', e
-                    );
-                }
-            }, this);
-        }.bind(this);
+    _messageFetchCallback(message) {
+        message.interested.forEach(function(mod) {
+            try {
+                this._modules[mod].execute(message);
+            } catch (e) {
+                this._logger.error(
+                    'Dispatch error to module',
+                    mod, ':', e
+                );
+            }
+        }, this);
     }
     /**
-     * Generates callback after fetching additional message information failed.
+     * Callback after fetching additional message information failed.
      * @param {Message} message Message whose additional information is fetched
-     * @returns {Function} Callback after failing to fetch message information
      * @private
      */
-    _generateMessageFetchFail(message) {
-        return function() {
-            if (message.retries === FETCH_MAX_RETRIES) {
-                this._logger.error(
-                    'Failed to fetch message information:',
-                    message.toJSON()
-                );
-            } else {
-                message.cleanup();
-                // TODO: Closure scope.
-                setTimeout(function() {
-                    try {
-                        message.fetch(this)
-                            .then(this._generateMessageFetchCallback(message))
-                            .catch(this._generateMessageFetchFail(message));
+    _messageFetchFail(message) {
+        if (message.retries === FETCH_MAX_RETRIES) {
+            this._logger.error(
+                'Failed to fetch message information:',
+                message.toJSON()
+            );
+        } else {
+            message.cleanup();
+            // TODO: Closure scope.
+            setTimeout(function() {
+                try {
+                    message.fetch(this)
+                        .then(this._messageFetchCallback.bind(this, message))
+                        .catch(this._messageFetchFail.bind(this, message));
                     } catch (e) {
-                        this._logger.error('Re-fetch timeout failure:', e);
-                    }
-                }.bind(this), FETCH_DELAY * message.retries);
-            }
-        }.bind(this);
+                    this._logger.error('Re-fetch timeout failure:', e);
+                }
+            }.bind(this), FETCH_DELAY * message.retries);
+        }
     }
     /**
      * Dispatches a message that failed to parse.
@@ -454,13 +448,12 @@ class Client {
                 ammessages: Object.keys(this._caches.i18n).join('|'),
                 amprop: 'default',
                 meta: 'allmessages'
-            }).then(
-                this._messageFetchCallback(
-                    message.wiki,
-                    message.language,
-                    message.domain
-                )
-            ).catch(
+            }).then(this._messagesFetchCallback.bind(
+                this,
+                message.wiki,
+                message.language,
+                message.domain
+            )).catch(
                 e => this._logger.error('Error while fetching messages', e)
             );
         }
@@ -470,43 +463,53 @@ class Client {
      * @param {String} wiki Wiki to handle the responses from
      * @param {String} language Language of the wiki
      * @param {String} domain Domain of the wiki
-     * @returns {Function} Generated handler function
+     * @param {Object} data MediaWiki API response
      * @private
      */
-    _messageFetchCallback(wiki, language, domain) {
-        return function(data) {
+    _messagesFetchCallback(wiki, language, domain, data) {
+        if (
+            typeof data !== 'object' ||
+            typeof data.query !== 'object' ||
+            !(data.query.allmessages instanceof Array)
+        ) {
             if (
-                typeof data !== 'object' ||
-                typeof data.query !== 'object' ||
-                !(data.query.allmessages instanceof Array)
+                typeof data === 'string' &&
+                data.trim().toLowerCase().startsWith('<!doctype html>')
             ) {
-                this._logger.error('Unusual MediaWiki API response', data);
-                return;
-            }
-            const messages = {};
-            data.query.allmessages.forEach(function(msg) {
-                if (msg.default) {
-                    messages[msg.name] = msg['*'];
-                }
-            });
-            delete messages.mainpage;
-            if (Object.entries(messages).length) {
-                this._loader.updateCustom(
+                this._logger.error(
+                    'Received an HTML response for',
                     wiki,
                     language,
-                    domain,
-                    messages,
-                    this._parser.update.bind(this._parser)
+                    domain
                 );
             } else {
-                const key = `${language}:${wiki}:${domain}`;
-                this._logger.error(
-                    'Message failed to parse',
-                    this._fetching[key].toJSON()
-                );
-                delete this._fetching[key];
+                this._logger.error('Unusual MediaWiki API response', data);
             }
-        }.bind(this);
+            return;
+        }
+        const messages = {};
+        data.query.allmessages.forEach(function(msg) {
+            if (msg.default) {
+                messages[msg.name] = msg['*'];
+            }
+        });
+        delete messages.mainpage;
+        if (Object.entries(messages).length) {
+            this._loader.updateCustom(
+                wiki,
+                language,
+                domain,
+                messages,
+                this._parser.update.bind(this._parser)
+            );
+        } else {
+            const key = `${language}:${wiki}:${domain}`;
+            this._logger.error(
+                'Message failed to parse',
+                this._fetching[key].toJSON()
+            );
+            delete this._fetching[key];
+        }
     }
     /**
      * Handles a CTCP VERSION.

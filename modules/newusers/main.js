@@ -36,7 +36,9 @@ PREFIXES = {
     fbPage: 'https://facebook.com/',
     twitter: 'https://twitter.com/'
 },
-CACHE_EXPIRY = 30 * 60;
+CACHE_EXPIRY = 30 * 60,
+MAX_RETRIES = 5,
+RETRY_DELAY = 10000;
 
 /**
  * Module for recording account creations and reporting possible profile spam.
@@ -54,6 +56,8 @@ class NewUsers extends Module {
         this._initDB(config.db);
         this._initSubscriber();
         this._initTransport(config.transport);
+        this._retries = [];
+        this._retryCount = {};
     }
     /**
      * Sets up a logger.
@@ -183,13 +187,47 @@ class NewUsers extends Module {
      */
     _redisMessage(channel, message) {
         const [type, user, wiki, language, domain] = message.split(':');
-        if (channel !== '__keyevent@0__:expired' || type !== 'newusers') {
-            return;
+        if (channel === '__keyevent@0__:expired' && type === 'newusers') {
+            this._getID(user, wiki, language, domain);
         }
-        this._io.query('community', 'en', 'fandom.com', {
-            list: 'users',
-            ususers: user
-        }).then(function(result) {
+    }
+    /**
+     * Fetches a user's ID.
+     * @param {String} user User whose ID is being obtained
+     * @param {String} wiki Wiki the user created their account on
+     * @param {String} language Language path of the wiki
+     * @param {String} domain Domain of the wiki
+     * @param {Boolean} isRetry If the function was called as a retry
+     * @private
+     */
+    _getID(user, wiki, language, domain, isRetry) {
+        try {
+            if (isRetry) {
+                this._retries.shift();
+            }
+            this._io.query('community', 'en', 'fandom.com', {
+                list: 'users',
+                ususers: user
+            }).then(this._idCallback.bind(this, user, wiki, language, domain))
+            .catch(this._idError.bind(this, user, wiki, language, domain));
+        } catch (error) {
+            this._logger.error(
+                'Error in timeout for obtaining user ID:',
+                error
+            );
+        }
+    }
+    /**
+     * Callback after obtaining a user ID.
+     * @param {String} user User whose ID is being obtained
+     * @param {String} wiki Wiki the user created their account on
+     * @param {String} language Language path of the wiki
+     * @param {String} domain Domain of the wiki
+     * @param {Object} result MediaWiki API response
+     * @private
+     */
+    _idCallback(user, wiki, language, domain, result) {
+        try {
             if (
                 typeof result === 'object' &&
                 typeof result.query === 'object' &&
@@ -197,52 +235,126 @@ class NewUsers extends Module {
                 typeof result.query.users[0] === 'object' &&
                 typeof result.query.users[0].userid === 'number'
             ) {
-                this._getInfo(
-                    result.query.users[0].userid,
-                    wiki,
+                if (result.isRetry) {
+                    this._retries.shift();
+                }
+                const id = result.query.users[0].userid;
+                delete this._retryCount[user];
+                const message = {
+                    domain,
+                    id,
                     language,
-                    domain
-                );
+                    user,
+                    wiki
+                };
+                this._io.userInfo(id)
+                    .then(this._infoCallback.bind(this, message))
+                    .catch(this._infoError.bind(this, message));
             } else if (!user.startsWith('QATest')) {
-                this._logger.error(
-                    'Failed to fetch user ID for',
-                    user, ':', result
-                );
+                this._idError(user, wiki, language, domain, result);
             }
-        }.bind(this)).catch(e => this._logger.error('MediaWiki API error', e));
+        } catch (error) {
+            this._logger.error(
+                'Error in timeout for obtaining user information:',
+                error
+            );
+        }
     }
     /**
-     * Gets profile information about a specified user.
+     * Callback after failing to obtain a user ID.
+     * @param {String} user User whose ID was being obtained
+     * @param {String} wiki Wiki the user created their account on
+     * @param {String} language Language path of the wiki
+     * @param {String} domain Domain of the wiki
+     * @param {Error} error Error that occurred
+     * @private
+     */
+    _idError(user, wiki, language, domain, error) {
+        if (this._retryCount[user] && this._retryCount[user] === MAX_RETRIES) {
+            this._logger.error('Failed to fetch user ID:', error);
+        } else {
+            if (!this._retryCount[user]) {
+                this._retryCount[user] = 0;
+            }
+            this._retries.push(setTimeout(
+                this._getID.bind(this, user, wiki, language, domain, true),
+                ++this._retryCount[user] * RETRY_DELAY
+            ));
+        }
+    }
+    /**
+     * Callback after getting profile information about a user.
      * @param {Number} id User ID of the user
+     * @param {String} json JSON response with profile information
+     * @param {String} user Username of the user
      * @param {String} wiki Wiki the user created their account on
      * @param {String} language Language path of the wiki
      * @param {String} domain Domain of the wiki
      */
-    _getInfo(id, wiki, language, domain) {
-        this._io.userInfo(id).then(function(json) {
-            let data = null;
-            try {
-                data = JSON.parse(json);
-            } catch (e) {
-                this._logger.error('JSON parsing error', e, json);
-                return;
+    _infoCallback({id, user, wiki, language, domain}, json) {
+        let data = null;
+        const message = {
+            domain,
+            id,
+            language,
+            user,
+            wiki
+        };
+        try {
+            data = JSON.parse(json);
+        } catch (error) {
+            this._infoError(message, {
+                details: 'JSON parsing error.',
+                error,
+                json
+            });
+            return;
+        }
+        if (
+            typeof data === 'object' &&
+            typeof data.users === 'object' &&
+            typeof data.users[id] === 'object'
+        ) {
+            const info = data.users[id];
+            if (info.website) {
+                this._post(info, wiki, language, domain);
             }
-            if (
-                typeof data === 'object' &&
-                typeof data.users === 'object' &&
-                typeof data.users[id] === 'object'
-            ) {
-                const info = data.users[id];
-                if (info.website) {
-                    this._post(info, wiki, language, domain);
-                }
-            } else {
-                this._logger.error(
-                    'Service API returned invalid data for user ID',
-                    id, ':', data
-                );
+        } else {
+            this._infoError(message, data);
+        }
+    }
+    /**
+     * Callback after getting profile information about a user.
+     * @param {Number} id User ID of the user
+     * @param {Error} error Error that occurred
+     * @param {String} wiki Wiki the user created their account on
+     * @param {String} language Language path of the wiki
+     * @param {String} domain Domain of the wiki
+     * @private
+     * @todo DRY
+     */
+    _infoError({id, user, wiki, language, domain}, error) {
+        if (this._retryCount[user] && this._retryCount[user] === MAX_RETRIES) {
+            this._logger.error('Failed to fetch user information:', error);
+        } else {
+            if (!this._retryCount[user]) {
+                this._retryCount[user] = 0;
             }
-        }.bind(this)).catch(e => this._logger.error('Service API error', e));
+            this._retries.push(setTimeout(
+                // WARNING: Hacky!
+                this._idCallback.bind(this, user, wiki, language, domain, {
+                    isRetry: true,
+                    query: {
+                        users: [
+                            {
+                                userid: id
+                            }
+                        ]
+                    }
+                }),
+                ++this._retryCount[user] * RETRY_DELAY
+            ));
+        }
     }
     /**
      * Posts profile information to a Discord channel.
@@ -291,6 +403,7 @@ class NewUsers extends Module {
      */
     kill(callback) {
         this._killing = true;
+        this._retries.forEach(clearTimeout);
         this._logger.close(callback);
         this._db.end().then(callback);
         this._subscriber.quit(callback);

@@ -16,7 +16,8 @@ const net = require('net'),
 /**
  * Constants.
  */
-const ACM = /<ac(_|$)(m|$)(e|$)(t|$)(a|$)(d|$)(a|$)(t|$)(a|$)( |$)(t|$)(i|$)(t|$)(l|$)(e|$)(=|$)("|$).*"$/;
+const ACM = /<ac(_|$)(m|$)(e|$)(t|$)(a|$)(d|$)(a|$)(t|$)(a|$)( |$)(t|$)(i|$)(t|$)(l|$)(e|$)(=|$)("|$).*"$/,
+      P_REGEX = /^<p>(.*)(?:<\/p>)?$/;
 
 /**
  * Logger format's class.
@@ -377,7 +378,7 @@ class Logger extends Format {
             m.reply,
             m.size,
             util.escape(m.category),
-            m.snippet
+            m.snippet.trim().replace(P_REGEX, '$1')
         );
     }
     /* eslint-disable max-statements */

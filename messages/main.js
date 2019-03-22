@@ -284,12 +284,12 @@ class Loader {
     _process() {
         this._logger.info('Processing messages...');
         this._caches.i18n = {};
-        for (const i in this._caches.messagecache) {
-            if (MAPPING[i]) {
-                this._caches.i18n[i] = this._caches.messagecache[i]
-                    .map(this._doMapping(i), this);
+        for (const key in this._caches.messagecache) {
+            if (MAPPING[key]) {
+                this._caches.i18n[key] = this._caches.messagecache[key]
+                    .map(this._doMapping.bind(this, key), this);
             } else {
-                this._caches.i18n[i] = this._caches.messagecache[i];
+                this._caches.i18n[key] = this._caches.messagecache[key];
             }
         }
         this._finish();
@@ -297,27 +297,27 @@ class Loader {
     /**
      * Processes {{GENDER:}} magic words in system messages and maps
      * them using respective regular expressions.
-     * @param {String} i Key of the mapping message
-     * @returns {Function} Mapping function
+     * @param {String} key System message key
+     * @param {String} value System message contents
+     * @returns {String} System message mapped to a regular expression
      * @private
      */
-    _doMapping(i) {
-        return function(str) {
-            const placeholder = [];
-            return MAPPING[i](
-                str.replace(/\{\{GENDER:[^|]*\|([^}]+)\}\}/ig, function(_, match) {
-                    const arr = match.split('|');
-                    if (arr[0] === arr[2] || arr[1] === arr[2]) {
-                        arr.pop();
-                    }
-                    placeholder.push(`(?:${arr.map(util.escapeRegex).join('|')})`);
-                    return GENDER_PLACEHOLDER;
-                })
-            ).replace(
-                new RegExp(GENDER_PLACEHOLDER, 'g'),
-                () => placeholder.shift()
-            );
-        };
+    _doMapping(key, value) {
+        const placeholder = [];
+        return MAPPING[key](value.replace(
+            /\{\{GENDER:[^|]*\|([^}]+)\}\}/ig,
+            function(_, match) {
+                const arr = match.split('|');
+                if (arr[0] === arr[2] || arr[1] === arr[2]) {
+                    arr.pop();
+                }
+                placeholder.push(`(?:${arr.map(util.escapeRegex).join('|')})`);
+                return GENDER_PLACEHOLDER;
+            }
+        )).replace(
+            new RegExp(GENDER_PLACEHOLDER, 'g'),
+            () => placeholder.shift()
+        );
     }
     /**
      * Processes custom messages.
@@ -333,7 +333,8 @@ class Loader {
             }
             for (const msg in this._caches.custom[wiki]) {
                 if (MAPPING[msg]) {
-                    this._caches.i18n2[wiki][msg] = this._doMapping(msg)(
+                    this._caches.i18n2[wiki][msg] = this._doMapping(
+                        msg,
                         this._caches.custom[wiki][msg]
                     );
                 }
@@ -432,9 +433,15 @@ class Loader {
                     this._saveCache('i18n2', this._caches.i18n2)
                 ]) :
                 this._saveCache('', this._caches)
-        ).then(
-            this._createUpdateCustomCallback(wiki, language, domain, callback)
-        ).catch(e => this._logger.error('Error while saving custom cache', e));
+        ).then(this._updateCustomCallback.bind(
+            this,
+            wiki,
+            language,
+            domain,
+            callback
+        )).catch(
+            e => this._logger.error('Error while saving custom cache', e)
+        );
     }
     /**
      * Callback after custom cache has been updated.
@@ -442,27 +449,24 @@ class Loader {
      * @param {String} language Language of the wiki
      * @param {String} domain Domain of the wiki
      * @param {Function} callback Callback function after the update
-     * @returns {Function} Generated callback function
      * @private
      */
-    _createUpdateCustomCallback(wiki, language, domain, callback) {
-        return function() {
-            for (const w in this._caches.i18n2) {
-                for (const msg in this._caches.i18n2[w]) {
-                    this._caches.i18n2[w][msg] =
-                        new RegExp(this._caches.i18n2[w][msg]);
-                }
+    _updateCustomCallback(wiki, language, domain, callback) {
+        for (const w in this._caches.i18n2) {
+            for (const msg in this._caches.i18n2[w]) {
+                this._caches.i18n2[w][msg] =
+                    new RegExp(this._caches.i18n2[w][msg]);
             }
-            if (typeof callback === 'function') {
-                callback(
-                    wiki,
-                    language,
-                    domain,
-                    this._caches.custom,
-                    this._caches.i18n2
-                );
-            }
-        }.bind(this);
+        }
+        if (typeof callback === 'function') {
+            callback(
+                wiki,
+                language,
+                domain,
+                this._caches.custom,
+                this._caches.i18n2
+            );
+        }
     }
 }
 
