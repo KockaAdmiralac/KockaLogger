@@ -418,7 +418,6 @@ class Loader {
      * @param {String} domain Domain of the wiki
      * @param {Object} data Custom messages for the wiki
      * @param {Function} callback Callback function after the update
-     * @todo DRY?
      */
     updateCustom(wiki, language, domain, data, callback) {
         if (!this._caches.custom) {

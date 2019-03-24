@@ -501,7 +501,6 @@ class Logger extends Format {
      * @param {String} domain Domain of the wiki
      * @param {String} page Page to link to
      * @returns {String} Markdown link
-     * @todo Fix for new language paths
      */
     _wikiLink(text, wiki, lang, domain, page) {
         return this._link(text, wiki, lang, domain, `wiki/${util.encode(page)}`);

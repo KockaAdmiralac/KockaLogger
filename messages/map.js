@@ -1,7 +1,8 @@
 /**
  * map.js
  *
- * @todo Kill me now
+ * Maps MediaWiki system messages to regular expressions later used during
+ * IRC message parsing.
  */
 'use strict';
 

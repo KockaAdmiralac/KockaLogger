@@ -391,7 +391,10 @@ class NewUsers extends Module {
         }
         this._transport.execute({
             content: `\`!report p ${
-                wiki === 'www' || wiki === 'community' ? 'c' : wiki
+                wiki === 'www' ||
+                wiki === 'community' ?
+                    'c' :
+                    util.shorturl(wiki, language, domain)
             } ${info.username}\``,
             embeds: [message]
         });

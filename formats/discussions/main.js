@@ -41,8 +41,7 @@ class DiscussionsFormat extends Format {
             embeds: [
                 {
                     author: {
-                        // TODO: Change when HTTPS is released globally.
-                        name: `${msg.user} [${msg.wiki}]`,
+                        name: `${msg.user} [${util.shorturl(msg.wiki, msg.language, msg.domain)}]`,
                         url: `${util.url(msg.wiki, msg.language, msg.domain)}/wiki/Special:Contribs/${util.encode(msg.user)}`
                     },
                     color: COLOR[msg.dtype],

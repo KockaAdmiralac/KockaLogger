@@ -282,9 +282,6 @@ class Client {
      * @private
      * @param {String} message Message to handle
      * @returns {Message} Parsed message object
-     * @todo Edge cases:
-     *  - Overflows can start with \x0314
-     *  - Overflows may not come right after the message!
      */
     _rcMessage(message) {
         let msg = null;
@@ -403,16 +400,24 @@ class Client {
             );
         } else {
             message.cleanup();
-            // TODO: Closure scope.
-            setTimeout(function() {
-                try {
-                    message.fetch(this)
-                        .then(this._messageFetchCallback.bind(this, message))
-                        .catch(this._messageFetchFail.bind(this, message));
-                    } catch (e) {
-                    this._logger.error('Re-fetch timeout failure:', e);
-                }
-            }.bind(this), FETCH_DELAY * message.retries);
+            setTimeout(
+                this._messageFetchTimeout.bind(this, message),
+                FETCH_DELAY * message.retries
+            );
+        }
+    }
+    /**
+     * Callback after a fetch delay for a message expires.
+     * @param {Message} message Message that needs to be re-fetched
+     * @private
+     */
+    _messageFetchTimeout(message) {
+        try {
+            message.fetch(this)
+                .then(this._messageFetchCallback.bind(this, message))
+                .catch(this._messageFetchFail.bind(this, message));
+            } catch (e) {
+            this._logger.error('Re-fetch timeout failure:', e);
         }
     }
     /**
@@ -453,20 +458,24 @@ class Client {
                 message.wiki,
                 message.language,
                 message.domain
-            )).catch(
-                e => this._logger.error('Error while fetching messages', e)
-            );
+            )).catch(this._messagesFetchFail.bind(
+                this,
+                message.wiki,
+                message.language,
+                message.domain
+            ));
         }
     }
     /**
-     * Creates a callback function for handling message fetching responses
-     * @param {String} wiki Wiki to handle the responses from
+     * Callback after fetching custom messages for a wiki.
+     * @param {String} wiki Wiki the custom messages are from
      * @param {String} language Language of the wiki
      * @param {String} domain Domain of the wiki
      * @param {Object} data MediaWiki API response
      * @private
      */
     _messagesFetchCallback(wiki, language, domain, data) {
+        const key = `${language}:${wiki}:${domain}`;
         if (
             typeof data !== 'object' ||
             typeof data.query !== 'object' ||
@@ -485,31 +494,42 @@ class Client {
             } else {
                 this._logger.error('Unusual MediaWiki API response', data);
             }
-            return;
-        }
-        const messages = {};
-        data.query.allmessages.forEach(function(msg) {
-            if (msg.default) {
-                messages[msg.name] = msg['*'];
-            }
-        });
-        delete messages.mainpage;
-        if (Object.entries(messages).length) {
-            this._loader.updateCustom(
-                wiki,
-                language,
-                domain,
-                messages,
-                this._parser.update.bind(this._parser)
-            );
         } else {
-            const key = `${language}:${wiki}:${domain}`;
-            this._logger.error(
-                'Message failed to parse',
-                this._fetching[key].toJSON()
-            );
-            delete this._fetching[key];
+            const messages = {};
+            data.query.allmessages.forEach(function(msg) {
+                if (msg.default) {
+                    messages[msg.name] = msg['*'];
+                }
+            });
+            delete messages.mainpage;
+            if (Object.entries(messages).length) {
+                this._loader.updateCustom(
+                    wiki,
+                    language,
+                    domain,
+                    messages,
+                    this._parser.update.bind(this._parser)
+                );
+            } else {
+                this._logger.error(
+                    'Message failed to parse',
+                    this._fetching[key].toJSON()
+                );
+            }
         }
+        delete this._fetching[key];
+    }
+    /**
+     * Callback after failing to fetch custom messages for a wiki.
+     * @param {String} wiki Wiki the custom messages are from
+     * @param {String} language Language of the wiki
+     * @param {String} domain Domain of the wiki
+     * @param {Error} error Error that occurred while fetching the messages
+     * @private
+     */
+    _messagesFetchFail(wiki, language, domain, error) {
+        this._logger.error('Error while fetching messages', error);
+        delete this._fetching[`${language}:${wiki}:${domain}`];
     }
     /**
      * Handles a CTCP VERSION.
