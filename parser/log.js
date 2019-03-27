@@ -104,9 +104,11 @@ class LogMessage extends RCMessage {
             this._advanced();
         }
     }
+    /* eslint-disable max-statements */
     /**
      * Advanced log parsing.
      * @private
+     * @todo Split this up.
      */
     _advanced() {
         // If there's a handler for this action, attempt to handle it.
@@ -123,6 +125,15 @@ class LogMessage extends RCMessage {
                     }
                 } else {
                     res = this._i18n();
+                    // action = 'restore' can have two meanings.
+                    if (
+                        !res &&
+                        this.log === 'move' &&
+                        this.action === 'restore'
+                    ) {
+                        this.action = 'move_redir';
+                        res = this._i18n();
+                    }
                 }
                 if (!res) {
                     this._error(
@@ -145,6 +156,7 @@ class LogMessage extends RCMessage {
             );
         }
     }
+    /* eslint-enable max-statements */
     /**
      * Attempts to parse the summary based on regular expressions
      * generated from i18n MediaWiki messages.

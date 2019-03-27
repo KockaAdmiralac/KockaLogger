@@ -58,6 +58,7 @@ class NewUsers extends Module {
         this._initTransport(config.transport);
         this._retries = [];
         this._retryCount = {};
+        this._noCloseConnection = 0;
     }
     /**
      * Sets up a logger.
@@ -163,21 +164,36 @@ class NewUsers extends Module {
      * @param {Message} message Message to handle
      */
     execute(message) {
-        this._db.getConnection().then(function(db) {
-            db.execute(QUERY, [
-                message.user,
-                message.wiki,
-                message.language,
-                message.domain
-            ]);
-            db.release();
-        }).catch(e => this._logger.error('Query error', e));
+        if (this._killing) {
+            return;
+        }
+        this._db.getConnection()
+            .then(this._insertUser.bind(this, message))
+            .catch(e => this._logger.error('Query error', e));
         const key = `newusers:${message.user}:${message.wiki}:${message.language}:${message.domain}`;
         this._cache
             .batch()
             .setbit(key, 0, 1)
             .expire(key, CACHE_EXPIRY)
             .exec(this._redisCallback.bind(this));
+    }
+    /**
+     * Inserts a user into the database, provided a connection.
+     * @param {Message} message New user information
+     * @param {PromisePoolConnection} connection Database connection
+     */
+    _insertUser(message, connection) {
+        ++this._noCloseConnection;
+        connection.execute(QUERY, [
+            message.user,
+            message.wiki,
+            message.language,
+            message.domain
+        ]);
+        connection.release();
+        if (--this._noCloseConnection === 0 && this._killing) {
+            this._db.end().then(this._dbCallback);
+        }
     }
     /**
      * Callback after a key expires in Redis.
@@ -408,7 +424,12 @@ class NewUsers extends Module {
         this._killing = true;
         this._retries.forEach(clearTimeout);
         this._logger.close(callback);
-        this._db.end().then(callback);
+        // Close database connection when there are no pending queries.
+        if (this._noCloseConnection) {
+            this._dbCallback = callback;
+        } else {
+            this._db.end().then(callback);
+        }
         this._subscriber.quit(callback);
         return 3;
     }
