@@ -348,7 +348,7 @@ class LogMessage extends RCMessage {
         } else if (this.action !== 'unprotect') {
             this.level = [];
             const level = res.shift(),
-                  regex = / \u200E\[(edit|move|upload|create|everything)=\w+\] \(([^\u200E]+)\)(?: \u200E|$|:)/g;
+                  regex = / \u200E\[(edit|move|upload|create|everything)=\w+\] \(([^\u200E)]+)\)(?: \u200E|$|:)/g;
             let res2 = null;
             do {
                 res2 = regex.exec(level);
