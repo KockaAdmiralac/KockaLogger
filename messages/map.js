@@ -1,7 +1,8 @@
 /**
  * map.js
  *
- * @todo Kill me now
+ * Maps MediaWiki system messages to regular expressions later used during
+ * IRC message parsing.
  */
 'use strict';
 
@@ -136,7 +137,7 @@ const MAPPING = {
      */
     'protectedarticle': e => `^${colorLink(util.escapeRegex(e))
         .replace('\\$1', '([^\x03]+)')
-    }((?: (?:\\u200E|\\u200F)\\[(?:edit|move|upload|create|everything)=\\w+\\] \\([^\\u200E\\u200F]+\\)){1,3})(?:${REASON})?$`,
+    }((?: (?:\\u200E|\\u200F)\\[(?:edit|move|upload|create|everything)=\\w+\\] \\([^\\u200E\\u200F)]+\\)){1,3})(?:${REASON})?$`,
     /**
      * Transforms the rights log entry
      * @param {String} e Log entry
@@ -151,10 +152,9 @@ const MAPPING = {
      * Transforms the unblock log entry
      * @param {String} e Log entry
      * @returns {String} Regex'd log entry
-     * @todo Edge case: User has : in username
      */
     'unblocklogentry': e => `^${util.escapeRegex(e)
-        .replace('\\$1', '[^:]+:([^:]+)')
+        .replace('\\$1', '[^:]+:(.+)')
     }(?:${REASON})?$`,
     /**
      * Transforms the unprotect log entry

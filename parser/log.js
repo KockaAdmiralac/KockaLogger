@@ -15,7 +15,7 @@ const RCMessage = require('./rc.js'),
 /**
  * Constants.
  */
-const AF_REGEX = /https?:\/\/[a-z0-9-.]+\.(?:fandom\.com|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:[a-z-]+\/)?wiki\/[^:]+:[^/]+\/(\d+).*\(https?:\/\/[a-z0-9-.]+\.(?:fandom\.com|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:[a-z-]+\/)?wiki\/[^:]+:[^/]+\/history\/\d+\/diff\/prev\/(\d+)\)$/,
+const AF_REGEX = /https?:\/\/[a-z0-9-.]+\.(?:fandom\.com|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:[a-z-]+\/)?(?:wiki\/)?[^:]+:[^/]+\/(\d+).*\(https?:\/\/[a-z0-9-.]+\.(?:fandom\.com|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:[a-z-]+\/)?(?:wiki\/)?[^:]+:[^/]+\/history\/\d+\/diff\/prev\/(\d+)\)$/,
 BLOCK_FLAGS = [
     'angry-autoblock',
     'anononly',
@@ -94,15 +94,21 @@ class LogMessage extends RCMessage {
         this.wiki = res.shift();
         this.domain = res.shift();
         this.language = res.shift() || 'en';
+        if (this.language === 'wiki') {
+            // Hack because www.wikia.com has no /wiki in path.
+            this.language = 'en';
+        }
         this.user = res.shift();
         this._summary = this._trimSummary(res.shift());
         if (this.log !== 'useravatar' || this.action !== 'avatar_chn') {
             this._advanced();
         }
     }
+    /* eslint-disable max-statements */
     /**
      * Advanced log parsing.
      * @private
+     * @todo Split this up.
      */
     _advanced() {
         // If there's a handler for this action, attempt to handle it.
@@ -119,6 +125,15 @@ class LogMessage extends RCMessage {
                     }
                 } else {
                     res = this._i18n();
+                    // action = 'restore' can have two meanings.
+                    if (
+                        !res &&
+                        this.log === 'move' &&
+                        this.action === 'restore'
+                    ) {
+                        this.action = 'move_redir';
+                        res = this._i18n();
+                    }
                 }
                 if (!res) {
                     this._error(
@@ -141,6 +156,7 @@ class LogMessage extends RCMessage {
             );
         }
     }
+    /* eslint-enable max-statements */
     /**
      * Attempts to parse the summary based on regular expressions
      * generated from i18n MediaWiki messages.
@@ -201,19 +217,28 @@ class LogMessage extends RCMessage {
                 // This is a major hack but, to be fair, so is ProtectSite.
                 this._summary = this._summary.replace(
                     PROTECTSITE_REGEX,
-                    (
-                        _,
-                        duration,
-                        reason
-                    ) => ` \u200E[everything=restricted] (${duration}): ${
-                        reason.replace(`${duration}: `, '').trim()
-                    }`
+                    this._protectSiteReplace.bind(this)
                 );
                 this.protectsite = true;
                 return this._i18n();
             }
         }
         return null;
+    }
+    /**
+     * Replaces a ProtectSite summary with something parsable.
+     * @param {*} _ Unused
+     * @param {String} duration Duration of the protection
+     * @param {String} reason Protection reason, if specified
+     * @returns {String} Parsable protect log summary
+     * @private
+     */
+    _protectSiteReplace(_, duration, reason) {
+        const base = ` \u200E[everything=restricted] (${duration})`;
+        if (reason) {
+            return `${base}: ${reason.replace(`${duration}: `, '').trim()}`;
+        }
+        return base;
     }
     /**
      * Handles Fandom's log fuckups.
@@ -323,7 +348,7 @@ class LogMessage extends RCMessage {
         } else if (this.action !== 'unprotect') {
             this.level = [];
             const level = res.shift(),
-                  regex = / \u200E\[(edit|move|upload|create|everything)=\w+\] \(([^\u200E]+)\)(?: \u200E|$|:)/g;
+                  regex = / \u200E\[(edit|move|upload|create|everything)=\w+\] \(([^\u200E)]+)\)(?: \u200E|$|:)/g;
             let res2 = null;
             do {
                 res2 = regex.exec(level);

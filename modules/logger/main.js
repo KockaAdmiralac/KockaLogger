@@ -168,7 +168,6 @@ class Logger extends Module {
         this._logger.close(callback);
         this._wikis.forEach(wiki => wiki.kill(callback));
         return this._wikis.length + 1;
-        // TODO: Clean up loggers in wikis.
     }
 }
 

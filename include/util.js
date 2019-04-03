@@ -35,6 +35,21 @@ class Util {
         return `https://${wiki}.${domain}`;
     }
     /**
+     * Returns a Fandom wiki URL without the protocol.
+     * @param {String} wiki Subdomain of the wiki
+     * @param {String} lang Language of the wiki
+     * @param {String} domain Domain of the wiki
+     * @returns {String} URL to the requested wiki (protocol-less)
+     * @static
+     */
+    static shorturl(wiki, lang, domain) {
+        let url = `${wiki}.${domain}`;
+        if (lang && lang !== 'en') {
+            url = `${url}/${lang}`;
+        }
+        return url;
+    }
+    /**
      * Makes Markdown safe to post through a webhook.
      * @param {String} text Markdown to escape
      * @returns {String} Escaped parameter

@@ -18,7 +18,7 @@ const COLOR = {
     post: 0x00FF00,
     report: 0xFF0000,
     thread: 0xFFFF00
-};
+}, P_REGEX = /^<p>(.*)(?:<\/p>)?$/;
 
 /**
  * Main class.
@@ -41,12 +41,11 @@ class DiscussionsFormat extends Format {
             embeds: [
                 {
                     author: {
-                        // TODO: Change when HTTPS is released globally.
-                        name: `${msg.user} [${msg.wiki}]`,
+                        name: `${msg.user} [${util.shorturl(msg.wiki, msg.language, msg.domain)}]`,
                         url: `${util.url(msg.wiki, msg.language, msg.domain)}/wiki/Special:Contribs/${util.encode(msg.user)}`
                     },
                     color: COLOR[msg.dtype],
-                    description: msg.snippet,
+                    description: msg.snippet.trim().replace(P_REGEX, '$1'),
                     title: msg.title ?
                         `${msg.title} [${util.cap(msg.dtype)} ${msg.action}]` :
                         `${util.cap(msg.dtype)} ${msg.action}`,

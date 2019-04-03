@@ -12,7 +12,8 @@ const net = require('net'),
       Module = require('../module.js'),
       Format = require('../../formats/logger/main.js'),
       Discord = require('../../transports/discord/main.js'),
-      Logger = require('../../include/log.js');
+      Logger = require('../../include/log.js'),
+      util = require('../../include/util.js');
 
 /**
  * Constants.
@@ -99,11 +100,7 @@ class Vandalism extends Module {
                     typeof formatted === 'object' &&
                     typeof formatted.content === 'string'
                 ) {
-                    let wiki = `${message.wiki}.${message.domain}`;
-                    if (message.language && message.language !== 'en') {
-                        wiki = `${wiki}/${message.language}`;
-                    }
-                    formatted.content = `[${wiki}] ${formatted.content}`;
+                    formatted.content = `[${util.shorturl(message.wiki, message.language, message.domain)}] ${formatted.content}`;
                     this._transport.execute(formatted);
                 }
             }
