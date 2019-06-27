@@ -19,6 +19,9 @@ class Filter {
             this._transport = typeof config.transport === 'string' ?
                 config.transport :
                 'default';
+            this._negation = typeof config.negation === 'boolean' ?
+                config.negation :
+                false;
             if (config.namespaces instanceof Array) {
                 this._namespaceFilter = config.namespaces;
             }
@@ -42,7 +45,7 @@ class Filter {
      */
     execute(message) {
         try {
-            if (this._func(message)) {
+            if (this._func(message) !== this._negation) {
                 return this._transport;
             }
         } catch (e) {

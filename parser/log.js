@@ -15,7 +15,7 @@ const RCMessage = require('./rc.js'),
 /**
  * Constants.
  */
-const AF_REGEX = /https?:\/\/[a-z0-9-.]+\.(?:fandom\.com|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:[a-z-]+\/)?(?:wiki\/)?[^:]+:[^/]+\/(\d+).*\(https?:\/\/[a-z0-9-.]+\.(?:fandom\.com|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:[a-z-]+\/)?(?:wiki\/)?[^:]+:[^/]+\/history\/\d+\/diff\/prev\/(\d+)\)$/,
+const AF_REGEX = /https?:\/\/[a-z0-9-.]+\.(?:fandom\.com|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:[a-z-]+\/)?wiki\/?[^:]+:[^/]+\/(\d+).*\(https?:\/\/[a-z0-9-.]+\.(?:fandom\.com|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:[a-z-]+\/)?wiki\/?[^:]+:[^/]+\/history\/\d+\/diff\/prev\/(\d+)\)$/,
 BLOCK_FLAGS = [
     'angry-autoblock',
     'anononly',
@@ -94,10 +94,6 @@ class LogMessage extends RCMessage {
         this.wiki = res.shift();
         this.domain = res.shift();
         this.language = res.shift() || 'en';
-        if (this.language === 'wiki') {
-            // Hack because www.wikia.com has no /wiki in path.
-            this.language = 'en';
-        }
         this.user = res.shift();
         this._summary = this._trimSummary(res.shift());
         if (this.log !== 'useravatar' || this.action !== 'avatar_chn') {

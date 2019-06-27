@@ -338,7 +338,7 @@ class Logger extends Format {
                     m.reason
                 );
             case 'abusefilter':
-                return this._msg('abusefilter', w, l, m.user, m.id, m.diff);
+                return this._msg('abusefilter', w, l, d, m.user, m.id, m.diff);
             case 'wikifeatures':
                 return this._msg(
                     'wikifeatures',

@@ -20,7 +20,7 @@ const DiscussionsMessage = require('./discussions.js'),
  */
 const EDIT_REGEX = /^\x0314\[\[\x0307([^\]]+)\x0314\]\]\x034 ([!NBM]*)\x0310 \x0302https?:\/\/([a-z0-9-.]+)\.(fandom\.com|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:([a-z-]+)\/)?index\.php\?(\S+)\x03 \x035\*\x03 \x0303([^\x03]+)\x03 \x035\*\x03 \(\x02?(\+|-)(\d+)\x02?\) \x0310(.*)$/,
       // NOTE: \s{2} is \s{1,2} due to overflow space removal.
-      LOG_REGEX = /^\x0314\[\[\x0307[^:]+:Log\/([^\x03]+)\x0314\]\]\x034 ([^\x03]+)\x0310 \x0302https?:\/\/([a-z0-9-.]+)\.(fandom\.com|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:([a-z-]+)\/)?(?:wiki\/)?[^:]+:Log\/[^\x03]+\x03 \x035\*\x03 \x0303([^\x03]+)\x03 \x035\*\x03\s{1,2}\x0310(.*)$/;
+      LOG_REGEX = /^\x0314\[\[\x0307[^:]+:Log\/([^\x03]+)\x0314\]\]\x034 ([^\x03]+)\x0310 \x0302https?:\/\/([a-z0-9-.]+)\.(fandom\.com|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:([a-z-]+)\/)?wiki\/[^:]+:Log\/[^\x03]+\x03 \x035\*\x03 \x0303([^\x03]+)\x03 \x035\*\x03\s{1,2}\x0310(.*)$/;
 
 /**
  * Class for parsing messages received from WikiaRC.

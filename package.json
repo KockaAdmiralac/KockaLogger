@@ -1,6 +1,6 @@
 {
     "name": "kocka-logger",
-    "version": "1.1.6",
+    "version": "1.1.7",
     "description": "The time has come.",
     "keywords": [
         "wikia",
@@ -31,6 +31,6 @@
         "request-promise-native": ">=1.0.7"
     },
     "devDependencies": {
-        "eslint": ">=5.15.3"
+        "eslint": ">=6.0.1"
     }
 }

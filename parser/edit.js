@@ -36,10 +36,6 @@ class EditMessage extends RCMessage {
         this.wiki = res.shift();
         this.domain = res.shift();
         this.language = res.shift() || 'en';
-        if (this.language === 'wiki') {
-            // Hack because www.wikia.com has no /wiki in path.
-            this.language = 'en';
-        }
         this.params = {};
         res.shift().split('&').forEach(this._parseParam, this);
         this.user = res.shift();
