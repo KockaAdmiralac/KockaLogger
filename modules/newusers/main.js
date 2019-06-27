@@ -55,7 +55,8 @@ class NewUsers extends Module {
         this._initLogger();
         this._initDB(config.db);
         this._initSubscriber();
-        this._initTransport(config.transport);
+        this._initTransport(config.profiles || config.transport, 'profiles');
+        this._initTransport(config.log, 'log');
         this._retries = [];
         this._retryCount = {};
         this._noCloseConnection = 0;
@@ -139,16 +140,20 @@ class NewUsers extends Module {
         this._logger.warn('Redis is reconnecting...');
     }
     /**
-     * Initializes the Discord transport.
+     * Initializes a Discord transport instance.
+     * Currently shared by two instance initializations:
+     * - `log`: Transport where all new users are logged.
+     * - `profiles`: Transport where possible spam profiles are logged.
      * @param {Object} config Transport configuration
+     * @param {String} name Transport name
      * @private
      */
-    _initTransport(config) {
+    _initTransport(config, name) {
         if (typeof config !== 'object') {
             throw new Error('Discord configuration is invalid!');
         }
-        config.type = 'discord-newusers';
-        this._transport = new Discord(config);
+        config.type = `discord-newusers-${name}`;
+        this[`_${name}Transport`] = new Discord(config);
     }
     /**
      * Determines whether the module is interested to receive the message
@@ -167,6 +172,7 @@ class NewUsers extends Module {
         if (this._killing) {
             return;
         }
+        this._relay(message);
         this._db.getConnection()
             .then(this._insertUser.bind(this, message))
             .catch(e => this._logger.error('Query error', e));
@@ -176,6 +182,27 @@ class NewUsers extends Module {
             .setbit(key, 0, 1)
             .expire(key, CACHE_EXPIRY)
             .exec(this._redisCallback.bind(this));
+    }
+    /**
+     * Relays all creations in a separate channel for logging new users.
+     * @param {Message} message New user information
+     * @private
+     */
+    _relay(message) {
+        const wiki = util.url(
+            message.wiki,
+            message.language,
+            message.domain
+        ), {user} = message;
+        this._logTransport.execute({
+            content: `[${user}](<${wiki}/wiki/Special:Contribs/${util.encode(user)}>) ([talk](<${wiki}/wiki/User_talk:${util.encode(user)}>) | [${
+                util.shorturl(
+                    message.wiki,
+                    message.language,
+                    message.domain
+                )
+            }](<${wiki}>/wiki/Special:Log/newusers))`
+        });
     }
     /**
      * Inserts a user into the database, provided a connection.
@@ -384,7 +411,7 @@ class NewUsers extends Module {
             fields: [],
             title: info.username,
             url: `${util.url(
-                wiki === 'www' ? 'c' : wiki,
+                wiki,
                 language,
                 domain
             )}/wiki/Special:Contribs/${util.encode(info.username)}`
@@ -405,9 +432,8 @@ class NewUsers extends Module {
                 });
             }
         }
-        this._transport.execute({
+        this._profilesTransport.execute({
             content: `\`!report p ${
-                wiki === 'www' ||
                 wiki === 'community' ?
                     'c' :
                     util.shorturl(wiki, language, domain)
