@@ -13,7 +13,7 @@ const Message = require('./msg.js');
 /**
  * Constants.
  */
-const URL_REGEX = /^https?:\/\/([a-z0-9-.]+)\.(fandom\.com|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:([a-z-]+)\/)?d\/p\/(\d{19,})(?:\/r\/(\d{19,}))?$/,
+const URL_REGEX = /^https?:\/\/([a-z0-9-.]+)\.(fandom\.com|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:([a-z-]+)\/)?(?:d|f)\/p\/(\d{19,})(?:\/r\/(\d{19,}))?$/,
       TYPE_REGEX = /^discussion-(thread|post|report)$/;
 
 /**

@@ -26,3 +26,5 @@ Thank you for your contributions, everybody!
 - [Lady Furude](https://dev.fandom.com/wiki/User:Lady_Furude) — [Russian translation](https://github.com/KockaAdmiralac/KockaLogger/pull/1)
 - [Dorumin](https://dev.fandom.com/wiki/User:Dorumin) — [Spanish translation and fixes](https://github.com/KockaAdmiralac/KockaLogger/pull/3)
 - [Tokina8937](https://dev.fandom.com/wiki/User:Tokina8937) — [French translation](https://github.com/KockaAdmiralac/KockaLogger/pull/4)
+- [East6](https://starwars.fandom.com/tr/wiki/User:East6) and [BaRaN6161TURK](https://dev.fandom.com/wiki/User:BaRaN6161TURK) — [Turkish](https://github.com/KockaAdmiralac/KockaLogger/pull/34) [translation](https://github.com/KockaAdmiralac/KockaLogger/pull/33)
+
