@@ -461,6 +461,15 @@ class Logger extends Format {
                 }
             }
         }
+        // In case of an argument at the end of a string.
+        if (mode === 1 && temp > 0) {
+            // TODO: DRY.
+            const arg = args[temp - 1];
+            result += typeof arg === 'undefined' || arg === null ?
+                '' :
+                String(arg);
+            temp = 0;
+        }
         return result;
     }
     /* eslint-enable max-statements */
@@ -589,6 +598,7 @@ class Logger extends Format {
                     '' :
                     `(${temp1}${util.escape(temp.replace(/(?:\n|\r|\s)+/g, ' '))}${temp1})`;
             case 'board':
+                console.log(this._msg(`board-${args[0]}`, wiki, lang, domain, args[1]));
                 return this._wikiLink(
                     this._msg(`board-${args[0]}`, wiki, lang, domain, args[1]),
                     wiki,

@@ -9,10 +9,16 @@
     "parserOptions": {
         "ecmaVersion": 2018
     },
+    "plugins": [
+        "jsdoc",
+        "node",
+        "promise"
+    ],
     "rules": {
-        "for-direction": "warn",
+        "for-direction": "error",
         "getter-return": "error",
-        "no-await-in-loop": "warn",
+        "no-async-promise-executor": "error",
+        "no-await-in-loop": "off",
         "no-compare-neg-zero": "error",
         "no-cond-assign": "error",
         "no-console": "off",
@@ -32,6 +38,7 @@
         "no-inner-declarations": "error",
         "no-invalid-regexp": "error",
         "no-irregular-whitespace": "error",
+        "no-misleading-character-class": "error",
         "no-obj-calls": "error",
         "no-prototype-builtins": "error",
         "no-regex-spaces": "error",
@@ -41,33 +48,8 @@
         "no-unreachable": "error",
         "no-unsafe-finally": "error",
         "no-unsafe-negation": "error",
+        "require-atomic-updates": "error",
         "use-isnan": "error",
-        "valid-jsdoc": [
-            "error",
-            {
-                "prefer": {
-                    "virtual": "abstract",
-                    "extends": "augments",
-                    "class": "constructor",
-                    "const": "constant",
-                    "defaultvalue": "default",
-                    "desc": "description",
-                    "host": "external",
-                    "fileoverview": "file",
-                    "overview": "file",
-                    "emits": "fires",
-                    "func": "function",
-                    "method": "function",
-                    "var": "member",
-                    "prop": "property",
-                    "return": "returns",
-                    "exception": "throws",
-                    "yield": "yields"
-                },
-                "requireReturn": false,
-                "matchDescription": ".+"
-            }
-        ],
         "valid-typeof": "error",
         "accessor-pairs": "off",
         "array-callback-return": "error",
@@ -87,6 +69,10 @@
         "dot-notation": "error",
         "eqeqeq": "error",
         "guard-for-in": "off",
+        "max-classes-per-file": [
+            "error",
+            1
+        ],
         "no-alert": "error",
         "no-caller": "error",
         "no-case-declarations": "error",
@@ -94,7 +80,7 @@
         "no-else-return": "error",
         "no-empty-function": "error",
         "no-empty-pattern": "error",
-        "no-eq-null": "warn",
+        "no-eq-null": "error",
         "no-eval": "error",
         "no-extend-native": "error",
         "no-extra-bind": "error",
@@ -111,7 +97,7 @@
         "no-lone-blocks": "error",
         "no-loop-func": "error",
         "no-magic-numbers": "off",
-        "no-multi-spaces": "warn",
+        "no-multi-spaces": "error",
         "no-multi-str": "error",
         "no-new": "error",
         "no-new-func": "error",
@@ -121,7 +107,14 @@
         "no-param-reassign": "error",
         "no-proto": "error",
         "no-redeclare": "error",
-        "no-restricted-properties": "off",
+        "no-restricted-properties": [
+            "error",
+            {
+                "object": "console",
+                "property": "log",
+                "message": "Use semantic logging `console` methods. `Console#log()` tells nothing about the severity of the logged message."
+            }
+        ],
         "no-return-assign": "error",
         "no-return-await": "error",
         "no-script-url": "error",
@@ -133,15 +126,18 @@
         "no-unused-expressions": "error",
         "no-unused-labels": "error",
         "no-useless-call": "error",
+        "no-useless-catch": "error",
         "no-useless-concat": "error",
         "no-useless-escape": "error",
         "no-useless-return": "error",
         "no-void": "error",
         "no-warning-comments": "off",
         "no-with": "error",
+        "prefer-named-capture-group": "off",
         "prefer-promise-reject-errors": "off",
         "radix": "error",
         "require-await": "error",
+        "require-unicode-regexp": "error",
         "vars-on-top": "error",
         "wrap-iife": "error",
         "yoda": [
@@ -150,11 +146,15 @@
         ],
         "strict": "error",
         "init-declarations": "error",
-        "no-catch-shadow": "error",
         "no-delete-var": "error",
         "no-label-var": "error",
         "no-restricted-globals": "off",
-        "no-shadow": "error",
+        "no-shadow": [
+            "error",
+            {
+                "builtinGlobals": true
+            }
+        ],
         "no-shadow-restricted-names": "error",
         "no-undef": "error",
         "no-undef-init": "error",
@@ -223,6 +223,10 @@
             "error",
             1000
         ],
+        "max-lines-per-function": [
+            "error",
+            50
+        ],
         "max-nested-callbacks": [
             "error",
             {
@@ -270,7 +274,17 @@
         "no-nested-ternary": "off",
         "no-new-object": "error",
         "no-plusplus": "off",
-        "no-restricted-syntax": "off",
+        "no-restricted-syntax": [
+            "error",
+            {
+                "selector": "ReturnStatement[argument.type='FunctionExpression']",
+                "message": "Don't make function generators. `Make use of Function#bind(context, arguments)` instead."
+            },
+            {
+                "selector": "MemberExpression[object.type='Identifier'][property.type='Identifier'][property.name=/^_/]",
+                "message": "Do not access private class members."
+            }
+        ],
         "no-tabs": "error",
         "no-ternary": "off",
         "no-trailing-spaces": "error",
@@ -298,6 +312,7 @@
             "never"
         ],
         "padding-line-between-statements": "off",
+        "prefer-object-spread": "error",
         "quote-props": [
             "error",
             "consistent-as-needed"
@@ -305,18 +320,6 @@
         "quotes": [
             "error",
             "single"
-        ],
-        "require-jsdoc": [
-            "error",
-            {
-                "require": {
-                    "FunctionDeclaration": true,
-                    "MethodDefinition": true,
-                    "ClassDeclaration": true,
-                    "ArrowFunctionExpression": false,
-                    "FunctionExpression": true
-                }
-            }
         ],
         "semi": "error",
         "semi-spacing": "error",
@@ -378,10 +381,145 @@
         "prefer-spread": "error",
         "prefer-template": "error",
         "require-yield": "error",
-        "rest-spread-spacing": "off",
+        "rest-spread-spacing": "error",
         "sort-imports": "error",
         "symbol-description": "error",
         "template-curly-spacing": "error",
-        "yield-star-spacing": "off"
+        "yield-star-spacing": "off",
+        "jsdoc/check-alignment": "error",
+        "jsdoc/check-examples": [
+            "error",
+            {
+                "captionRequired": true,
+                "reportUnusedDisableDirectives": true,
+                "noDefaultExampleRules": true
+            }
+        ],
+        "jsdoc/check-indentation": "error",
+        "jsdoc/check-param-names": "error",
+        "jsdoc/check-syntax": "error",
+        "jsdoc/check-tag-names": "error",
+        /*"jsdoc/check-types": [
+            "error",
+            {
+                "unifyParentAndChildTypeChecks": true
+            }
+        ],*/
+        "jsdoc/implements-on-classes": "error",
+        "jsdoc/match-description": "error",
+        "jsdoc/newline-after-description": [
+            "error",
+            "never"
+        ],
+        "jsdoc/no-types": "off",
+        // "jsdoc/no-undefined-types": "error",
+        "jsdoc/require-description-complete-sentence": "off",
+        "jsdoc/require-description": [
+            "error",
+            {
+                "descriptionStyle": "body"
+            }
+        ],
+        "jsdoc/require-example": "off",
+        "jsdoc/require-hyphen-before-param-description": [
+            "error",
+            "never"
+        ],
+        "jsdoc/require-jsdoc": [
+            "error",
+            {
+                "require": {
+                    "ArrowFunctionExpression": false,
+                    "ClassDeclaration": true,
+                    "ClassExpression": true,
+                    "FunctionDeclaration": true,
+                    "FunctionExpression": true,
+                    "MethodDefinition": true
+                }
+            }
+        ],
+        "jsdoc/require-param-description": "error",
+        "jsdoc/require-param-name": "error",
+        "jsdoc/require-param-type": "error",
+        "jsdoc/require-param": "error",
+        "jsdoc/require-returns-check": "error",
+        "jsdoc/require-returns-description": "error",
+        "jsdoc/require-returns": "error",
+        "jsdoc/valid-types": [
+            "error",
+            {
+                "checkSeesForNamepaths": true
+            }
+        ],
+        "node/no-extraneous-import": "error",
+        "node/no-extraneous-require": "error",
+        "node/no-missing-import": "error",
+        "node/no-missing-require": "error",
+        "node/no-unpublished-bin": "error",
+        "node/no-unpublished-require": "error",
+        "node/no-unsupported-features/es-builtins": "error",
+        "node/no-unsupported-features/es-syntax": "error",
+        "node/no-unsupported-features/node-builtins": "error",
+        "node/process-exit-as-throw": "error",
+        "node/shebang": "error",
+        "node/no-deprecated-api": "error",
+        "node/exports-style": [
+            "error",
+            "module.exports"
+        ],
+        "node/file-extension-in-import": [
+            "error",
+            "always"
+        ],
+        "node/prefer-global/buffer": "error",
+        "node/prefer-global/console": "error",
+        "node/prefer-global/process": "error",
+        "node/prefer-global/text-decoder": "error",
+        "node/prefer-global/text-encoder": "error",
+        "node/prefer-global/url-search-params": "error",
+        "node/prefer-global/url": "error",
+        "node/prefer-promises/dns": "error",
+        "node/prefer-promises/fs": "error",
+        "promise/catch-or-return": "error",
+        "promise/no-return-wrap": "error",
+        "promise/param-names": "error",
+        "promise/always-return": "off",
+        "promise/no-native": "off",
+        "promise/no-nesting": "error",
+        "promise/no-promise-in-callback": "error",
+        "promise/no-callback-in-promise": "error",
+        "promise/avoid-new": "error",
+        "promise/no-new-statics": "error",
+        "promise/no-return-in-finally": "error",
+        "promise/valid-params": "error",
+        "promise/prefer-await-to-then": "error",
+        "promise/prefer-await-to-callbacks": "error"
+    },
+    "settings": {
+        "jsdoc": {
+            "ignorePrivate": false,
+            "tagNamePreference": {
+                "virtual": "abstract",
+                "extends": "augments",
+                "class": "constructor",
+                "const": "constant",
+                "defaultvalue": "default",
+                "desc": "description",
+                "host": "external",
+                "fileoverview": "file",
+                "overview": "file",
+                "emits": "fires",
+                "func": "function",
+                "method": "function",
+                "var": "member",
+                "prop": "property",
+                "return": "returns",
+                "exception": "throws",
+                "yield": "yields"
+            },
+            "overrideReplacesDocs": false,
+            "augmentsExtendsReplacesDocs": false,
+            "implementsReplacesDocs": false
+        }
     }
 }

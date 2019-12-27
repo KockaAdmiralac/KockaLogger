@@ -201,7 +201,7 @@ class NewUsers extends Module {
                     message.language,
                     message.domain
                 )
-            }](<${wiki}>/wiki/Special:Log/newusers))`
+            }](<${wiki}/wiki/Special:Log/newusers>))`
         });
     }
     /**

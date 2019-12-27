@@ -35,7 +35,7 @@ class RCMessage extends Message {
         this._cached = {};
     }
     /**
-     * Trims the unnecessary character off the summary
+     * Trims the unnecessary character off the summary.
      * @param {String} summary Summary to trim
      * @returns {String} Trimmed summary
      * @protected

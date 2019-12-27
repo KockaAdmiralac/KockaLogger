@@ -16,7 +16,7 @@ const RCMessage = require('./rc.js'),
  * Constants.
  */
 const CACHE_EXPIRY = 3 * 24 * 60 * 60,
-      TITLE_REGEX = /<ac_metadata [^>]*title="([^"]+)"[^>]*>\s*<\/ac_metadata>$/;
+      TITLE_REGEX = /<ac_metadata [^>]*title="([^"]+)"[^>]*>\s*<\/ac_metadata>$/u;
 
 /**
  * Parses WikiaRC messages representing edits.
@@ -57,37 +57,36 @@ class EditMessage extends RCMessage {
      * Starts fetching more details about the message.
      * @param {Client} client Client instance to get external clients from
      * @param {Array<String>} properties Details to fetch
-     * @param {Array<String>} interested Modules interested in the message
-     * @returns {Promise} Promise that resolves when the details are fetched
      */
-    fetch(client, properties, interested) {
-        const promise = super.fetch(client, properties, interested);
+    async fetch(client, properties) {
+        super.fetch(client, properties);
         if (this._properties.includes('pageinfo')) {
             if (this.params.diff) {
-                client.cache.get(
-                    this._getTitleKey(this.params.oldid),
-                    this._pageInfoCache.bind(this)
-                );
+                try {
+                    const title = await client.cache.getAsync(
+                        this._getTitleKey(this.params.oldid),
+                        this._pageInfoCache.bind(this)
+                    );
+                    await this._handleCachedTitle(title);
+                } catch (error) {
+                    this._error(
+                        'cache-pageinfo',
+                        'Failed to fetch page info from cache',
+                        {error}
+                    );
+                }
             } else {
-                this._pageInfoAPI();
+                await this._pageInfoAPI();
             }
         }
-        return promise;
     }
     /**
-     * Callback after attempting to fetch page info from cache.
-     * @param {Error} error Error that occurred while fetching page info
-     * @param {String} title The page's title
+     * Handles a page title returned from cache.
+     * @param {string} title The page's title
      * @private
      */
-    _pageInfoCache(error, title) {
-        if (error) {
-            this._error(
-                'cache-pageinfo',
-                'Failed to fetch page info from cache',
-                {error}
-            );
-        } else if (title) {
+    async _handleCachedTitle(title) {
+        if (title) {
             this.page = title;
             const key = this._getTitleKey(
                 this.params.diff || this.params.oldid
@@ -98,16 +97,24 @@ class EditMessage extends RCMessage {
                 .del(this._getTitleKey(this.params.oldid));
             if (this._properties.includes('threadinfo')) {
                 this.isMain = this._getParentThread() === title;
-                batch
-                    .get(this._getThreadTitleKey())
-                    .get(this._getThreadIDKey())
-                    .exec(this._threadInfoCache.bind(this));
+                try {
+                    const data = batch
+                        .get(this._getThreadTitleKey())
+                        .get(this._getThreadIDKey())
+                        .execAsync(this._threadInfoCache.bind(this));
+                } catch (error) {
+                    this._error(
+                        'cache-threadinfo',
+                        'Failed to fetch thread info from cache.',
+                        {error}
+                    );
+                }
             } else {
                 batch.exec(this._setPageInfoCache.bind(this));
                 this._resolve();
             }
         } else {
-            this._pageInfoAPI();
+            await this._pageInfoAPI();
         }
     }
     /**
@@ -191,8 +198,9 @@ class EditMessage extends RCMessage {
     }
     /**
      * Callback after fetching page information from the API.
-     * @param {Object} error API error that occurred
-     * @param {Object} query API response
+     * @param {Object} obj MediaWiki API response
+     * @param {Object} obj.error API error that occurred
+     * @param {Object} obj.query API response
      * @private
      */
     _pageInfoAPICallback({error, query}) {

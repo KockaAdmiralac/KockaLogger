@@ -100,11 +100,9 @@ class LogMessage extends RCMessage {
             this._advanced();
         }
     }
-    /* eslint-disable max-statements */
     /**
      * Advanced log parsing.
      * @private
-     * @todo Split this up.
      */
     _advanced() {
         // If there's a handler for this action, attempt to handle it.
@@ -112,25 +110,9 @@ class LogMessage extends RCMessage {
             let res = null;
             if (MESSAGE_MAP[this.log]) {
                 // Article comments suck.
-                if (this.action === 'article_comment') {
-                    this.action = 'delete';
-                    res = this._i18n();
-                    if (!res) {
-                        this.action = 'restore';
-                        res = this._i18n();
-                    }
-                } else {
-                    res = this._i18n();
-                    // action = 'restore' can have two meanings.
-                    if (
-                        !res &&
-                        this.log === 'move' &&
-                        this.action === 'restore'
-                    ) {
-                        this.action = 'move_redir';
-                        res = this._i18n();
-                    }
-                }
+                res = this.action === 'article_comment' ?
+                    this._handleArticleComments() :
+                    this._i18n();
                 if (!res) {
                     this._error(
                         'logparsefail',
@@ -152,7 +134,32 @@ class LogMessage extends RCMessage {
             );
         }
     }
-    /* eslint-enable max-statements */
+    /**
+     * Handles article comment actions by parsing it with all possible options.
+     * This is due to a Fandom bug where relevant actions get replaced by
+     * `article_comment` whenever they are done on article comments.
+     * @returns {RegExpExecArray} Regular expression execution result
+     * @private
+     */
+    _handleArticleComments() {
+        let res = null;
+        if (this.log === 'delete') {
+            this.action = 'delete';
+            res = this._i18n();
+            if (!res) {
+                this.action = 'restore';
+                res = this._i18n();
+            }
+        } else if (this.log === 'move') {
+            this.action = 'move';
+            res = this._i18n();
+            if (!res) {
+                this.action = 'move_redir';
+                res = this._i18n();
+            }
+        }
+        return res;
+    }
     /**
      * Attempts to parse the summary based on regular expressions
      * generated from i18n MediaWiki messages.
@@ -424,11 +431,10 @@ class LogMessage extends RCMessage {
      * Starts fetching more details about the message.
      * @param {Client} client Client instance to get external clients from
      * @param {Array<String>} properties Details to fetch
-     * @param {Array<String>} interested Modules interested in the message
      * @returns {Promise} Promise that resolves when the details are fetched
      */
-    fetch(client, properties, interested) {
-        const promise = super.fetch(client, properties, interested);
+    fetch(client, properties) {
+        const promise = super.fetch(client, properties);
         if (this._properties.includes('threadlog')) {
             this._client.io.query(
                 this.wiki,

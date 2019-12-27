@@ -32,17 +32,19 @@ class Logger {
      * @param {String} level Log level
      * @param {String} dir Directory for logs
      * @param {Boolean} debug Whether the logger itself should debug content
+     * @param {IO} io The HTTP client instance used for the logger
      */
-    constructor({name, stdout, file, discord, level, dir, debug}) {
+    constructor({name, stdout, file, discord, level, dir, debug, io}) {
         if (typeof name !== 'string') {
             throw new Error('Log must have a name!');
         }
+        this._io = io;
         this._name = name;
-        this._level = level || Logger._level;
+        this._level = LOG_LEVELS.indexOf(level || DEFAULT_LOG_LEVEL);
         this._console = stdout;
         if (file) {
             this._stream = fs.createWriteStream(
-                path.resolve(`${dir || Logger._dir}/${name}.log`),
+                path.resolve(`${dir || DEFAULT_LOG_DIRECTORY}/${name}.log`),
                 {flags: 'a'}
             );
         }
@@ -52,23 +54,9 @@ class Logger {
         if (!this._console && !this._stream && !this._url) {
             throw new Error('No logging route specified!');
         }
-        if (debug || Logger._debug) {
+        if (debug) {
             this._level = LOG_LEVELS.indexOf('debug');
         }
-    }
-    /**
-     * Sets up global logging configuration.
-     * @param {String} level Logging level
-     * @param {Boolean} debug Whether debug mode is enabled
-     * @param {IO} io HTTP client
-     * @param {String} dir Logging directory
-     * @static
-     */
-    static setup({level, dir}, debug, io) {
-        this._level = LOG_LEVELS.indexOf(level || DEFAULT_LOG_LEVEL);
-        this._dir = dir || DEFAULT_LOG_DIRECTORY;
-        this._debug = debug;
-        this._io = io;
     }
     /**
      * Formats a console color based on color number.
@@ -128,7 +116,7 @@ class Logger {
               logLevel = level.toUpperCase(),
               levelColor = this._color(this._colorLevel(logLevel));
         if (this._console) {
-            console[level](`${this._color(34)}[${this._name}]${this._color(2)}[${date} ${time}]${this._color(0)} ${levelColor}[${logLevel}]${this._color(0)}`, ...messages);
+            console[level](`${String.fromCharCode(27)}[0G${this._color(34)}[${this._name}]${this._color(2)}[${date} ${time}]${this._color(0)} ${levelColor}[${logLevel}]${this._color(0)}`, ...messages);
         }
         if (this._stream) {
             this._stream.write(`[${date} ${time}] [${logLevel}] ${str}\n`);

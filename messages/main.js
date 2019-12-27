@@ -53,13 +53,12 @@ const DEFAULT_CACHE_DIRECTORY = 'cache',
 class Loader {
     /**
      * Class constructor.
-     * @param {Object} config KockaLogger configuration
      * @param {String} cache Loader cache directory
      * @param {Boolean} debug KockaLogger debug mode
      * @param {Boolean} fetch If messages should be fetched beforehand
      * @param {Boolean} generate If messages should only be generated
      */
-    constructor(config, {cache, debug, fetch, generate}) {
+    constructor({cache, debug, fetch, generate}) {
         this._debug = debug;
         this._doFetch = fetch;
         this._generate = generate;
