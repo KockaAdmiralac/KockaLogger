@@ -9,7 +9,8 @@
  * Importing modules.
  */
 const Transport = require('../transport.js'),
-      IO = require('../../include/io.js');
+      IO = require('../../include/io.js'),
+      {WebhookClient} = require('discord.js');
 
 /**
  * Discord transport class.
@@ -22,15 +23,19 @@ class Discord extends Transport {
      */
     constructor(config) {
         super(config);
+        this._webhook = new WebhookClient(config.id, config.token);
+        /*
         this._url = `https://discordapp.com/api/webhooks/${config.id}/${config.token}`;
         this._queue = [];
         this._io = new IO();
+        */
     }
     /**
      * Executes the transport.
      * @param {Object} message Formatted message to transport
      */
     execute(message) {
+        /*
         if (this._ratelimit) {
             this._queue.push(message);
         } else {
@@ -49,6 +54,8 @@ class Discord extends Transport {
                 }
             }.bind(this));
         }
+        */
+        this._webhook.send(message.content, message);
     }
     /**
      * Executed after Discord's wait time finishes.

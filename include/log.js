@@ -9,7 +9,8 @@
  * Importing modules.
  */
 const fs = require('fs'),
-      path = require('path');
+      path = require('path'),
+      {WebhookClient} = require('discord.js');
 
 /**
  * Constants.
@@ -47,7 +48,8 @@ class Logger {
             );
         }
         if (typeof discord === 'object') {
-            this._url = `https://discordapp.com/api/webhooks/${discord.id}/${discord.token}`;
+            this._webhook = new WebhookClient(discord.id, discord.token);
+            // this._url = `https://discordapp.com/api/webhooks/${discord.id}/${discord.token}`;
         }
         if (!this._console && !this._stream && !this._url) {
             throw new Error('No logging route specified!');
@@ -133,6 +135,7 @@ class Logger {
         if (this._stream) {
             this._stream.write(`[${date} ${time}] [${logLevel}] ${str}\n`);
         }
+        /*
         if (this._url && !dstr.startsWith(DISCORD_ERROR)) {
             Logger._io.webhook(this._url, {
                 // CAUTION: May contain mentions
@@ -143,6 +146,10 @@ class Logger {
                     '| Rate limited!' :
                     e.error
             ));
+        }
+        */
+        if (this._webhook) {
+            this._webhook.send(`**${logLevel}:** ${dstr}`);
         }
     }
     /**
