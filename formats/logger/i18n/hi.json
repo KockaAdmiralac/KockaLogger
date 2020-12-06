@@ -8,7 +8,6 @@
     "threadclose": "{{user|$1}} ने {{board|$4|$5}} पर {{link|Thread:$2|$3}} को बंद किया {{summary|$6}}",
     "threadreopen": "{{user|$1}} ने {{board|$4|$5}} पर {{link|Thread:$2|$3}} को फिर से खोला {{summary|$6}}",
     "threadremove": "{{user|$1}} ने {{board|$4|$5}} से {{link|Thread:$2|$3}} को हटाया {{summary|$6}}",
-    "threadremove": "{{user|$1}} ने {{board|$4|$5}} से {{link|Thread:$2|$3}} को डिलीट किया {{summary|$6}}",
     "threadrestore": "{{user|$1}} {{board|$4|$5}} पर {{link|Thread:$2|$3}} को रिस्टोर किया {{summary|$6}}",
     "block": "{{user|$1}} ने $3 के लिए {{user|$2}} को ब्लॉक किया {{flags|$4}}{{summary|$5}}",
     "unblock": "{{user|$1}} ने {{user|$2}} को अनब्लॉक किया {{summary|$3}}",
