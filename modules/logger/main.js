@@ -93,7 +93,8 @@ class Logger extends Module {
                 'general',
                 'namespaces',
                 'statistics',
-                'wikidesc'
+                'wikidesc',
+                'variables'
             ].join('|')
         }).then(function(d) {
             if (

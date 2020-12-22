@@ -157,7 +157,7 @@ class Wiki {
      * @todo Use the statistics somehow
      */
     setData(data) {
-        this._id = Number(data.wikidesc.id);
+        this._id = Number(data.variables.filter((variable) => variable.id === 'wgCityId')[0]['*']);
         this._sitename = data.general.sitename;
         this._path = data.general.articlepath;
         this._namespaces = {};
