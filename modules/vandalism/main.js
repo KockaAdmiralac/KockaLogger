@@ -8,12 +8,13 @@
 /**
  * Importing modules.
  */
-const net = require('net'),
+const {isIP} = require('net'),
+      {promisify} = require('util'),
       Module = require('../module.js'),
       Format = require('../../formats/logger/main.js'),
       Discord = require('../../transports/discord/main.js'),
       Logger = require('../../include/log.js'),
-      util = require('../../include/util.js');
+      {shorturl} = require('../../include/util.js');
 
 /**
  * Constants.
@@ -32,18 +33,16 @@ class Vandalism extends Module {
      */
     constructor(config, client) {
         super(config, client);
-        if (config.summaries instanceof Array) {
-            this._summaries = config.summaries.map(s => new RegExp(s, 'i'));
-        } else {
-            this._summaries = [];
-        }
-        this._wikiwl = config.wikiwl instanceof Array ? config.wikiwl : [];
-        this._removal = typeof config.removal === 'number' ?
-            config.removal :
-            1500;
-        const transport = config.transport || {};
-        transport.type = 'discord-vandalism';
-        this._transport = new Discord(transport);
+        const {summaries, wikiwl, removal, transport} = config;
+        this._summaries = summaries instanceof Array ?
+            summaries.map(s => new RegExp(s, 'i')) :
+            [];
+        this._wikiwl = wikiwl instanceof Array ? wikiwl : [];
+        this._removal = typeof removal === 'number' ? removal : 1500;
+        this._transport = new Discord({
+            ...transport,
+            type: 'discord-vandalism'
+        });
         this._format = new Format({}, this._transport);
         this._logger = new Logger({
             file: true,
@@ -67,7 +66,7 @@ class Vandalism extends Module {
                 // Summary matching.
                 this._summaries.some(s => s.test(message.summary)) ||
                 // Large removal/replacement/blanking by anons condition:
-                net.isIP(message.user) &&
+                isIP(message.user) &&
                 (
                     // Page was blanked.
                     this._caches.i18n['autosumm-blank']
@@ -84,27 +83,29 @@ class Vandalism extends Module {
      * Handles messages.
      * @param {Message} message Received message
      */
-    execute(message) {
-        const key = `vandalism:${message.user}:${message.language}:${message.wiki}:${message.domain}`;
-        this._cache.exists(key, function(error, exists) {
-            if (error) {
-                this._logger.error('Redis error:', error);
-            } else if (!exists) {
-                this._cache
-                    .batch()
-                    .setbit(key, 0, 1)
-                    .expire(key, CACHE_EXPIRY)
-                    .exec(this._redisCallback.bind(this));
-                const formatted = this._format.execute(message);
-                if (
-                    typeof formatted === 'object' &&
-                    typeof formatted.content === 'string'
-                ) {
-                    formatted.content = `[${util.shorturl(message.wiki, message.language, message.domain)}] ${formatted.content}`;
-                    this._transport.execute(formatted);
-                }
+    async execute(message) {
+        const {user, wiki, language, domain} = message,
+              key = `vandalism:${user}:${language}:${wiki}:${domain}`;
+        try {
+            if (await promisify(this._cache.exists).call(this._cache, key)) {
+                return;
             }
-        }.bind(this));
+            this._cache
+                .batch()
+                .setbit(key, 0, 1)
+                .expire(key, CACHE_EXPIRY)
+                .exec(this._redisCallback.bind(this));
+            const formatted = this._format.execute(message);
+            if (
+                typeof formatted === 'object' &&
+                typeof formatted.content === 'string'
+            ) {
+                formatted.content = `[${shorturl(wiki, language, domain)}] ${formatted.content}`;
+                await this._transport.execute(formatted);
+            }
+        } catch (error) {
+            this._logger.error('Redis error', error);
+        }
     }
     /**
      * Cleans up the resources after a kill has been requested.
