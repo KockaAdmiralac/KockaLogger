@@ -26,7 +26,6 @@
     "rights-none": "(yok)",
     "discussions": "{{user|$1}} tarafından $7 kategorisindeki durumu $2 olan tartışmaya {{dlink|$3|$4|$5}} eklendi {{summary|$8}}",
     "discussions-reply": "yanıt",
-    "discussions-thread": "a thread",
     "discussions-create-post": "paylaşıldı",
     "discussions-create-report": "rapor edildi",
     "discussions-deleted": "silindi",

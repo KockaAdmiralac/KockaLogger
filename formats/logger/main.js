@@ -506,9 +506,7 @@ class Logger extends Format {
                     `(${temp1}${util.escape(temp.replace(/(?:\n|\r|\s)+/g, ' '))}${temp1})`;
             case 'dlink':
                 return this._link(
-                    args[0] || args[2] ?
-                        this._i18n['discussions-reply'] :
-                        this._i18n['discussions-thread'],
+                    args[0] || this._i18n['discussions-reply'],
                     wiki,
                     lang,
                     domain,

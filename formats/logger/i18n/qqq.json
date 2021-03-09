@@ -26,7 +26,6 @@
     "rights-none": "When a user's had no rights before a promotion or has no rights after a demotion.",
     "discussions": "Appears when a Discussions event occurs. $1: user doing the event; $2: one of the discussions-* messages representing the action being done; $3: thread ID; $4: reply ID; $5: thread title, or discussions-reply message if title is not available; $6: size in bytes; $7: Discussions category name; $8: short summary of the event",
     "discussions-reply": "When the title of a thread is not available (for example, an action was done on a thread reply)",
-    "discussions-thread": "When the title of a thread is not available and the target is a thread, not a reply",
     "discussions-create-post": "When a Discussions post is created",
     "discussions-create-report": "When a Discussions post is reported",
     "discussions-deleted": "When a Discussions post is deleted",

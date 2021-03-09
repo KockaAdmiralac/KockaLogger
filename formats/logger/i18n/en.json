@@ -26,7 +26,6 @@
     "rights-none": "(none)",
     "discussions": "{{user|$1}} $2 {{dlink|$3|$4|$5}} ($6) in $7 {{summary|$8}}",
     "discussions-reply": "a reply",
-    "discussions-thread": "a thread",
     "discussions-create-post": "posted",
     "discussions-create-report": "reported",
     "discussions-deleted": "deleted",

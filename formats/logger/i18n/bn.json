@@ -26,7 +26,6 @@
     "rights-none": "(কিছু না)",
     "discussions": "{{user|$1}} {{dlink|$3|$4|$5}}তে $2 ($6) {{summary|$8}}",
     "discussions-reply": "একটি উত্তর",
-    "discussions-thread": "a thread",
     "discussions-create-post": "পোস্ট করেছে",
     "discussions-create-report": "রিপোর্ট করেছে",
     "discussions-deleted": "ডিলিট করেছে",
