@@ -1,7 +1,7 @@
 {
     "name": "kocka-logger",
-    "version": "1.1.9",
-    "description": "The time has come.",
+    "version": "1.1.10",
+    "description": "Parses IRC activity messages across all of Fandom and relays them to Discord in various formats.",
     "keywords": [
         "wikia",
         "fandom",
@@ -24,14 +24,13 @@
         "url": "https://github.com/KockaAdmiralac/KockaLogger.git"
     },
     "dependencies": {
-        "discord.js": ">=12.0.2",
-        "irc-upd": ">=0.10.0",
-        "mysql2": ">=2.1.0",
-        "redis": ">=3.0.2",
-        "request": ">=2.88.2",
-        "request-promise-native": ">=1.0.8"
+        "discord.js": ">=12.5.1",
+        "got": ">=11.8.2",
+        "irc-upd": ">=0.11.0",
+        "mysql2": ">=2.2.5",
+        "redis": ">=3.0.2"
     },
     "devDependencies": {
-        "eslint": ">=6.8.0"
+        "eslint": ">=7.21.0"
     }
 }
