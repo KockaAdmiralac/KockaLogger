@@ -9,7 +9,7 @@
  * Importing modules.
  */
 const Module = require('../module.js'),
-      util = require('../../include/util.js'),
+      {escape, url} = require('../../include/util.js'),
       Discord = require('../../transports/discord/main.js');
 
 /**
@@ -52,17 +52,9 @@ class NewWikis extends Module {
      * @param {Message} message Received message
      */
     execute(message) {
+        const {target, wiki, language, domain} = message;
         this._transport.execute({
-            content: `New wiki! [${
-                util.escape(message.target)
-                    .replace(/\[|\]/g, '')
-            }](<${
-                util.url(
-                    message.wiki,
-                    message.language,
-                    message.domain
-                )
-            }>)`
+            content: `New wiki! [${escape(target).replace(/\[|\]/g, '')}](<${url(wiki, language, domain)}>)`
         });
     }
 }
