@@ -8,10 +8,11 @@
 /**
  * Importing modules.
  */
-const redis = require('redis'),
+const {promisify} = require('util'),
+      redis = require('redis'),
       Module = require('../module.js'),
       Logger = require('../../include/log.js'),
-      util = require('../../include/util.js'),
+      {url, shorturl, encode} = require('../../include/util.js'),
       Discord = require('../../transports/discord/main.js'),
       mysql = require('mysql2/promise');
 
@@ -20,16 +21,14 @@ const redis = require('redis'),
  */
 const QUERY = 'INSERT INTO `newusers` (`name`, `wiki`, `language`, `domain`) ' +
               'VALUES(?, ?, ?, ?)',
-/* eslint-disable camelcase, sort-keys */
+/* eslint-disable sort-keys */
 PROPERTY_MAP = {
     website: 'Website',
+    bio: 'Bio',
     name: 'aka',
-    location: 'I live in',
-    UserProfilePagesV3_birthday: 'I was born on',
-    UserProfilePagesV3_gender: 'I am',
     fbPage: 'Facebook',
     twitter: 'Twitter',
-    bio: 'Bio'
+    discordHandle: 'Discord'
 },
 /* eslint-enable */
 PREFIXES = {
@@ -95,11 +94,11 @@ class NewUsers extends Module {
         this._subscriber = redis.createClient({
             path: '/tmp/redis_kockalogger.sock'
         })
-        .on('connect', this._redisConnected.bind(this))
-        .on('end', this._redisDisconnected.bind(this))
-        .on('error', this._redisError.bind(this))
-        .on('reconnecting', this._redisReconnecting.bind(this))
-        .on('message', this._redisMessage.bind(this));
+            .on('connect', this._redisConnected.bind(this))
+            .on('end', this._redisDisconnected.bind(this))
+            .on('error', this._redisError.bind(this))
+            .on('reconnecting', this._redisReconnecting.bind(this))
+            .on('message', this._redisMessage.bind(this));
         this._subscriber.subscribe('__keyevent@0__:expired');
     }
     /**
@@ -168,14 +167,16 @@ class NewUsers extends Module {
      * Handles messages.
      * @param {Message} message Message to handle
      */
-    execute(message) {
+    async execute(message) {
         if (this._killing) {
             return;
         }
-        this._relay(message);
-        this._db.getConnection()
-            .then(this._insertUser.bind(this, message))
-            .catch(e => this._logger.error('Query error', e));
+        await this._relay(message);
+        try {
+            await this._insertUser(message);
+        } catch (error) {
+            this._logger.error('Query error', error);
+        }
         const key = `newusers:${message.user}:${message.wiki}:${message.language}:${message.domain}`;
         this._cache
             .batch()
@@ -188,38 +189,27 @@ class NewUsers extends Module {
      * @param {Message} message New user information
      * @private
      */
-    _relay(message) {
-        const wiki = util.url(
-            message.wiki,
-            message.language,
-            message.domain
-        ), {user} = message;
-        this._logTransport.execute({
-            content: `[${user}](<${wiki}/wiki/Special:Contribs/${util.encode(user)}>) ([talk](<${wiki}/wiki/User_talk:${util.encode(user)}>) | [${
-                util.shorturl(
-                    message.wiki,
-                    message.language,
-                    message.domain
-                )
-            }](<${wiki}>/wiki/Special:Log/newusers))`
+    async _relay(message) {
+        const {wiki, language, domain, user} = message,
+              wikiUrl = url(wiki, language, domain);
+        await this._logTransport.execute({
+            content: `[${user}](<${wikiUrl}/wiki/Special:Contribs/${encode(user)}>) ([talk](<${wikiUrl}/wiki/User_talk:${encode(user)}>) | [${
+                shorturl(wiki, language, domain)
+            }](<${wikiUrl}/wiki/Special:Log/newusers>))`
         });
     }
     /**
      * Inserts a user into the database, provided a connection.
      * @param {Message} message New user information
-     * @param {PromisePoolConnection} connection Database connection
      */
-    _insertUser(message, connection) {
+    async _insertUser(message) {
         ++this._noCloseConnection;
-        connection.execute(QUERY, [
-            message.user,
-            message.wiki,
-            message.language,
-            message.domain
-        ]);
-        connection.release();
+        const {user, wiki, language, domain} = message;
+        await this._db.execute(QUERY, [user, wiki, language, domain]);
         if (--this._noCloseConnection === 0 && this._killing) {
-            this._db.end().then(this._dbCallback);
+            await this._db.end();
+            // TODO: Remove
+            this._dbCallback();
         }
     }
     /**
@@ -228,176 +218,46 @@ class NewUsers extends Module {
      * @param {String} message Message sent in the channel
      * @private
      */
-    _redisMessage(channel, message) {
+    async _redisMessage(channel, message) {
         const [type, user, wiki, language, domain] = message.split(':');
-        if (channel === '__keyevent@0__:expired' && type === 'newusers') {
-            this._getID(user, wiki, language, domain);
+        if (channel !== '__keyevent@0__:expired' || type !== 'newusers') {
+            return;
         }
+        const wait = promisify(setTimeout),
+              errors = [];
+        for (let retry = 0; retry < MAX_RETRIES; ++retry) {
+            await wait(retry * RETRY_DELAY);
+            try {
+                const userId = await this._getID(user, wiki, language, domain),
+                      {users} = await this._io.userInfo(userId);
+                if (users[0].website) {
+                    await this._post(users[0], wiki, language, domain);
+                }
+                return;
+            } catch (error) {
+                if (user.startsWith('QATest')) {
+                    return;
+                }
+                errors.push(error);
+            }
+        }
+        this._logger.error('Errors while fetching user ID:', errors);
     }
     /**
      * Fetches a user's ID.
+     * This method needs to fail if it wants the parent loop to retry
+     * the request.
      * @param {String} user User whose ID is being obtained
      * @param {String} wiki Wiki the user created their account on
      * @param {String} language Language path of the wiki
      * @param {String} domain Domain of the wiki
-     * @param {Boolean} isRetry If the function was called as a retry
      * @private
      */
-    _getID(user, wiki, language, domain, isRetry) {
-        try {
-            if (isRetry) {
-                this._retries.shift();
-            }
-            this._io.query('community', 'en', 'fandom.com', {
-                list: 'users',
-                ususers: user
-            }).then(this._idCallback.bind(this, user, wiki, language, domain))
-            .catch(this._idError.bind(this, user, wiki, language, domain));
-        } catch (error) {
-            this._logger.error(
-                'Error in timeout for obtaining user ID:',
-                error
-            );
-        }
-    }
-    /**
-     * Callback after obtaining a user ID.
-     * @param {String} user User whose ID is being obtained
-     * @param {String} wiki Wiki the user created their account on
-     * @param {String} language Language path of the wiki
-     * @param {String} domain Domain of the wiki
-     * @param {Object} result MediaWiki API response
-     * @private
-     */
-    _idCallback(user, wiki, language, domain, result) {
-        try {
-            if (
-                typeof result === 'object' &&
-                typeof result.query === 'object' &&
-                result.query.users instanceof Array &&
-                typeof result.query.users[0] === 'object' &&
-                typeof result.query.users[0].userid === 'number'
-            ) {
-                if (result.isRetry) {
-                    this._retries.shift();
-                }
-                const id = result.query.users[0].userid;
-                delete this._retryCount[user];
-                const message = {
-                    domain,
-                    id,
-                    language,
-                    user,
-                    wiki
-                };
-                this._io.userInfo(id)
-                    .then(this._infoCallback.bind(this, message))
-                    .catch(this._infoError.bind(this, message));
-            } else if (!user.startsWith('QATest')) {
-                this._idError(user, wiki, language, domain, result);
-            }
-        } catch (error) {
-            this._logger.error(
-                'Error in timeout for obtaining user information:',
-                error
-            );
-        }
-    }
-    /**
-     * Callback after failing to obtain a user ID.
-     * @param {String} user User whose ID was being obtained
-     * @param {String} wiki Wiki the user created their account on
-     * @param {String} language Language path of the wiki
-     * @param {String} domain Domain of the wiki
-     * @param {Error} error Error that occurred
-     * @private
-     */
-    _idError(user, wiki, language, domain, error) {
-        if (this._retryCount[user] && this._retryCount[user] === MAX_RETRIES) {
-            this._logger.error('Failed to fetch user ID:', error);
-        } else {
-            if (!this._retryCount[user]) {
-                this._retryCount[user] = 0;
-            }
-            this._retries.push(setTimeout(
-                this._getID.bind(this, user, wiki, language, domain, true),
-                ++this._retryCount[user] * RETRY_DELAY
-            ));
-        }
-    }
-    /**
-     * Callback after getting profile information about a user.
-     * @param {Number} id User ID of the user
-     * @param {String} json JSON response with profile information
-     * @param {String} user Username of the user
-     * @param {String} wiki Wiki the user created their account on
-     * @param {String} language Language path of the wiki
-     * @param {String} domain Domain of the wiki
-     */
-    _infoCallback({id, user, wiki, language, domain}, json) {
-        let data = null;
-        const message = {
-            domain,
-            id,
-            language,
-            user,
-            wiki
-        };
-        try {
-            data = JSON.parse(json);
-        } catch (error) {
-            this._infoError(message, {
-                details: 'JSON parsing error.',
-                error,
-                json
-            });
-            return;
-        }
-        if (
-            typeof data === 'object' &&
-            typeof data.users === 'object' &&
-            typeof data.users[id] === 'object'
-        ) {
-            const info = data.users[id];
-            if (info.website) {
-                this._post(info, wiki, language, domain);
-            }
-        } else {
-            this._infoError(message, data);
-        }
-    }
-    /**
-     * Callback after getting profile information about a user.
-     * @param {Number} id User ID of the user
-     * @param {Error} error Error that occurred
-     * @param {String} wiki Wiki the user created their account on
-     * @param {String} language Language path of the wiki
-     * @param {String} domain Domain of the wiki
-     * @private
-     * @todo DRY
-     */
-    _infoError({id, user, wiki, language, domain}, error) {
-        if (this._retryCount[user] && this._retryCount[user] === MAX_RETRIES) {
-            this._logger.error('Failed to fetch user information:', error);
-        } else {
-            if (!this._retryCount[user]) {
-                this._retryCount[user] = 0;
-            }
-            this._retries.push(setTimeout(
-                // WARNING: Hacky!
-                this._idCallback.bind(this, user, wiki, language, domain, {
-                    isRetry: true,
-                    query: {
-                        users: [
-                            {
-                                userid: id
-                            }
-                        ]
-                    }
-                }),
-                ++this._retryCount[user] * RETRY_DELAY
-            ));
-        }
+    async _getID(user) {
+        return (await this._io.query('community', 'en', 'fandom.com', {
+            list: 'users',
+            ususers: user
+        })).query.users[0].userid;
     }
     /**
      * Posts profile information to a Discord channel.
@@ -406,39 +266,29 @@ class NewUsers extends Module {
      * @param {String} language Language path of the wiki
      * @param {String} domain Domain of the wiki
      */
-    _post(info, wiki, language, domain) {
-        const message = {
-            fields: [],
-            title: info.username,
-            url: `${util.url(
-                wiki,
-                language,
-                domain
-            )}/wiki/Special:Contribs/${util.encode(info.username)}`
-        };
-        if (info.avatar) {
-            message.image = {
-                url: info.avatar
-            };
-        }
-        for (const key in PROPERTY_MAP) {
-            if (info[key]) {
-                message.fields.push({
-                    inline: true,
-                    name: PROPERTY_MAP[key],
-                    value: PREFIXES[key] ?
-                        PREFIXES[key] + info[key] :
-                        info[key]
-                });
-            }
-        }
-        this._profilesTransport.execute({
+    async _post(info, wiki, language, domain) {
+        await this._profilesTransport.execute({
             content: `\`!report p ${
                 wiki === 'community' ?
                     'c' :
-                    util.shorturl(wiki, language, domain)
+                    shorturl(wiki, language, domain)
             } ${info.username}\``,
-            embeds: [message]
+            embeds: [{
+                fields: Object.keys(PROPERTY_MAP)
+                    .filter(key => info[key])
+                    .map(key => ({
+                        inline: true,
+                        name: PROPERTY_MAP[key],
+                        value: PREFIXES[key] ?
+                            `${PREFIXES[key]}${info[key]}` :
+                            info[key]
+                    })),
+                image: info.avatar ? {
+                    url: info.avatar
+                } : undefined,
+                title: info.username,
+                url: `${url(wiki, language, domain)}/wiki/Special:Contribs/${encode(info.username)}`
+            }]
         });
     }
     /**
