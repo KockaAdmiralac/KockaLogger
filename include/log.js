@@ -17,8 +17,7 @@ const fs = require('fs'),
  */
 const LOG_LEVELS = ['debug', 'info', 'warn', 'error'],
       DEFAULT_LOG_LEVEL = 'debug',
-      DEFAULT_LOG_DIRECTORY = 'logs',
-      DISCORD_ERROR = 'Discord transport error';
+      DEFAULT_LOG_DIRECTORY = 'logs';
 
 /**
  * Simple logging interface.
@@ -49,7 +48,6 @@ class Logger {
         }
         if (typeof discord === 'object') {
             this._webhook = new WebhookClient(discord.id, discord.token);
-            // this._url = `https://discordapp.com/api/webhooks/${discord.id}/${discord.token}`;
         }
         if (!this._console && !this._stream && !this._url) {
             throw new Error('No logging route specified!');
@@ -135,19 +133,6 @@ class Logger {
         if (this._stream) {
             this._stream.write(`[${date} ${time}] [${logLevel}] ${str}\n`);
         }
-        /*
-        if (this._url && !dstr.startsWith(DISCORD_ERROR)) {
-            Logger._io.webhook(this._url, {
-                // CAUTION: May contain mentions
-                content: `**${logLevel}:** ${dstr}`
-            }).catch(e => this.error(
-                DISCORD_ERROR,
-                e.statusCode === 429 ?
-                    '| Rate limited!' :
-                    e.error
-            ));
-        }
-        */
         if (this._webhook) {
             this._webhook.send(`**${logLevel}:** ${dstr}`);
         }
