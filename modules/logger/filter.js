@@ -14,19 +14,18 @@ class Filter {
      * @param {Object} config Filter configuration
      */
     constructor(config) {
-        if (typeof config === 'object') {
-            this._type = typeof config.type === 'string' ? config.type : 'all';
-            this._transport = typeof config.transport === 'string' ?
-                config.transport :
+        if (typeof config === 'object' && config) {
+            const {type, transport, negation, namespaces, logs} = config;
+            this._type = typeof type === 'string' ? type : 'all';
+            this._transport = typeof transport === 'string' ?
+                transport :
                 'default';
-            this._negation = typeof config.negation === 'boolean' ?
-                config.negation :
-                false;
-            if (config.namespaces instanceof Array) {
-                this._namespaceFilter = config.namespaces;
+            this._negation = typeof negation === 'boolean' ? negation : false;
+            if (namespaces instanceof Array) {
+                this._namespaceFilter = namespaces;
             }
-            if (config.logs instanceof Array) {
-                this._logFilter = config.logs;
+            if (logs instanceof Array) {
+                this._logFilter = logs;
             }
         } else {
             this._type = 'all';
@@ -48,7 +47,8 @@ class Filter {
             if (this._func(message) !== this._negation) {
                 return this._transport;
             }
-        } catch (e) {
+        } catch (error) {
+            // TODO: Log failure
             return false;
         }
     }

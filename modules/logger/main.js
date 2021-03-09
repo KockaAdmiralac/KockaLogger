@@ -33,7 +33,9 @@ class Logger extends Module {
             throw new Error('Logger configuration invalid!');
         }
         this._initLogging();
-        this._initWikis(config);
+        this._initWikis(config).catch(
+            error => this._logger.error('Unknown initialization error', error)
+        );
     }
     /**
      * Initializes the logger.
@@ -51,114 +53,100 @@ class Logger extends Module {
      * @param {Array<Object>} config Configuration array
      * @private
      */
-    _initWikis(config) {
+    async _initWikis(config) {
         this._wikis = config
             .map(wiki => new Wiki(wiki))
             .filter(wiki => wiki.initialized);
-        this._wikiMap = {};
-        this._intervals = {};
-        this._fetching = [];
-        this._wikis.forEach(function(wiki, i) {
-            if (this._wikiMap[wiki.key]) {
-                this._wikiMap[wiki.key].push(i);
+        this._wikiMap = new Map();
+        const fetching = [];
+        for (let i = 0, l = this._wikis.length; i < l; ++i) {
+            const wiki = this._wikis[i];
+            if (this._wikiMap.has(wiki.key)) {
+                this._wikiMap.get(wiki.key).push(i);
             } else {
-                this._wikiMap[wiki.key] = [i];
-                this._fetching.push(wiki.key);
+                this._wikiMap.set(wiki.key, [i]);
+                fetching.push(wiki);
             }
-        }, this);
-        for (
-            let i = 0, l = this._fetching.length;
-            i < l && i < INFO_THREADS;
-            ++i
-        ) {
-            this._fetchWikiInfo();
+        }
+        while (fetching.length > 0) {
+            await Promise.all(
+                fetching
+                    .splice(0, INFO_THREADS)
+                    .map(wiki => this._fetchWikiInfo(wiki))
+            );
         }
     }
     /**
-     * Fetches information about a wiki that's in logging.
+     * Fetches information about a wiki that's being logged.
+     * @param {Wiki} wiki Wiki whose information is to be fetched
      * @private
      */
-    _fetchWikiInfo() {
-        const key = this._fetching.shift();
-        if (!key) {
-            return;
-        }
-        const spl = key.split('.'),
-              lang = spl.shift(),
-              domain = spl.splice(-2).join('.'),
-              wiki = spl.join('.');
-        this._io.query(wiki, lang, domain, {
-            meta: 'siteinfo',
-            siprop: [
-                'general',
-                'namespaces',
-                'statistics',
-                'wikidesc',
-                'variables'
-            ].join('|')
-        }).then(function(d) {
+    async _fetchWikiInfo(wiki) {
+        const {name, language, domain} = wiki;
+        try {
+            const response = await this._io.query(name, language, domain, {
+                meta: 'siteinfo',
+                siprop: [
+                    'general',
+                    'namespaces',
+                    'variables'
+                ].join('|')
+            });
             if (
-                typeof d === 'object' &&
-                typeof d.query === 'object' &&
-                typeof d.error !== 'object'
+                typeof response === 'object' &&
+                typeof response.query === 'object' &&
+                typeof response.error !== 'object'
             ) {
-                const {query} = d;
-                this._wikiMap[key].forEach(function(index) {
-                    this._wikis[index].setData(query);
-                }, this);
+                const {query} = response,
+                      wikis = this._wikiMap.get(wiki.key)
+                          .map(index => this._wikis[index]);
+                for (const dataWiki of wikis) {
+                    dataWiki.setData(query);
+                }
+            } else {
+                this._logger.error('Invalid siteinfo response', response);
             }
-            this._fetchWikiInfo();
-        }.bind(this)).catch(e => this._logger.error('Fetching wiki info', e));
+        } catch (error) {
+            this._logger.error('Fetching wiki info', error);
+        }
     }
     /**
      * Determines whether the module is interested to receive the message
      * and which set of properties does it expect to receive.
      * @param {Message} message Message to check
-     * @returns {Boolean|String|Array} Set(s) of expected properties
+     * @returns {Boolean} Whether the module is interested in the message
      */
     interested(message) {
-        const indexes = this._wikiMap[
+        const indexes = this._wikiMap.get(
             `${message.language}.${message.wiki}.${message.domain}`
-        ];
+        );
         if (!(indexes instanceof Array) || indexes.length === 0) {
             return false;
         }
-        if (message.type === 'edit' && !message.flags.includes('B')) {
-            const ns = this._wikis[indexes[0]]
-                .getNamespaceID(message.page.split(':')[0]);
-            if (ns === 1200 || ns === 2000) {
-                return ['threadinfo', 'pageinfo'];
-            }
-            return 'pageinfo';
-        } else if (message.type === 'log' && message.log === '0') {
-            return 'threadlog';
-        } else if (message.type !== 'edit') {
-            return true;
-        }
-        return false;
+        return message.type !== 'edit' || !message.flags.includes('B');
     }
     /**
      * Handles messages.
      * @param {Message} message Received message
      */
-    execute(message) {
-        this._wikiMap[
-            `${message.language}.${message.wiki}.${message.domain}`
-        ].forEach(function(index) {
-            const wiki = this._wikis[index];
+    async execute(message) {
+        const wikiKey = `${message.language}.${message.wiki}.${message.domain}`,
+              wikis = this._wikiMap.get(wikiKey)
+                  .map(index => this._wikis[index]);
+        for (const wiki of wikis) {
             if (wiki && wiki.id) {
                 try {
-                    wiki.execute(message);
-                } catch (e) {
+                    await wiki.execute(message);
+                } catch (error) {
                     this._logger.error(
                         'Error while handling message',
-                        e,
+                        error,
                         message,
                         wiki.key
                     );
                 }
             }
-        }, this);
+        }
     }
     /**
      * Cleans up the resources after a kill has been requested.
