@@ -28,8 +28,12 @@ class Discord extends Transport {
      * Executes the transport.
      * @param {Object} message Formatted message to transport
      */
-    execute(message) {
-        this._webhook.send(message.content, message);
+    async execute(message) {
+        try {
+            await this._webhook.send(message.content, message);
+        } catch (error) {
+            this._logger.error('Discord transport error:', error);
+        }
     }
 }
 
