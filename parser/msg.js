@@ -32,9 +32,6 @@ class Message {
         this.error = code;
         this.errmsg = message;
         this.errdetails = details;
-        if (typeof this._reject === 'function') {
-            this._reject();
-        }
     }
     /**
      * Starts fetching more details about the message.
@@ -42,14 +39,9 @@ class Message {
      * @param {Array<String>} properties Details to fetch
      * @param {Array<String>} interested Modules interested in the message
      */
-    fetch(client, properties, interested) {
+    fetch(client, properties) {
         this._client = client;
-        if (!this._properties) {
-            this._properties = properties;
-        }
-        if (!this._interested) {
-            this._interested = interested;
-        }
+        this._properties = properties;
     }
     /**
      * Cleans up after a failed fetch.
@@ -61,7 +53,7 @@ class Message {
         delete this.errmsg;
         delete this.errdetails;
         delete this._client;
-        this.retries = (this.retries || 0) + 1;
+        delete this._properties;
     }
     /**
      * Stringifies the object when passed through JSON.stringify.
@@ -81,13 +73,6 @@ class Message {
             }
         }
         return clone;
-    }
-    /**
-     * Gets interested modules.
-     * @returns {Array<String>} Modules interested in the message
-     */
-    get interested() {
-        return this._interested;
     }
 }
 
