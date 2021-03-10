@@ -109,12 +109,11 @@ class Vandalism extends Module {
     }
     /**
      * Cleans up the resources after a kill has been requested.
-     * @param {Function} callback Callback to call after cleaning up
-     * @returns {Number} Number of upcoming callback calls
      */
-    kill(callback) {
-        this._logger.close(callback);
-        return 1;
+    kill() {
+        this._logger.close();
+        this._transport.kill();
+        this._format.kill();
     }
 }
 

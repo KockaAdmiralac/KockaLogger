@@ -194,12 +194,15 @@ class Logger {
      * Closes all open resources.
      * @param {Function} callback Callback to call after closing
      */
-    close(callback) {
+    close() {
         if (this._stream) {
             this._stream.close();
             delete this._stream;
         }
-        callback();
+        if (this._webhook) {
+            this._webhook.destroy();
+            delete this._webhook;
+        }
     }
     /**
      * Debugs specified messages.

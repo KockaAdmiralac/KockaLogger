@@ -45,15 +45,12 @@ class Module {
             throw new Error('Implement this method!');
         }
     }
+    /* eslint-disable no-empty-function */
     /**
-     * Cleans up the resources after a kill has been requested.
-     * @param {Function} callback Callback to call after cleaning up
-     * @returns {Number} Number of upcoming callback calls
+     * Disposes resources used by the module so KockaLogger can cleanly exit.
      */
-    kill(callback) {
-        callback();
-        return 1;
-    }
+    kill() {}
+    /* eslint-enable */
     /**
      * Standard Redis callback.
      * @param {Error} error Error that occurred

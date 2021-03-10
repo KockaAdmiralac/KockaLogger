@@ -57,6 +57,12 @@ class NewWikis extends Module {
             content: `New wiki! [${escape(target).replace(/\[|\]/g, '')}](<${url(wiki, language, domain)}>)`
         });
     }
+    /**
+     * Disposes resources used by the format so KockaLogger can cleanly exit.
+     */
+    kill() {
+        this._transport.kill();
+    }
 }
 
 module.exports = NewWikis;

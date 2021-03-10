@@ -300,6 +300,23 @@ class Client {
         }
         // This is a UCP bug where the URL isn't included in log messages.
         if (msg && !msg.wiki) {
+            /*
+             * You might want to use this for debugging:
+             *if (
+             *    msg.error &&
+             *    ![
+             *        'ro-tournament',
+             *        'ro-news',
+             *        'curseprofile',
+             *        'review',
+             *        'thanks',
+             *        'cargo',
+             *        'import'
+             *    ].includes(msg.log)
+             *) {
+             *    console.info(msg.toJSON());
+             *}
+             */
             return null;
         }
         return msg;
@@ -494,49 +511,33 @@ class Client {
      * Cleans up the resources after a kill has been requested.
      * @private
      */
-    kill() {
+    async kill() {
         // Clear ^C from console line.
         process.stdout.write(`${String.fromCharCode(27)}[0G`);
         if (this._killing) {
             this._logger.error(
                 'KockaLogger already shutting down, please wait. ' +
-                'If shutting down lasts over 60 seconds, use CTRL+Z.'
+                'If shutting down lasts over 15 seconds, press again.'
             );
             return;
         }
-        const cb = this._killCallback.bind(this);
         this._killing = true;
-        // Redis + logger + init.
-        this._awaitingKill = 3;
         // Quit client's logger.
         this._logger.info('Shutting down by user request...');
-        this._logger.close(cb);
+        this._logger.close();
         // Quit IRC.
         if (
             typeof this._client === 'object' &&
             typeof this._client.disconnect === 'function'
         ) {
-            ++this._awaitingKill;
-            this._client.disconnect('User-requested shutdown.', cb);
+            await promisify(this._client.disconnect)
+                .call(this._client, 'User-requested shutdown.');
         }
         // Quit Redis client.
-        this._cache.quit();
+        await promisify(this._cache.quit).call(this._cache);
         // Let modules quit what they have to quit.
         for (const mod in this._modules) {
-            const num = this._modules[mod].kill(cb) || 1;
-            this._awaitingKill += num;
-        }
-        // Initialization of kill callbacks finished.
-        this._killInitFinished = true;
-        this._killCallback();
-    }
-    /**
-     * Callback after cleaning up a resource.
-     * @private
-     */
-    _killCallback() {
-        if (--this._awaitingKill === 0 && this._killInitFinished) {
-            process.exit();
+            await this._modules[mod].kill();
         }
     }
     /**

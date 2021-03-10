@@ -140,16 +140,15 @@ class Logger extends Module {
     }
     /**
      * Cleans up the resources after a kill has been requested.
-     * @param {Function} callback Callback to call after cleaning up
-     * @returns {Number} Number of upcoming callback calls
      */
-    kill(callback) {
-        this._logger.close(callback);
+    kill() {
+        this._logger.close();
         if (!this._wikis) {
-            return 1;
+            return;
         }
-        this._wikis.forEach(wiki => wiki.kill(callback));
-        return this._wikis.length + 1;
+        for (const wiki of this._wikis) {
+            wiki.kill();
+        }
     }
 }
 

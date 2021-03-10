@@ -518,6 +518,12 @@ class Logger extends Format {
                 return '';
         }
     }
+    /**
+     * Disposes resources used by the format so KockaLogger can cleanly exit.
+     */
+    kill() {
+        this._logger.close();
+    }
 }
 
 module.exports = Logger;

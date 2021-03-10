@@ -25,6 +25,12 @@ class Format {
     execute() {
         throw new Error('Implement this method!');
     }
+    /* eslint-disable no-empty-function */
+    /**
+     * Disposes resources used by the format so KockaLogger can cleanly exit.
+     */
+    kill() {}
+    /* eslint-enable */
 }
 
 module.exports = Format;

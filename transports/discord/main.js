@@ -35,6 +35,12 @@ class Discord extends Transport {
             this._logger.error('Discord transport error:', error);
         }
     }
+    /**
+     * Disposes resources used by the transport so KockaLogger can cleanly exit.
+     */
+    kill() {
+        this._webhook.destroy();
+    }
 }
 
 module.exports = Discord;

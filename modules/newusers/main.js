@@ -56,8 +56,6 @@ class NewUsers extends Module {
         this._initSubscriber();
         this._initTransport(config.profiles || config.transport, 'profiles');
         this._initTransport(config.log, 'log');
-        this._retries = [];
-        this._retryCount = {};
         this._noCloseConnection = 0;
     }
     /**
@@ -208,8 +206,6 @@ class NewUsers extends Module {
         await this._db.execute(QUERY, [user, wiki, language, domain]);
         if (--this._noCloseConnection === 0 && this._killing) {
             await this._db.end();
-            // TODO: Remove
-            this._dbCallback();
         }
     }
     /**
@@ -293,21 +289,17 @@ class NewUsers extends Module {
     }
     /**
      * Cleans up the resources after a kill has been requested.
-     * @param {Function} callback Callback to call after cleaning up
-     * @returns {Number} Number of upcoming callback calls
      */
-    kill(callback) {
+    async kill() {
         this._killing = true;
-        this._retries.forEach(clearTimeout);
-        this._logger.close(callback);
+        this._logger.close();
+        this._profilesTransport.kill();
+        this._logTransport.kill();
         // Close database connection when there are no pending queries.
-        if (this._noCloseConnection) {
-            this._dbCallback = callback;
-        } else {
-            this._db.end().then(callback);
+        if (this._noCloseConnection === 0) {
+            await this._db.end();
         }
-        this._subscriber.quit(callback);
-        return 3;
+        await promisify(this._subscriber.quit).call(this._subscriber);
     }
 }
 
