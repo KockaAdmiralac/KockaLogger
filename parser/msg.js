@@ -41,7 +41,6 @@ class Message {
      * @param {Client} client Client instance to get external clients from
      * @param {Array<String>} properties Details to fetch
      * @param {Array<String>} interested Modules interested in the message
-     * @returns {Promise} Promise that resolves when the details are fetched
      */
     fetch(client, properties, interested) {
         this._client = client;
@@ -51,10 +50,6 @@ class Message {
         if (!this._interested) {
             this._interested = interested;
         }
-        return new Promise(function(resolve, reject) {
-            this._resolve = resolve;
-            this._reject = reject;
-        }.bind(this));
     }
     /**
      * Cleans up after a failed fetch.
@@ -66,8 +61,6 @@ class Message {
         delete this.errmsg;
         delete this.errdetails;
         delete this._client;
-        delete this._resolve;
-        delete this._reject;
         this.retries = (this.retries || 0) + 1;
     }
     /**

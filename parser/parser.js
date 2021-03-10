@@ -13,14 +13,14 @@ const DiscussionsMessage = require('./discussions.js'),
       ErrorMessage = require('./error.js'),
       LogMessage = require('./log.js'),
       NewUsersMessage = require('./newusers.js'),
-      util = require('../include/util.js');
+      {escapeRegex} = require('../include/util.js');
 
 /**
  * Constants.
  */
-const EDIT_REGEX = /^\x0314\[\[\x0307([^\]]+)\x0314\]\]\x034 ([!NBM]*)\x0310 \x0302https?:\/\/([a-z0-9-.]+)\.(fandom\.com|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:([a-z-]+)\/)?index\.php\?(\S+)\x03 \x035\*\x03 \x0303([^\x03]+)\x03 \x035\*\x03 \(\x02?(\+|-)(\d+)\x02?\) \x0310(.*)$/,
+const EDIT_REGEX = /^\x0314\[\[\x0307([^\]]+)\x0314\]\]\x034 ([!NBM]*)\x0310 \x0302https?:\/\/([a-z0-9-.]+)\.(fandom\.com|gamepedia\.(?:com|io)|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:([a-z-]+)\/)?index\.php\?(\S+)\x03 \x035\*\x03 \x0303([^\x03]+)\x03 \x035\*\x03 \(\x02?(\+|-)(\d+)\x02?\) \x0310(.*)$/,
       // NOTE: \s{2} is \s{1,2} due to overflow space removal.
-      LOG_REGEX = /^\x0314\[\[\x0307[^:]+:Log\/([^\x03]+)\x0314\]\]\x034 ([^\x03]+)\x0310 \x0302https?:\/\/([a-z0-9-.]+)\.(fandom\.com|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:([a-z-]+)\/)?wiki\/[^:]+:Log\/[^\x03]+\x03 \x035\*\x03 \x0303([^\x03]+)\x03 \x035\*\x03\s{1,2}\x0310(.*)$/;
+      LOG_REGEX = /^\x0314\[\[\x0307[^:]+:Log\/([^\x03]+)\x0314\]\]\x034 ([^\x03]+)\x0310 \x0302(?:https?:\/\/([a-z0-9-.]+)\.(fandom\.com|gamepedia\.(?:com|io)|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:([a-z-]+)\/)?wiki\/[^:]+:Log\/[^\x03]+)?\x03 \x035\*\x03 \x0303([^\x03]+)\x03 \x035\*\x03\s{1,2}\x0310(.*)$/;
 
 /**
  * Class for parsing messages received from WikiaRC.
@@ -36,18 +36,18 @@ class Parser {
         for (const key in data) {
             this[`_${key}`] = data[key];
         }
-        LogMessage.BLOCK_FLAGS.forEach(function(m) {
-            const key = `block-log-flags-${m}`;
+        for (const flag of LogMessage.BLOCK_FLAGS) {
+            const key = `block-log-flags-${flag}`;
             if (typeof this._i18n[key] === 'string') {
                 this._i18n[key] = new RegExp(this._i18n[key]);
             } else if (this._i18n[key] instanceof Array) {
                 this._i18n[key] = new RegExp(
                     this._i18n[key]
-                        .map(util.escapeRegex)
+                        .map(escapeRegex)
                         .join('|')
                 );
             }
-        }, this);
+        }
     }
     /**
      * Parses a message.

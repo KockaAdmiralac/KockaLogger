@@ -13,7 +13,7 @@ const Message = require('./msg.js');
 /**
  * Constants.
  */
-const URL_REGEX = /^https?:\/\/([a-z0-9-.]+)\.(fandom\.com|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:([a-z-]+)\/)?(?:d|f)\/p\/(\d{19,})(?:\/r\/(\d{19,}))?$/,
+const URL_REGEX = /^https?:\/\/([a-z0-9-.]+)\.(fandom\.com|gamepedia\.(?:com|io)|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:([a-z-]+)\/)?(?:d|f)\/p\/(\d{19,})(?:\/r\/(\d{19,}))?$/,
       TYPE_REGEX = /^discussion-(thread|post|report)$/;
 
 /**
@@ -51,15 +51,17 @@ class DiscussionsMessage extends Message {
      * @param {String} category Category the post is in
      * @param {String} userName User who took the action
      * @param {String} action The taken action
+     * @param {String} title Discussions post title
      * @private
      */
-    _extract({url, type, snippet, size, category, userName, action}) {
+    _extract({url, type, snippet, size, category, userName, action, title}) {
         this.url = url;
         this.snippet = snippet;
         this.size = Number(size);
         this.category = category;
         this.user = userName;
         this.action = action;
+        this.title = title;
         this._extractType(type);
         this._extractURL(url);
     }
