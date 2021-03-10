@@ -8,7 +8,8 @@
 /**
  * Importing modules
  */
-const irc = require('irc-upd'),
+const {promisify} = require('util'),
+      irc = require('irc-upd'),
       redis = require('redis'),
       util = require('./util.js'),
       IO = require('./io.js'),
@@ -43,16 +44,14 @@ class Client {
      * @param {Boolean} debug KockaLogger debug mode
      * @param {Loader} loader Loader instance
      */
-    constructor(config, {debug}, loader) {
+    constructor(config, {debug}) {
         this._config = config;
         this._debug = debug;
-        this._loader = loader;
         this._io = new IO();
-        this._fetching = {};
+        this._fetching = new Map();
         this._initLogger(config.logging || {}, config.client.discord);
         this._initCache();
         this._initModules();
-        process.on('SIGINT', this._kill.bind(this));
     }
     /**
      * Initializes the debug/info/error logger.
@@ -77,10 +76,10 @@ class Client {
         this._cache = redis.createClient({
             path: '/tmp/redis_kockalogger.sock'
         })
-        .on('connect', this._redisConnected.bind(this))
-        .on('end', this._redisDisconnected.bind(this))
-        .on('error', this._redisError.bind(this))
-        .on('reconnecting', this._redisReconnecting.bind(this));
+            .on('connect', this._redisConnected.bind(this))
+            .on('end', this._redisDisconnected.bind(this))
+            .on('error', this._redisError.bind(this))
+            .on('reconnecting', this._redisReconnecting.bind(this));
     }
     /**
      * Event emitted when the Redis client connects.
@@ -147,36 +146,36 @@ class Client {
     /**
      * Initializes the IRC client.
      * @param {Object} data Loader data
+     * @param {Loader} loader Message loader
      */
-    run(data) {
+    async run(data, loader) {
         this._caches = data;
+        this._loader = loader;
         this._parser = new Parser(this, data);
         this._logger.info('Setting up modules...');
         for (const mod in this._modules) {
-            this._modules[mod].setup(data);
+            await this._modules[mod].setup(data);
         }
         this._logger.info('Initializing IRC client...');
-        const config = this._config.client;
-        this._client = new irc.Client(config.server, config.nick, {
+        const {
+            server, nick, channels, port, realname, username
+        } = this._config.client;
+        this._client = new irc.Client(server, nick, {
             autoRejoin: true,
             autoRenick: true,
-            channels: [
-                config.channels.rc,
-                config.channels.discussions,
-                config.channels.newusers
-            ],
-            port: config.port,
-            realName: config.realname,
+            channels: [channels.rc, channels.discussions, channels.newusers],
+            port,
+            realName: realname,
             showErrors: true,
-            userName: config.username || config.nick
+            userName: username || nick
         });
         this._client.out.error = this._errorOverride.bind(this);
-        EVENTS.forEach(function(e) {
+        for (const e of EVENTS) {
             this._client.on(e, this[`_${e.replace(
                 /-(\w)/,
                 (_, m) => m.toUpperCase()
             )}`].bind(this));
-        }, this);
+        }
     }
     /**
      * Overrides irc-upd's error output.
@@ -253,24 +252,17 @@ class Client {
      * @param {String} user User sending the message
      * @param {String} channel Channel the message was sent to
      * @param {String} message Message contents
-     * @param {Object} debug IRC message object
      */
-    _message(user, channel, message, debug) {
-        if (!message) {
-            this._logger.error('IRC message is null:', debug);
-            return;
-        }
+    async _message(user, channel, message) {
         for (const i in this._config.client.channels) {
-            if (
-                user.startsWith(this._config.client.users[i]) &&
-                channel === this._config.client.channels[i]
-            ) {
+            const {channels, users} = this._config.client;
+            if (user.startsWith(users[i]) && channel === channels[i]) {
                 const msg = this[`_${i}Message`](message);
                 if (msg && typeof msg === 'object') {
                     if (msg.error) {
-                        this._dispatchError(msg);
+                        await this._dispatchError(msg);
                     } else {
-                        this._dispatchMessage(msg);
+                        await this._dispatchMessage(msg);
                     }
                 }
                 break;
@@ -299,9 +291,16 @@ class Client {
                     msg.type === 'log' && msg.error === 'logparsefail'
                 ) {
                     msg = this._parser.parse(`${this._overflow} ${message}`, 'rc');
+                    if (msg) {
+                        msg.addedSpaces = true;
+                    }
                 }
             }
             this._overflow = '';
+        }
+        // This is a UCP bug where the URL isn't included in log messages.
+        if (msg && !msg.wiki) {
+            return null;
         }
         return msg;
     }
@@ -341,20 +340,20 @@ class Client {
      * @param {Message} message Message to dispatch
      * @private
      */
-    _dispatchMessage(message) {
-        const interested = [];
-        let properties = [];
+    async _dispatchMessage(message) {
+        const interested = [],
+              properties = [];
         for (const mod in this._modules) {
             try {
                 const m = this._modules[mod],
                       interest = m.interested(message);
                 if (interest === true) {
-                    m.execute(message);
+                    await m.execute(message);
                 } else if (typeof interest === 'string') {
                     properties.push(interest);
                     interested.push(mod);
                 } else if (interest instanceof Array) {
-                    properties = properties.concat(interest);
+                    properties.push(...interest);
                     interested.push(mod);
                 }
             } catch (e) {
@@ -364,60 +363,49 @@ class Client {
                 );
             }
         }
-        if (properties.length > 0) {
-            message.fetch(this, properties, interested)
-                .then(this._messageFetchCallback.bind(this, message))
-                .catch(this._messageFetchFail.bind(this, message));
+        await this._fetchMessage(message, properties, interested);
+    }
+    /**
+     * Fetches additional information about a message.
+     * @param {Message} message Message whose information should be fetched
+     * @param {Array<String>} properties Additional information to fetch
+     * @param {Array<Module>} interested Modules interested in that information
+     */
+    async _fetchMessage(message, properties, interested) {
+        if (properties.length === 0) {
+            return;
         }
-    }
-    /**
-     * Callback after fetching additional message information.
-     * @param {Message} message Message whose additional information is fetched
-     * @private
-     */
-    _messageFetchCallback(message) {
-        message.interested.forEach(function(mod) {
+        let successful = false;
+        const errors = [],
+              wait = promisify(setTimeout);
+        for (let retry = 0; retry < FETCH_MAX_RETRIES; ++retry) {
+            await wait(retry * FETCH_DELAY);
             try {
-                this._modules[mod].execute(message);
-            } catch (e) {
-                this._logger.error(
-                    'Dispatch error to module',
-                    mod, ':', e
-                );
+                await message.fetch(this, properties);
+                successful = true;
+                break;
+            } catch (error) {
+                errors.push(error);
+                message.cleanup();
             }
-        }, this);
-    }
-    /**
-     * Callback after fetching additional message information failed.
-     * @param {Message} message Message whose additional information is fetched
-     * @private
-     */
-    _messageFetchFail(message) {
-        if (message.retries === FETCH_MAX_RETRIES) {
+        }
+        if (!successful) {
             this._logger.error(
                 'Failed to fetch message information:',
-                message.toJSON()
+                message.toJSON(),
+                errors
             );
-        } else {
-            message.cleanup();
-            setTimeout(
-                this._messageFetchTimeout.bind(this, message),
-                FETCH_DELAY * message.retries
-            );
+            return;
         }
-    }
-    /**
-     * Callback after a fetch delay for a message expires.
-     * @param {Message} message Message that needs to be re-fetched
-     * @private
-     */
-    _messageFetchTimeout(message) {
-        try {
-            message.fetch(this)
-                .then(this._messageFetchCallback.bind(this, message))
-                .catch(this._messageFetchFail.bind(this, message));
-            } catch (e) {
-            this._logger.error('Re-fetch timeout failure:', e);
+        for (const mod of interested) {
+            try {
+                await this._modules[mod].execute(message);
+            } catch (error) {
+                this._logger.error(
+                    'Dispatch error to module',
+                    mod, ':', error
+                );
+            }
         }
     }
     /**
@@ -425,7 +413,7 @@ class Client {
      * @param {Message} message Message that failed to parse
      * @private
      */
-    _dispatchError(message) {
+    async _dispatchError(message) {
         if (message.type === 'error') {
             this._logger.error(
                 'Message failed to parse (early stages)',
@@ -433,103 +421,63 @@ class Client {
             );
             return;
         }
-        const key = `${message.language}:${message.wiki}:${message.domain}`;
-        // NOTE: This only works while logged out due to amlang.
-        if (!this._fetching[key]) {
-            this._fetching[key] = message;
-            if (
-                typeof message.wiki !== 'string' ||
-                typeof message.language !== 'string' ||
-                typeof message.domain !== 'string'
-            ) {
-                this._logger.error(
-                    'Message to fetch messages from is invalid',
-                    message.toJSON()
-                );
-                return;
-            }
-            this._io.query(message.wiki, message.language, message.domain, {
+        const {language, wiki, domain} = message,
+              key = `${language}:${wiki}:${domain}`;
+        if (
+            typeof wiki !== 'string' ||
+            typeof language !== 'string' ||
+            typeof domain !== 'string'
+        ) {
+            this._logger.error(
+                'Message to fetch messages from is invalid',
+                message.toJSON()
+            );
+            return;
+        }
+        if (this._fetching.has(key)) {
+            return;
+        }
+        this._fetching.set(key, message);
+        try {
+            // NOTE: This only works while logged out due to amlang.
+            const data = await this._io.query(wiki, language, domain, {
                 amcustomized: 'modified',
                 ammessages: Object.keys(this._caches.i18n).join('|'),
                 amprop: 'default',
                 meta: 'allmessages'
-            }).then(this._messagesFetchCallback.bind(
-                this,
-                message.wiki,
-                message.language,
-                message.domain
-            )).catch(this._messagesFetchFail.bind(
-                this,
-                message.wiki,
-                message.language,
-                message.domain
-            ));
-        }
-    }
-    /**
-     * Callback after fetching custom messages for a wiki.
-     * @param {String} wiki Wiki the custom messages are from
-     * @param {String} language Language of the wiki
-     * @param {String} domain Domain of the wiki
-     * @param {Object} data MediaWiki API response
-     * @private
-     */
-    _messagesFetchCallback(wiki, language, domain, data) {
-        const key = `${language}:${wiki}:${domain}`;
-        if (
-            typeof data !== 'object' ||
-            typeof data.query !== 'object' ||
-            !(data.query.allmessages instanceof Array)
-        ) {
-            if (
-                typeof data === 'string' &&
-                data.trim().toLowerCase().startsWith('<!doctype html>')
-            ) {
-                this._logger.error(
-                    'Received an HTML response for',
-                    wiki,
-                    language,
-                    domain
-                );
-            } else {
+            }), {query} = data;
+            if (!query || !(query.allmessages instanceof Array)) {
                 this._logger.error('Unusual MediaWiki API response', data);
-            }
-        } else {
-            const messages = {};
-            data.query.allmessages.forEach(function(msg) {
-                if (msg.default) {
-                    messages[msg.name] = msg['*'];
-                }
-            });
-            delete messages.mainpage;
-            if (Object.entries(messages).length) {
-                this._loader.updateCustom(
-                    wiki,
-                    language,
-                    domain,
-                    messages,
-                    this._parser.update.bind(this._parser)
-                );
             } else {
-                this._logger.error(
-                    'Message failed to parse',
-                    this._fetching[key].toJSON()
-                );
+                await this._updateCustomMessages(query.allmessages, key);
             }
+            this._fetching.delete(key);
+        } catch (error) {
+            this._logger.error('Error while fetching messages', error);
+            this._fetching.delete(key);
         }
-        delete this._fetching[key];
     }
     /**
-     * Callback after failing to fetch custom messages for a wiki.
-     * @param {String} wiki Wiki the custom messages are from
-     * @param {String} language Language of the wiki
-     * @param {String} domain Domain of the wiki
-     * @param {Error} error Error that occurred while fetching the messages
-     * @private
+     * Updates custom messages with newly fetched data.
+     * @param {Object} allmessages MediaWiki API response
+     * @param {String} key Serialized wiki information
      */
-    _messagesFetchFail(wiki, language, domain, error) {
-        this._logger.error('Error while fetching messages', error);
-        delete this._fetching[`${language}:${wiki}:${domain}`];
+    async _updateCustomMessages(allmessages, key) {
+        const messages = {};
+        for (const msg of allmessages) {
+            if (msg.default) {
+                messages[msg.name] = msg['*'];
+            }
+        }
+        delete messages.mainpage;
+        if (Object.entries(messages).length) {
+            await this._loader.updateCustom(key, messages);
+        } else {
+            this._logger.error(
+                'Message failed to parse',
+                this._fetching.get(key).toJSON()
+            );
+        }
     }
     /**
      * Handles a CTCP VERSION.
@@ -546,7 +494,7 @@ class Client {
      * Cleans up the resources after a kill has been requested.
      * @private
      */
-    _kill() {
+    kill() {
         // Clear ^C from console line.
         process.stdout.write(`${String.fromCharCode(27)}[0G`);
         if (this._killing) {

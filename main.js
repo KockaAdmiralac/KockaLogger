@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /**
  * main.js
  *
@@ -36,26 +37,42 @@ function option(opt) {
 let config = {};
 try {
     config = require('./config.json');
-} catch (e) {
+} catch (error) {
     console.error(
-        'You forgot to rename config.sample.json or your config.json has' +
+        'You forgot to rename config.sample.json or your config.json has ' +
         'a syntax error',
-        e
+        error
     );
+    process.exit(1);
+}
+
+const fetch = option('fetch'),
+      debug = option('debug'),
+      client = new Client(config, {debug}),
+      loader = new Loader(config, {
+          debug,
+          fetch
+      });
+
+/**
+ * Stop KockaLogger.
+ */
+async function kill() {
+    await loader.kill();
+    await client.kill();
 }
 
 /**
- * Initialize client and loader.
+ * Run KockaLogger.
  */
-const loader = new Loader(config, {
-    debug: option('debug'),
-    fetch: option('fetch'),
-    generate: option('generate')
-}), client = new Client(config, {
-    debug: option('debug')
-}, loader);
+async function main() {
+    const caches = await loader.run();
+    if (fetch) {
+        await kill();
+        return;
+    }
+    await client.run(caches, loader);
+}
 
-/**
- * Load system messages and run the client.
- */
-loader.run(client.run, client);
+process.on('SIGINT', kill);
+main();

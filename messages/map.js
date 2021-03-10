@@ -137,7 +137,10 @@ const MAPPING = {
      */
     'protectedarticle': e => `^${colorLink(escapeRegex(e))
         .replace('\\$1', '([^\x03]+)')
-    }((?: (?:\\u200E|\\u200F)\\[(?:edit|move|upload|create|everything)=\\w+\\] \\([^\\u200E\\u200F]+\\)){1,3})(?:${REASON})?$`,
+        // eslint-disable-next-line max-len
+        .replace('\\]\\]', '((?: ?(?:\\u200E|\\u200F)\\[(?:edit|move|upload|create|comment|everything)=\\w+\\] \\([^\\u200E\\u200F]+\\)){1,3})\\]\\]')
+        // This is weird UCP behavior.
+    }(?:${REASON})?$`,
     /**
      * Transforms the rights log entry
      * @param {String} e Log entry
@@ -154,7 +157,7 @@ const MAPPING = {
      * @returns {String} Regex'd log entry
      */
     'unblocklogentry': e => `^${escapeRegex(e)
-        .replace('\\$1', '[^:]+:(.+)')
+        .replace('\\$1', '[^:]+:([^:]+)')
     }(?:${REASON})?$`,
     /**
      * Transforms the unprotect log entry
@@ -182,6 +185,8 @@ MAPPING['1movedto2_redir'] = MAPPING['1movedto2'];
 MAPPING['chat-chatbanchange-log-entry'] =
 MAPPING['chat-chatbanadd-log-entry'];
 MAPPING['logentry-delete-event-legacy'] =
+MAPPING['logentry-delete-revision-legacy'];
+MAPPING['logentry-delete-delete_redir'] =
 MAPPING['logentry-delete-revision-legacy'];
 
 module.exports = MAPPING;

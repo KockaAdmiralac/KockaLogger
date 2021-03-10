@@ -113,7 +113,7 @@ class Logger {
      * @param {Array} messages Messages to log
      * @private
      */
-    _log(level, ...messages) {
+    async _log(level, ...messages) {
         if (typeof level !== 'string') {
             throw new Error('Invalid log level!');
         }
@@ -134,7 +134,7 @@ class Logger {
             this._stream.write(`[${date} ${time}] [${logLevel}] ${str}\n`);
         }
         if (this._webhook) {
-            this._webhook.send(`**${logLevel}:** ${dstr}`);
+            await this._webhook.send(`**${logLevel}:** ${dstr}`);
         }
     }
     /**
@@ -205,29 +205,29 @@ class Logger {
      * Debugs specified messages.
      * @param {Array<String>} messages Messages to debug
      */
-    debug(...messages) {
-        this._log('debug', ...messages);
+    async debug(...messages) {
+        await this._log('debug', ...messages);
     }
     /**
      * Outputs specified information.
      * @param {Array<String>} messages Information to output
      */
-    info(...messages) {
-        this._log('info', ...messages);
+    async info(...messages) {
+        await this._log('info', ...messages);
     }
     /**
      * Outputs specified warnings.
      * @param {Array<String>} messages Warnings to output
      */
-    warn(...messages) {
-        this._log('warn', ...messages);
+    async warn(...messages) {
+        await this._log('warn', ...messages);
     }
     /**
      * Outputs specified errors.
      * @param {Array<String>} messages Errors to output
      */
-    error(...messages) {
-        this._log('error', ...messages);
+    async error(...messages) {
+        await this._log('error', ...messages);
     }
 }
 

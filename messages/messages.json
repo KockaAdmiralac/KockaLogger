@@ -10,6 +10,7 @@
     "rightslogentry",
     "deletedarticle",
     "undeletedarticle",
+    "logentry-delete-delete_redir",
     "logentry-delete-event-legacy",
     "logentry-delete-revision-legacy",
     "uploadedimage",

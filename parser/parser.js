@@ -89,14 +89,11 @@ class Parser {
     }
     /**
      * Updates custom messages.
-     * @param {String} wiki Wiki to update the messages on
-     * @param {String} language Language of the wiki to update the messages on
-     * @param {String} domain Domain of the wiki to update the messages on
+     * @param {String} key Key to store the messages under
      * @param {Object} messages Custom messages on the wiki
      * @param {Object} generated Processed custom messages on the wiki
      */
-    update(wiki, language, domain, messages, generated) {
-        const key = `${language}:${wiki}:${domain}`;
+    update(key, messages, generated) {
         this._custom[key] = messages[key];
         this._i18n2[key] = generated[key];
     }

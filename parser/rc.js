@@ -26,6 +26,18 @@ class RCMessage extends Message {
         super(parser, raw, type);
         res.shift();
     }
+    /**
+     * Trims the unnecessary character off the summary
+     * @param {String} summary Summary to trim
+     * @returns {String} Trimmed summary
+     * @protected
+     */
+    _trimSummary(summary) {
+        if (summary.endsWith('\x03')) {
+            return summary.slice(0, -1);
+        }
+        return summary;
+    }
 }
 
 module.exports = RCMessage;

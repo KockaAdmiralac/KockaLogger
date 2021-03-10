@@ -32,16 +32,6 @@ class Logger extends Module {
         if (!(config instanceof Array)) {
             throw new Error('Logger configuration invalid!');
         }
-        this._initLogging();
-        this._initWikis(config).catch(
-            error => this._logger.error('Unknown initialization error', error)
-        );
-    }
-    /**
-     * Initializes the logger.
-     * @private
-     */
-    _initLogging() {
         this._logger = new Logging({
             file: true,
             name: 'logger',
@@ -50,11 +40,11 @@ class Logger extends Module {
     }
     /**
      * Initializes wiki objects.
-     * @param {Array<Object>} config Configuration array
-     * @private
+     * @param {Object} caches Cached system message data from loader
      */
-    async _initWikis(config) {
-        this._wikis = config
+    async setup(caches) {
+        super.setup(caches);
+        this._wikis = this._config
             .map(wiki => new Wiki(wiki))
             .filter(wiki => wiki.initialized);
         this._wikiMap = new Map();
@@ -155,6 +145,9 @@ class Logger extends Module {
      */
     kill(callback) {
         this._logger.close(callback);
+        if (!this._wikis) {
+            return 1;
+        }
         this._wikis.forEach(wiki => wiki.kill(callback));
         return this._wikis.length + 1;
     }

@@ -63,10 +63,11 @@ class Util {
             .replace(/@/g, '@\u200B')
             // Escape invite links.
             .replace(/discord\.gg/g, 'discord\u200B.\u200Bgg')
-            // Escapes certain Markdown constructions.
+            // Escapes certain Markdown constructs.
             .replace(/_{1,2}([^_*]+)_{1,2}/g, '$1')
             .replace(/\*{1,2}([^_*]+)\*{1,2}/g, '$1')
-            .replace(/\r?\n|\r/g, '');
+            .replace(/\r?\n|\r/g, '')
+            .replace(/\\/g, '\\\\');
     }
     /**
      * Escapes a string from special regex characters.

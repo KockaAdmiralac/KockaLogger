@@ -33,6 +33,7 @@ const DEFAULT_CACHE_DIRECTORY = 'cache',
         'rightslogentry',
         'deletedarticle',
         'undeletedarticle',
+        'logentry-delete-delete_redir',
         'logentry-delete-event-legacy',
         'logentry-delete-revision-legacy',
         'uploadedimage',
@@ -99,6 +100,16 @@ class Loader {
         }
         this._process();
         this._custom();
+        if (this._doFetch || !this._caches.messagecache) {
+            this._logger.info('Saving caches...');
+            if (this._debug) {
+                for (const cache in this._caches) {
+                    await this._saveCache(cache, this._caches[cache]);
+                }
+            } else {
+                await this._saveCache('', this._caches);
+            }
+        }
         this._logger.info('Exiting loader...');
         for (const msg of MESSAGES) {
             this._caches.i18n[msg] = this._caches.i18n[msg]
@@ -112,6 +123,7 @@ class Loader {
                 }
             }
         }
+        return this._caches;
     }
     /**
      * Loads a JSON file.
@@ -186,18 +198,9 @@ class Loader {
             }
             delete this._results['patrol-log-diff'];
             this._caches.messagecache = Object.assign({}, this._results);
-            this._logger.info('Saving caches...');
-            if (this._debug) {
-                for (const cache in this._caches) {
-                    await this._saveCache(cache, this._caches[cache]);
-                }
-            } else {
-                await this._saveCache('', this._caches);
-            }
         } catch (error) {
             this._logger.error('Error while fetching', error);
         }
-        return this._caches;
     }
     /**
      * Fetches all languages from the API.
@@ -268,7 +271,10 @@ class Loader {
             /\{\{GENDER:[^|]*\|([^}]+)\}\}/ig,
             function(_, match) {
                 const arr = match.split('|');
-                if (arr[0] === arr[2] || arr[1] === arr[2]) {
+                if (
+                    arr.length > 1 &&
+                    (arr[0] === arr[2] || arr[1] === arr[2])
+                ) {
                     arr.pop();
                 }
                 placeholder.push(`(?:${arr.map(util.escapeRegex).join('|')})`);
@@ -306,9 +312,8 @@ class Loader {
      * @param {String} language Language of the wiki
      * @param {String} domain Domain of the wiki
      * @param {Object} data Custom messages for the wiki
-     * @param {Function} callback Callback function after the update
      */
-    async updateCustom(wiki, language, domain, data, callback) {
+    async updateCustom(wiki, language, domain, data) {
         if (!this._caches.custom) {
             this._caches.custom = {};
         }
@@ -330,22 +335,17 @@ class Loader {
                     new RegExp(this._caches.i18n2[w][msg]);
             }
         }
-        if (typeof callback === 'function') {
-            callback(
-                wiki,
-                language,
-                domain,
-                this._caches.custom,
-                this._caches.i18n2
-            );
-        }
+        return {
+            generated: this._caches.i18n2,
+            messages: this._caches.custom
+        };
     }
     /**
      * Disposes resources used by the message loader.
      * @todo Remove callback
      */
     kill() {
-        this._logger.close(() => null);
+        this._logger.close();
     }
 }
 

@@ -230,8 +230,8 @@ class NewUsers extends Module {
             try {
                 const userId = await this._getID(user, wiki, language, domain),
                       {users} = await this._io.userInfo(userId);
-                if (users[0].website) {
-                    await this._post(users[0], wiki, language, domain);
+                if (users[userId].website) {
+                    await this._post(users[userId], wiki, language, domain);
                 }
                 return;
             } catch (error) {

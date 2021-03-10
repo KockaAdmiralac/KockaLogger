@@ -14,7 +14,7 @@ const RCMessage = require('./rc.js');
 /**
  * Constants.
  */
-const AF_REGEX = /https?:\/\/[a-z0-9-.]+\.(?:fandom\.com|gamepedia\.(?:com|io)|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:[a-z-]+\/)?wiki\/?[^:]+:[^/]+\/(\d+).*\(https?:\/\/[a-z0-9-.]+\.(?:fandom\.com|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:[a-z-]+\/)?wiki\/?[^:]+:[^/]+\/history\/\d+\/diff\/prev\/(\d+)\)$/,
+const AF_REGEX = /\[\[\x0302[^:]+:[^/]+\/(\d+)\x0310\]\].*(?:\(|（)\[\[[^:]+:[^/]+\/history\/\d+\/diff\/prev\/(\d+)\]\](?:\)|）)$/,
 BLOCK_FLAGS = [
     'angry-autoblock',
     'anononly',
@@ -31,6 +31,10 @@ BLOCK_FLAGS = [
     },
     delete: {
         delete: 'deletedarticle',
+        /* eslint-disable camelcase */
+        delete_redir: 'logentry-delete-delete_redir',
+        delete_redir2: 'logentry-delete-delete_redir',
+        /* eslint-enable camelcase */
         event: 'logentry-delete-event-legacy',
         restore: 'undeletedarticle',
         revision: 'logentry-delete-revision-legacy'
@@ -56,7 +60,7 @@ BLOCK_FLAGS = [
     },
     upload: {
         overwrite: 'overwroteimage',
-        revert: 'uploadedimage',
+        revert: 'overwroteimage',
         upload: 'uploadedimage'
     }
 },
@@ -270,7 +274,7 @@ class LogMessage extends RCMessage {
         } else if (this.action !== 'unprotect') {
             this.level = [];
             const level = res.shift(),
-                  regex = / \u200E\[(edit|move|upload|create|everything)=(\w+)\] \(([^\u200E]+)\)(?: \u200E|$|:)/g;
+                  regex = / \u200E\[(edit|move|upload|create|comment|everything)=(\w+)\] \(([^\u200E]+)\)(?: \u200E|$|:)/g;
             let res2 = null;
             do {
                 res2 = regex.exec(level);
