@@ -13,7 +13,7 @@ const Message = require('./msg.js');
 /**
  * Constants.
  */
-const REGEX = /^(.+) New user registration https?:\/\/([a-z0-9-.]+)\.(fandom\.com|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:([a-z-]+)\/)?wiki\/Special:Log\/newusers$/;
+const REGEX = /^(.+) New user registration https?:\/\/([a-z0-9-.]+)\.(fandom\.com|gamepedia\.(?:com|io)|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:([a-z-]+)\/)?wiki\/Special:Log\/newusers$/;
 
 /**
  * Parses messages representing user account creations.

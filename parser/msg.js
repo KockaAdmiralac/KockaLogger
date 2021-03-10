@@ -32,29 +32,16 @@ class Message {
         this.error = code;
         this.errmsg = message;
         this.errdetails = details;
-        if (typeof this._reject === 'function') {
-            this._reject();
-        }
     }
     /**
      * Starts fetching more details about the message.
      * @param {Client} client Client instance to get external clients from
      * @param {Array<String>} properties Details to fetch
      * @param {Array<String>} interested Modules interested in the message
-     * @returns {Promise} Promise that resolves when the details are fetched
      */
-    fetch(client, properties, interested) {
+    fetch(client, properties) {
         this._client = client;
-        if (!this._properties) {
-            this._properties = properties;
-        }
-        if (!this._interested) {
-            this._interested = interested;
-        }
-        return new Promise(function(resolve, reject) {
-            this._resolve = resolve;
-            this._reject = reject;
-        }.bind(this));
+        this._properties = properties;
     }
     /**
      * Cleans up after a failed fetch.
@@ -66,9 +53,7 @@ class Message {
         delete this.errmsg;
         delete this.errdetails;
         delete this._client;
-        delete this._resolve;
-        delete this._reject;
-        this.retries = (this.retries || 0) + 1;
+        delete this._properties;
     }
     /**
      * Stringifies the object when passed through JSON.stringify.
@@ -88,13 +73,6 @@ class Message {
             }
         }
         return clone;
-    }
-    /**
-     * Gets interested modules.
-     * @returns {Array<String>} Modules interested in the message
-     */
-    get interested() {
-        return this._interested;
     }
 }
 

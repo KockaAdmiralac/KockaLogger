@@ -2,8 +2,22 @@
 set -e
 cd "${0%/*}"
 
+if [[ -z "$XDG_CACHE_HOME" ]]; then
+    cache_dir="$HOME/.cache"
+else
+    cache_dir="$XDG_CACHE_HOME"
+fi
+
+if [[ -z "$XDG_DATA_HOME" ]]; then
+    logs_dir="$HOME/.local/share"
+else
+    logs_dir="$XDG_DATA_HOME"
+fi
+
 startup () {
-    redis-server redis.conf
+    mkdir -p "$cache_dir/kocka-logger"
+    mkdir -p "$logs_dir/kocka-logger/logs"
+    redis-server redis.conf --dir "$cache_dir/kocka-logger" --logfile "$logs_dir/kocka-logger/logs/redis.log"
 }
 
 shutdown () {

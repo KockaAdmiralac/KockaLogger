@@ -9,7 +9,7 @@
  * Importing modules.
  */
 const Transport = require('../transport.js'),
-      IO = require('../../include/io.js');
+      got = require('got');
 
 /**
  * Constants.
@@ -36,16 +36,20 @@ class Slack extends Transport {
             throw new Error('Invalid Slack transport configuration!');
         }
         this._url = url;
-        this._io = new IO();
     }
     /**
      * Executes the transport.
      * @param {Object} message Formatted message to transport
      */
-    execute(message) {
-        this._io.webhook(this._url, message).catch(function(e) {
-            this._logger.error('Slack transport error:', e);
-        }.bind(this));
+    async execute(message) {
+        try {
+            await got(this._url, {
+                body: message,
+                method: 'POST'
+            });
+        } catch (error) {
+            this._logger.error('Slack transport error:', error);
+        }
     }
 }
 

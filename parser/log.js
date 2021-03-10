@@ -9,18 +9,18 @@
 /**
  * Importing modules.
  */
-const RCMessage = require('./rc.js'),
-      util = require('../include/util.js');
+const RCMessage = require('./rc.js');
 
 /**
  * Constants.
  */
-const AF_REGEX = /https?:\/\/[a-z0-9-.]+\.(?:fandom\.com|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:[a-z-]+\/)?wiki\/?[^:]+:[^/]+\/(\d+).*\(https?:\/\/[a-z0-9-.]+\.(?:fandom\.com|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:[a-z-]+\/)?wiki\/?[^:]+:[^/]+\/history\/\d+\/diff\/prev\/(\d+)\)$/,
+const AF_REGEX = /\[\[\x0302[^:]+:[^/]+\/(\d+)\x0310\]\].*(?:\(|（)\[\[[^:]+:[^/]+\/history\/\d+\/diff\/prev\/(\d+)\]\](?:\)|）)$/,
 BLOCK_FLAGS = [
     'angry-autoblock',
     'anononly',
     'hiddenname',
     'noautoblock',
+    'nocreate',
     'noemail',
     'nousertalk'
 ], MESSAGE_MAP = {
@@ -29,29 +29,27 @@ BLOCK_FLAGS = [
         reblock: 'reblock-logentry',
         unblock: 'unblocklogentry'
     },
-    chatban: {
-        chatbanadd: 'chat-chatbanadd-log-entry',
-        chatbanchange: 'chat-chatbanchange-log-entry',
-        chatbanremove: 'chat-chatbanremove-log-entry'
-    },
     delete: {
         delete: 'deletedarticle',
+        /* eslint-disable camelcase */
+        delete_redir: 'logentry-delete-delete_redir',
+        delete_redir2: 'logentry-delete-delete_redir',
+        /* eslint-enable camelcase */
         event: 'logentry-delete-event-legacy',
         restore: 'undeletedarticle',
         revision: 'logentry-delete-revision-legacy'
     },
     move: {
         move: '1movedto2',
-        // eslint-disable-next-line
-        move_redir: '1movedto2_redir',
-        restore: '1movedto2'
+        // eslint-disable-next-line camelcase
+        move_redir: '1movedto2_redir'
     },
     patrol: {
         patrol: 'patrol-log-line'
     },
     protect: {
         modify: 'modifiedarticleprotection',
-        // eslint-disable-next-line
+        // eslint-disable-next-line camelcase
         move_prot: 'movedarticleprotection',
         protect: 'protectedarticle',
         restore: 'protectedarticle',
@@ -62,19 +60,11 @@ BLOCK_FLAGS = [
     },
     upload: {
         overwrite: 'overwroteimage',
-        revert: 'uploadedimage',
+        revert: 'overwroteimage',
         upload: 'uploadedimage'
-    },
-    useravatar: {
-        // eslint-disable-next-line
-        avatar_rem: 'blog-avatar-removed-log'
     }
 },
-WIKIFEATURES_REGEX = /^wikifeatures\s?(?:：|:)\s?set extension option\s?(?:：|:)\s?(\w+) = (true|false)$/,
-PROTECTSITE_REGEX = / (\d+ (?:second|minute|hour|day|week|month|year)s?)?(?:\s?(?::|：)\s?(.*))?$/,
-// TODO: DRY?
-CACHE_EXPIRY = 3 * 24 * 60 * 60,
-TITLE_REGEX = /<ac_metadata [^>]*title="([^"]+)"[^>]*>\s*<\/ac_metadata>$/;
+PROTECTSITE_REGEX = / (\d+ (?:second|minute|hour|day|week|month|year)s?)?(?:\s?(?::|：)\s?(.*))?$/;
 
 /**
  * Parses log action related messages.
@@ -96,42 +86,12 @@ class LogMessage extends RCMessage {
         this.language = res.shift() || 'en';
         this.user = res.shift();
         this._summary = this._trimSummary(res.shift());
-        if (this.log !== 'useravatar' || this.action !== 'avatar_chn') {
-            this._advanced();
-        }
-    }
-    /* eslint-disable max-statements */
-    /**
-     * Advanced log parsing.
-     * @private
-     * @todo Split this up.
-     */
-    _advanced() {
         // If there's a handler for this action, attempt to handle it.
         if (typeof this[`_${this.log}`] === 'function') {
-            let res = null;
+            let res2 = null;
             if (MESSAGE_MAP[this.log]) {
-                // Article comments suck.
-                if (this.action === 'article_comment') {
-                    this.action = 'delete';
-                    res = this._i18n();
-                    if (!res) {
-                        this.action = 'restore';
-                        res = this._i18n();
-                    }
-                } else {
-                    res = this._i18n();
-                    // action = 'restore' can have two meanings.
-                    if (
-                        !res &&
-                        this.log === 'move' &&
-                        this.action === 'restore'
-                    ) {
-                        this.action = 'move_redir';
-                        res = this._i18n();
-                    }
-                }
-                if (!res) {
+                res2 = this._i18n();
+                if (!res2) {
                     this._error(
                         'logparsefail',
                         'Failed to parse log action.'
@@ -139,7 +99,7 @@ class LogMessage extends RCMessage {
                     return;
                 }
             }
-            if (this[`_${this.log}`](res) !== false) {
+            if (this[`_${this.log}`](res2) !== false) {
                 delete this._summary;
             }
         } else {
@@ -152,7 +112,6 @@ class LogMessage extends RCMessage {
             );
         }
     }
-    /* eslint-enable max-statements */
     /**
      * Attempts to parse the summary based on regular expressions
      * generated from i18n MediaWiki messages.
@@ -237,13 +196,6 @@ class LogMessage extends RCMessage {
         return base;
     }
     /**
-     * Handles Fandom's log fuckups.
-     * @private
-     */
-    _0() {
-        this.fandomFuckedUp = true;
-    }
-    /**
      * Handles abuse filter summary extraction.
      * @returns {Boolean|undefined} False if summary failed to parse
      * @private
@@ -268,34 +220,12 @@ class LogMessage extends RCMessage {
         if (this.action !== 'unblock') {
             this.expiry = res.shift();
             const flags = res.shift();
-            if (flags) {
-                this.flags = flags.split(',').map(function(f) {
-                    for (let i = 0, l = BLOCK_FLAGS.length; i < l; ++i) {
-                        if (
-                            this._parser.i18n[`block-log-flags-${BLOCK_FLAGS[i]}`]
-                                .test(f.trim())
-                        ) {
-                            return BLOCK_FLAGS[i];
-                        }
-                    }
-                    return 'unknown';
-                }, this);
-            } else {
-                this.flags = [];
-            }
-        }
-        this.reason = res.shift();
-    }
-    /**
-     * Handles chatban summary extraction.
-     * @param {Array<String>} res I18n checking result
-     * @private
-     */
-    _chatban(res) {
-        this.target = res.shift();
-        if (this.action !== 'chatbanremove') {
-            this.length = res.shift();
-            this.expires = res.shift();
+            this.flags = flags ?
+                flags.split(',').map(flag => BLOCK_FLAGS.find(
+                        f => this._parser.i18n[`block-log-flags-${f}`]
+                            .test(flag.trim())
+                    ) || 'unknown') :
+                [];
         }
         this.reason = res.shift();
     }
@@ -344,7 +274,7 @@ class LogMessage extends RCMessage {
         } else if (this.action !== 'unprotect') {
             this.level = [];
             const level = res.shift(),
-                  regex = / \u200E\[(edit|move|upload|create|everything)=(\w+)\] \(([^\u200E]+)\)(?: \u200E|$|:)/g;
+                  regex = / \u200E\[(edit|move|upload|create|comment|everything)=(\w+)\] \(([^\u200E]+)\)(?: \u200E|$|:)/g;
             let res2 = null;
             do {
                 res2 = regex.exec(level);
@@ -393,195 +323,6 @@ class LogMessage extends RCMessage {
     _upload(res) {
         this.file = res.shift();
         this.reason = res.shift();
-    }
-    /**
-     * Handles user avatar removals.
-     * @param {Array<String>} res I18n checking result
-     * @private
-     */
-    _useravatar(res) {
-        this.target = res.shift();
-    }
-    /**
-     * Handles wiki feature summaries.
-     * @returns {Boolean|null} False if wiki feature hasn't been extracted
-     * @private
-     */
-    _wikifeatures() {
-        const res = WIKIFEATURES_REGEX.exec(this._summary);
-        if (res) {
-            this.feature = res[1];
-            this.value = res[2] === 'true';
-        } else {
-            this._error(
-                'wikifeatureserror',
-                'Failed to parse wiki features log entry.'
-            );
-            return false;
-        }
-    }
-    /**
-     * Starts fetching more details about the message.
-     * @param {Client} client Client instance to get external clients from
-     * @param {Array<String>} properties Details to fetch
-     * @param {Array<String>} interested Modules interested in the message
-     * @returns {Promise} Promise that resolves when the details are fetched
-     */
-    fetch(client, properties, interested) {
-        const promise = super.fetch(client, properties, interested);
-        if (this._properties.includes('threadlog')) {
-            this._client.io.query(
-                this.wiki,
-                this.language,
-                this.domain,
-                {
-                    cb: Date.now(),
-                    list: 'recentchanges',
-                    rcprop: 'comment|ids|loginfo|title|user',
-                    rctype: 'log'
-                }
-            ).then(this._threadLogCallback.bind(this))
-            .catch(error => this._error(
-                'api-threadlog',
-                'Failed to obtain thread log information from the API.',
-                {error}
-            ));
-        }
-        return promise;
-    }
-    /**
-     * Callback after fetching thread log information.
-     * @param {Object} error The error API returned
-     * @param {Object} query The data API returned
-     * @private
-     */
-    _threadLogCallback({error, query}) {
-        if (error) {
-            this._error(
-                'api-threadlog',
-                'API returned an error when fetching thread log information.',
-                {error}
-            );
-        } else {
-            const rc = query.recentchanges.find(l => l.logtype === '0');
-            if (rc) {
-                this.log = 'thread';
-                this.page = rc.title;
-                this.user = rc.user;
-                this.action = rc.logaction;
-                this.namespace = rc.ns;
-                this.reason = rc.comment;
-                this.threadid = rc.pageid;
-                this._client.cache.get(
-                    this._getThreadTitleKey(),
-                    this._threadTitleCacheCallback.bind(this)
-                );
-            } else {
-                // Attach more information to the error?
-                this._error(
-                    'threadlognofind',
-                    'Cannot find relevant thread logs in recent changes.'
-                );
-            }
-        }
-    }
-    /**
-     * Callback after fetching the thread title from cache.
-     * @param {Object} error Redis error that occurred
-     * @param {String} title Title of the thread
-     * @private
-     */
-    _threadTitleCacheCallback(error, title) {
-        if (error) {
-            this._error(
-                'cache-threadtitle',
-                'Failed to fetch thread title from cache.',
-                {error}
-            );
-        } else if (title) {
-            this.threadtitle = title;
-            const idKey = this._getThreadIDKey();
-            this._client.cache
-                .batch()
-                .expire(this._getThreadTitleKey(), CACHE_EXPIRY)
-                .set(idKey, this.threadid)
-                .expire(idKey, CACHE_EXPIRY)
-                .exec(this._setThreadCache.bind(this));
-            this._resolve();
-        } else {
-            this._client.io.query(this.wiki, this.language, this.domain, {
-                indexpageids: 1,
-                prop: 'revisions',
-                rvprop: 'content',
-                titles: this._getParentThread()
-            }).then(this._threadTitleAPICallback.bind(this))
-            .catch(err => this._error(
-                'api-threadinfo',
-                'Failed to obtain thread information from the API.',
-                {
-                    error: err
-                }
-            ));
-        }
-    }
-    /**
-     * Callback after setting thread-related cache entries.
-     * @param {Error} error Redis error that occurred
-     * @private
-     */
-    _setThreadCache(error) {
-        if (error) {
-            this._error(
-                'cache-setthreadcache',
-                'Failed to set thread entries in cache.',
-                {error}
-            );
-        }
-    }
-    /**
-     * Callback after fetching the thread title from the API.
-     * @param {Object} error API error that occurred
-     * @param {Object} query API query results
-     * @private
-     */
-    _threadTitleAPICallback({error, query}) {
-        if (error) {
-            this._error(
-                'api-titleapi',
-                'Failed to fetch thread title data from API.',
-                {error}
-            );
-        } else if (query.pageids[0] === '-1') {
-            this._error(
-                'api-notitle',
-                'API responded with no page.',
-                {query}
-            );
-        } else {
-            const res = TITLE_REGEX.exec(
-                query
-                    .pages[query.pageids[0]]
-                    .revisions[0]['*']
-            );
-            if (res) {
-                this.threadtitle = util.decodeHTML(res[1]);
-                const titleKey = this._getThreadTitleKey(),
-                      idKey = this._getThreadIDKey();
-                this._client.cache
-                    .batch()
-                    .set(titleKey, this.threadtitle)
-                    .set(idKey, this.threadid)
-                    .expire(titleKey, CACHE_EXPIRY)
-                    .expire(idKey, CACHE_EXPIRY)
-                    .exec(this._setThreadCache.bind(this));
-                this._resolve();
-            } else {
-                this._error(
-                    'threadtitleparse',
-                    'Failed to parse thread title.'
-                );
-            }
-        }
     }
 }
 

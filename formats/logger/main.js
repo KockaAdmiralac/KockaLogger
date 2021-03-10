@@ -8,7 +8,7 @@
 /**
  * Importing modules.
  */
-const net = require('net'),
+const {isIP} = require('net'),
       Format = require('../format.js'),
       util = require('../../include/util.js'),
       Logging = require('../../include/log.js');
@@ -16,8 +16,7 @@ const net = require('net'),
 /**
  * Constants.
  */
-const ACM = /<ac(_|$)(m|$)(e|$)(t|$)(a|$)(d|$)(a|$)(t|$)(a|$)( |$)(t|$)(i|$)(t|$)(l|$)(e|$)(=|$)("|$).*"$/,
-      P_REGEX = /^<p>(.*)(?:<\/p>)?$/;
+const P_REGEX = /^<p>(.*)(?:<\/p>)?$/;
 
 /**
  * Logger format's class.
@@ -84,25 +83,6 @@ class Logger extends Format {
      */
     _handleEdit(m) {
         const n = m.flags.includes('N');
-        if (m.threadtitle) {
-            return this._msg(
-                `${
-                    n ? 'new' : 'edit'
-                }-${
-                    m.isMain ? 'post' : 'reply'
-                }`,
-                m.wiki,
-                m.language,
-                m.domain,
-                m.user,
-                m.threadid,
-                m.threadtitle,
-                m.namespace,
-                m.page.split(':')[1].split('/')[0],
-                m.diff,
-                n ? m.summary : m.params.diff
-            );
-        }
         if (n) {
             return this._msg(
                 'new',
@@ -127,13 +107,11 @@ class Logger extends Format {
             m.summary
         );
     }
-    /* eslint-disable complexity */
     /**
      * Handles logs.
      * @param {Message} m Message to format
      * @returns {Object} Formatted message
      * @private
-     * @todo Split this up somehow
      */
     _handleLog(m) {
         const w = m.wiki,
@@ -141,29 +119,6 @@ class Logger extends Format {
               d = m.domain;
         let temp = null, temp2 = null, temp3 = null;
         switch (m.log) {
-            case 'thread':
-                temp = [
-                    w,
-                    l,
-                    d,
-                    m.user,
-                    m.threadid,
-                    m.threadtitle,
-                    m.namespace,
-                    m.page.split(':')[1].split('/')[0],
-                    m.reason
-                ];
-                switch (m.action.substring(5)) {
-                    case 'archive':
-                        return this._msg('threadclose', ...temp);
-                    case 'admindelete':
-                        return this._msg('threaddelete', ...temp);
-                    default:
-                        return this._msg(
-                            `thread${m.action.substring(5)}`,
-                            ...temp
-                        );
-                }
             case 'block':
                 switch (m.action) {
                     case 'block':
@@ -194,22 +149,6 @@ class Logger extends Format {
                 }
             case 'newusers':
                 return this._msg('newusers', w, l, d, m.user);
-            case 'useravatar':
-                switch (m.action) {
-                    case 'avatar_chn':
-                        return this._msg('avatar', w, l, d, m.user);
-                    case 'avatar_rem':
-                        return this._msg(
-                            'remavatar',
-                            w,
-                            l,
-                            d,
-                            m.user,
-                            m.target
-                        );
-                    default:
-                        return '';
-                }
             case 'delete':
                 if (m.action === 'revision' || m.action === 'event') {
                     return this._msg(
@@ -280,28 +219,6 @@ class Logger extends Format {
                     m.file,
                     m.reason
                 );
-            case 'chatban':
-                if (m.action === 'chatbanremove') {
-                    return this._msg(
-                        'chatbanremove',
-                        w,
-                        l,
-                        d,
-                        m.user,
-                        m.target,
-                        m.reason
-                    );
-                }
-                return this._msg(
-                    m.action,
-                    w,
-                    l,
-                    d,
-                    m.user,
-                    m.target,
-                    util.escape(m.length),
-                    m.reason
-                );
             case 'protect':
                 if (m.action === 'unprotect') {
                     return this._msg(
@@ -339,22 +256,11 @@ class Logger extends Format {
                 );
             case 'abusefilter':
                 return this._msg('abusefilter', w, l, d, m.user, m.id, m.diff);
-            case 'wikifeatures':
-                return this._msg(
-                    'wikifeatures',
-                    w,
-                    l,
-                    d,
-                    m.user,
-                    this._i18n[`feature-${m.value ? 'enable' : 'disable'}`],
-                    this._i18n[`feature-${m.feature}`]
-                );
             // patrol doesn't need to be logged
             default:
                 return '';
         }
     }
-    /* eslint-enable complexity */
     /**
      * Handles Discussions.
      * @param {Message} m Message to format
@@ -390,8 +296,6 @@ class Logger extends Format {
      * @param {String} domain Domain of the wiki
      * @param {Array} args Arguments for the message
      * @returns {Object} Formatted message
-     * @todo Nested templates support
-     * @todo Split this up somehow
      */
     _msg(key, wiki, lang, domain, ...args) {
         const string = this._i18n[key];
@@ -461,6 +365,15 @@ class Logger extends Format {
                 }
             }
         }
+        // In case of an argument at the end of a string.
+        if (mode === 1 && temp > 0) {
+            // TODO: DRY.
+            const arg = args[temp - 1];
+            result += typeof arg === 'undefined' || arg === null ?
+                '' :
+                String(arg);
+            temp = 0;
+        }
         return result;
     }
     /* eslint-enable max-statements */
@@ -522,7 +435,7 @@ class Logger extends Format {
                 if (args[0].startsWith('#') || util.isIPRange(args[0])) {
                     return util.escape(args[0]);
                 }
-                if (net.isIP(args[0])) {
+                if (isIP(args[0])) {
                     return this._wikiLink(
                         args[0],
                         wiki,
@@ -583,21 +496,11 @@ class Logger extends Format {
                 }
                 return `${temp}(${args[0]})${temp}`;
             case 'summary':
-                temp = args[0].trim().replace(ACM, '"');
+                temp = args[0].trim();
                 temp1 = this._transportType === 'Slack' ? '_' : '*';
                 return temp.length === 0 ?
                     '' :
                     `(${temp1}${util.escape(temp.replace(/(?:\n|\r|\s)+/g, ' '))}${temp1})`;
-            case 'board':
-                return this._wikiLink(
-                    this._msg(`board-${args[0]}`, wiki, lang, domain, args[1]),
-                    wiki,
-                    lang,
-                    domain,
-                    `${Number(args[0]) === 1201 ?
-                        'Message Wall' :
-                        'Board'}:${args[1]}`
-                );
             case 'dlink':
                 return this._link(
                     args[0] || this._i18n['discussions-reply'],
@@ -611,6 +514,12 @@ class Logger extends Format {
             default:
                 return '';
         }
+    }
+    /**
+     * Disposes resources used by the format so KockaLogger can cleanly exit.
+     */
+    kill() {
+        this._logger.close();
     }
 }
 

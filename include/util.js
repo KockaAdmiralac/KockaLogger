@@ -26,11 +26,6 @@ class Util {
     static url(wiki, lang, domain) {
         if (lang && lang !== 'en') {
             return `https://${wiki}.${domain}/${lang}`;
-        } else if (domain === 'wikia.com') {
-            if (wiki.includes('.')) {
-                return `http://${wiki}.wikia.com`;
-            }
-            return `https://${wiki}.wikia.com`;
         }
         return `https://${wiki}.${domain}`;
     }
@@ -63,10 +58,11 @@ class Util {
             .replace(/@/g, '@\u200B')
             // Escape invite links.
             .replace(/discord\.gg/g, 'discord\u200B.\u200Bgg')
-            // Escapes certain Markdown constructions.
+            // Escapes certain Markdown constructs.
             .replace(/_{1,2}([^_*]+)_{1,2}/g, '$1')
             .replace(/\*{1,2}([^_*]+)\*{1,2}/g, '$1')
-            .replace(/\r?\n|\r/g, '');
+            .replace(/\r?\n|\r/g, '')
+            .replace(/\\/g, '\\\\');
     }
     /**
      * Escapes a string from special regex characters.

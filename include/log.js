@@ -17,8 +17,7 @@ const fs = require('fs'),
  */
 const LOG_LEVELS = ['debug', 'info', 'warn', 'error'],
       DEFAULT_LOG_LEVEL = 'debug',
-      DEFAULT_LOG_DIRECTORY = 'logs',
-      DISCORD_ERROR = 'Discord transport error';
+      DEFAULT_LOG_DIRECTORY = 'logs';
 
 /**
  * Simple logging interface.
@@ -49,7 +48,6 @@ class Logger {
         }
         if (typeof discord === 'object') {
             this._webhook = new WebhookClient(discord.id, discord.token);
-            // this._url = `https://discordapp.com/api/webhooks/${discord.id}/${discord.token}`;
         }
         if (!this._console && !this._stream && !this._url) {
             throw new Error('No logging route specified!');
@@ -115,7 +113,7 @@ class Logger {
      * @param {Array} messages Messages to log
      * @private
      */
-    _log(level, ...messages) {
+    async _log(level, ...messages) {
         if (typeof level !== 'string') {
             throw new Error('Invalid log level!');
         }
@@ -135,21 +133,8 @@ class Logger {
         if (this._stream) {
             this._stream.write(`[${date} ${time}] [${logLevel}] ${str}\n`);
         }
-        /*
-        if (this._url && !dstr.startsWith(DISCORD_ERROR)) {
-            Logger._io.webhook(this._url, {
-                // CAUTION: May contain mentions
-                content: `**${logLevel}:** ${dstr}`
-            }).catch(e => this.error(
-                DISCORD_ERROR,
-                e.statusCode === 429 ?
-                    '| Rate limited!' :
-                    e.error
-            ));
-        }
-        */
         if (this._webhook) {
-            this._webhook.send(`**${logLevel}:** ${dstr}`);
+            await this._webhook.send(`**${logLevel}:** ${dstr}`);
         }
     }
     /**
@@ -209,40 +194,43 @@ class Logger {
      * Closes all open resources.
      * @param {Function} callback Callback to call after closing
      */
-    close(callback) {
+    close() {
         if (this._stream) {
             this._stream.close();
             delete this._stream;
         }
-        callback();
+        if (this._webhook) {
+            this._webhook.destroy();
+            delete this._webhook;
+        }
     }
     /**
      * Debugs specified messages.
      * @param {Array<String>} messages Messages to debug
      */
-    debug(...messages) {
-        this._log('debug', ...messages);
+    async debug(...messages) {
+        await this._log('debug', ...messages);
     }
     /**
      * Outputs specified information.
      * @param {Array<String>} messages Information to output
      */
-    info(...messages) {
-        this._log('info', ...messages);
+    async info(...messages) {
+        await this._log('info', ...messages);
     }
     /**
      * Outputs specified warnings.
      * @param {Array<String>} messages Warnings to output
      */
-    warn(...messages) {
-        this._log('warn', ...messages);
+    async warn(...messages) {
+        await this._log('warn', ...messages);
     }
     /**
      * Outputs specified errors.
      * @param {Array<String>} messages Errors to output
      */
-    error(...messages) {
-        this._log('error', ...messages);
+    async error(...messages) {
+        await this._log('error', ...messages);
     }
 }
 

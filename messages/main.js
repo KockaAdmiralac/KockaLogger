@@ -8,8 +8,8 @@
 /**
  * Importing modules.
  */
-const path = require('path'),
-      fs = require('fs'),
+const {resolve} = require('path'),
+      {writeFile} = require('fs/promises'),
       messages = require('./messages.json'),
       MAPPING = require('./map.js'),
       IO = require('../include/io.js'),
@@ -33,17 +33,14 @@ const DEFAULT_CACHE_DIRECTORY = 'cache',
         'rightslogentry',
         'deletedarticle',
         'undeletedarticle',
+        'logentry-delete-delete_redir',
         'logentry-delete-event-legacy',
         'logentry-delete-revision-legacy',
         'uploadedimage',
         'overwroteimage',
         '1movedto2',
         '1movedto2_redir',
-        'blog-avatar-removed-log',
         'patrol-log-line',
-        'chat-chatbanadd-log-entry',
-        'chat-chatbanchange-log-entry',
-        'chat-chatbanremove-log-entry',
         'autosumm-replace'
     ];
 
@@ -59,16 +56,14 @@ class Loader {
      * @param {Boolean} fetch If messages should be fetched beforehand
      * @param {Boolean} generate If messages should only be generated
      */
-    constructor(config, {cache, debug, fetch, generate}) {
+    constructor(config, {cache, debug, fetch}) {
         this._debug = debug;
         this._doFetch = fetch;
-        this._generate = generate;
-        this._cacheDir = path.resolve(
+        this._cacheDir = resolve(
             typeof cache === 'string' ?
                 cache :
                 DEFAULT_CACHE_DIRECTORY
         );
-        this._jobs = 0;
         this._caches = {
             custom: this._loadCache('custom'),
             i18n: this._loadCache('i18n'),
@@ -76,6 +71,11 @@ class Loader {
             messagecache: this._loadCache('messagecache')
         };
         this._io = new IO();
+        this._logger = new Logger({
+            file: true,
+            name: 'loader',
+            stdout: true
+        });
     }
     /**
      * Serializes RegExp objects into plain strings.
@@ -92,37 +92,38 @@ class Loader {
     }
     /**
      * Runs the loading.
-     * @param {Function} callback Callback function after loading finishes
-     * @param {*} context Context to bind the callback to
      */
-    run(callback, context) {
-        this._logger = new Logger({
-            file: true,
-            name: 'loader',
-            stdout: true
-        });
+    async run() {
         this._logger.info('KockaLogger started.');
-        if (typeof callback === 'function') {
-            this._callback = callback;
-            this._context = context;
-        }
         if (this._doFetch || !this._caches.messagecache) {
-            ++this._jobs;
-            this._fetch();
-        } else if (this._generate || !this._caches.i18n) {
-            ++this._jobs;
-            this._process();
+            await this._fetch();
         }
-        if (!this._caches.i18n2 && this._caches.custom) {
-            ++this._jobs;
-            this._custom();
-        } else if (!this._caches.custom) {
-            this._caches.i18n2 = {};
-            this._caches.custom = {};
+        this._process();
+        this._custom();
+        if (this._doFetch || !this._caches.messagecache) {
+            this._logger.info('Saving caches...');
+            if (this._debug) {
+                for (const cache in this._caches) {
+                    await this._saveCache(cache, this._caches[cache]);
+                }
+            } else {
+                await this._saveCache('', this._caches);
+            }
         }
-        if (this._jobs === 0) {
-            this._finished(true);
+        this._logger.info('Exiting loader...');
+        for (const msg of MESSAGES) {
+            this._caches.i18n[msg] = this._caches.i18n[msg]
+                .map(m => (m instanceof RegExp ? m : new RegExp(m)));
         }
+        for (const wiki in this._caches.i18n2) {
+            const w = this._caches.i18n2[wiki];
+            for (const msg in w) {
+                if (!(w[msg] instanceof RegExp)) {
+                    w[msg] = new RegExp(w[msg]);
+                }
+            }
+        }
+        return this._caches;
     }
     /**
      * Loads a JSON file.
@@ -133,7 +134,8 @@ class Loader {
     _loadFile(file) {
         try {
             return require(`${this._cacheDir}/${file}.json`);
-        } catch (e) {
+        } catch (_) {
+            // Ignoring error because cache loading errors are unimportant.
             return undefined;
         }
     }
@@ -162,97 +164,70 @@ class Loader {
      * @returns {Promise} Promise for file saving
      * @private
      */
-    _saveCache(file, object) {
+    async _saveCache(file, object) {
         const filename = file ? `_loader_${file}` : '_loader';
-        return new Promise(function(resolve, reject) {
-            if (!object) {
-                // Don't save if there's nothing to save.
-                resolve();
-                return;
-            }
-            fs.writeFile(
-                `${this._cacheDir}/${filename}.json`,
-                this._debug ?
-                    JSON.stringify(object, this._replacer, '    ') :
-                    JSON.stringify(object, this._replacer),
-                function(err) {
-                    if (err) {
-                        reject(err);
-                    } else {
-                        resolve();
-                    }
-                }
-            );
-        }.bind(this));
+        if (!object) {
+            // Don't save if there's nothing to save.
+            return;
+        }
+        await writeFile(
+            `${this._cacheDir}/${filename}.json`,
+            this._debug ?
+                JSON.stringify(object, this._replacer, '    ') :
+                JSON.stringify(object, this._replacer)
+        );
     }
     /**
      * Fetches required system messages for all languages.
      * @private
      */
-    _fetch() {
+    async _fetch() {
         this._logger.info('Fetching required system messages...');
         this._results = {};
-        messages.forEach(function(m) {
-            this._results[m] = [];
-        }, this);
-        this._fetchLanguages().then(this._cbLanguages.bind(this)).catch(
-            e => this._logger.error('Error while fetching languages', e)
-        );
+        for (const msg of messages) {
+            this._results[msg] = [];
+        }
+        try {
+            const languages = await this._fetchLanguages();
+            while (languages.length > 0) {
+                await Promise.all(
+                    languages
+                        .splice(0, THREADS)
+                        .map(lang => this._fetchMessages(lang))
+                );
+            }
+            delete this._results['patrol-log-diff'];
+            this._caches.messagecache = Object.assign({}, this._results);
+        } catch (error) {
+            this._logger.error('Error while fetching', error);
+        }
     }
     /**
      * Fetches all languages from the API.
      * @returns {Promise} Promise to listen on for response
      * @private
      */
-    _fetchLanguages() {
-        return this._io.query('community', 'en', 'fandom.com', {
+    async _fetchLanguages() {
+        return (await this._io.query('community', 'en', 'fandom.com', {
             meta: 'siteinfo',
             siprop: 'languages'
-        });
-    }
-    /**
-     * Callback after fetching languages from the API.
-     * @param {Object} data MediaWiki API response
-     * @private
-     */
-    _cbLanguages(data) {
-        this._languages = data.query.languages.map(l => l.code);
-        this._running = THREADS;
-        for (let i = 0; i < THREADS; ++i) {
-            this._fetchMessages();
-        }
+        })).query.languages.map(l => l.code);
     }
     /**
      * Fetches messages for a specific language.
+     * @param {String} lang Language code for which to fetch messages
      * @private
      */
-    _fetchMessages() {
-        const lang = this._languages.shift();
-        if (!lang) {
-            if (--this._running === 0) {
-                delete this._results['patrol-log-diff'];
-                this._caches.messagecache = Object.assign({}, this._results);
-                this._process();
-            }
-            return;
-        }
+    async _fetchMessages(lang) {
         this._logger.debug('Fetching messages for', lang);
-        this._io.query('community', 'en', 'fandom.com', {
+        const {query} = await this._io.query('community', 'en', 'fandom.com', {
             amlang: lang,
             ammessages: messages.join('|'),
             amprop: 'default',
             meta: 'allmessages'
-        }).then(this._cbMessages.bind(this))
-        .catch(this._errMessages.bind(this));
-    }
-    /**
-     * Callback after fetching messages.
-     * @param {Object} data MediaWiki API response
-     * @private
-     */
-    _cbMessages(data) {
+        });
         let diff = null;
-        data.query.allmessages.forEach(function(m) {
+        for (const m of query.allmessages) {
             const text = m.default || m['*'];
             if (m.name === 'patrol-log-diff') {
                 diff = text;
@@ -264,18 +239,7 @@ class Loader {
             } else if (!this._results[m.name].includes(text)) {
                 this._results[m.name].push(text);
             }
-        }, this);
-        this._fetchMessages();
-    }
-    /**
-     * Callback after fetching messages fails.
-     * @param {Error} e Fetching error
-     * @private
-     */
-    _errMessages(e) {
-        this._logger.error('Error while fetching messages', e);
-        // Continue anyways.
-        this._fetchMessages();
+        }
     }
     /**
      * Processes i18n messages.
@@ -292,7 +256,6 @@ class Loader {
                 this._caches.i18n[key] = this._caches.messagecache[key];
             }
         }
-        this._finish();
     }
     /**
      * Processes {{GENDER:}} magic words in system messages and maps
@@ -308,7 +271,10 @@ class Loader {
             /\{\{GENDER:[^|]*\|([^}]+)\}\}/ig,
             function(_, match) {
                 const arr = match.split('|');
-                if (arr[0] === arr[2] || arr[1] === arr[2]) {
+                if (
+                    arr.length > 1 &&
+                    (arr[0] === arr[2] || arr[1] === arr[2])
+                ) {
                     arr.pop();
                 }
                 placeholder.push(`(?:${arr.map(util.escapeRegex).join('|')})`);
@@ -321,10 +287,9 @@ class Loader {
     }
     /**
      * Processes custom messages.
-     * @param {Boolean} noFinish If _finish shouldn't be called
      * @private
      */
-    _custom(noFinish) {
+    _custom() {
         this._logger.info('Processing custom messages...');
         this._caches.i18n2 = {};
         for (const wiki in this._caches.custom) {
@@ -340,76 +305,6 @@ class Loader {
                 }
             }
         }
-        if (!noFinish) {
-            this._finish();
-        }
-    }
-    /**
-     * Finishes a job.
-     * @private
-     */
-    _finish() {
-        if (--this._jobs === 0) {
-            this._finished();
-        }
-    }
-    /**
-     * Callback after everything has finished.
-     * @param {Boolean} noSave If caches should not be saved
-     * @private
-     */
-    _finished(noSave) {
-        if (noSave) {
-            this._logger.info('Nothing to do, caches not saved.');
-            this._finalize();
-        } else {
-            this._logger.info('Saving caches...');
-            let promise = null;
-            if (this._debug) {
-                const promises = [];
-                for (const cache in this._caches) {
-                    promises.push(this._saveCache(cache, this._caches[cache]));
-                }
-                promise = Promise.all(promises);
-            } else {
-                promise = this._saveCache('', this._caches);
-            }
-            promise.then(this._finalize.bind(this)).catch(
-                e => this._logger.error(
-                    'An error occurred while saving cache',
-                    e
-                )
-            );
-        }
-    }
-    /**
-     * Processes messages into RegExp objects and calls client callback.
-     * @private
-     */
-    _finalize() {
-        this._logger.info('Exiting loader...');
-        MESSAGES.forEach(function(msg) {
-            this._caches.i18n[msg] = this._caches.i18n[msg].map(function(m) {
-                if (m instanceof RegExp) {
-                    return m;
-                }
-                return new RegExp(m);
-            });
-        }, this);
-        for (const wiki in this._caches.i18n2) {
-            const w = this._caches.i18n2[wiki];
-            for (const msg in w) {
-                if (!(w[msg] instanceof RegExp)) {
-                    w[msg] = new RegExp(w[msg]);
-                }
-            }
-        }
-        if (this._doFetch || this._generate) {
-            this._logger.info('Nothing to do, exiting KockaLogger...');
-            process.exit();
-        } else if (this._callback) {
-            this._callback.call(this._context, this._caches);
-        }
     }
     /**
      * Updates custom messages and saves them to cache.
@@ -417,55 +312,39 @@ class Loader {
      * @param {String} language Language of the wiki
      * @param {String} domain Domain of the wiki
      * @param {Object} data Custom messages for the wiki
-     * @param {Function} callback Callback function after the update
      */
-    updateCustom(wiki, language, domain, data, callback) {
+    async updateCustom(wiki, language, domain, data) {
         if (!this._caches.custom) {
             this._caches.custom = {};
         }
         this._caches.custom[`${language}:${wiki}:${domain}`] = data;
-        this._custom(true);
-        (
-            this._debug ?
-                Promise.all([
-                    this._saveCache('custom', this._caches.custom),
-                    this._saveCache('i18n2', this._caches.i18n2)
-                ]) :
-                this._saveCache('', this._caches)
-        ).then(this._updateCustomCallback.bind(
-            this,
-            wiki,
-            language,
-            domain,
-            callback
-        )).catch(
-            e => this._logger.error('Error while saving custom cache', e)
-        );
-    }
-    /**
-     * Callback after custom cache has been updated.
-     * @param {String} wiki Wiki to update the custom messages for
-     * @param {String} language Language of the wiki
-     * @param {String} domain Domain of the wiki
-     * @param {Function} callback Callback function after the update
-     * @private
-     */
-    _updateCustomCallback(wiki, language, domain, callback) {
+        this._custom();
+        try {
+            if (this._debug) {
+                await this._saveCache('custom', this._caches.custom);
+                await this._saveCache('i18n2', this._caches.i18n2);
+            } else {
+                await this._saveCache('', this._caches);
+            }
+        } catch (error) {
+            this._logger.error('Error while saving custom cache', error);
+        }
         for (const w in this._caches.i18n2) {
             for (const msg in this._caches.i18n2[w]) {
                 this._caches.i18n2[w][msg] =
                     new RegExp(this._caches.i18n2[w][msg]);
             }
         }
-        if (typeof callback === 'function') {
-            callback(
-                wiki,
-                language,
-                domain,
-                this._caches.custom,
-                this._caches.i18n2
-            );
-        }
+        return {
+            generated: this._caches.i18n2,
+            messages: this._caches.custom
+        };
+    }
+    /**
+     * Disposes resources used by the message loader.
+     */
+    kill() {
+        this._logger.close();
     }
 }
 

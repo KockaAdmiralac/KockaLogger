@@ -24,7 +24,7 @@ Logger module configuration consists of an array of objects representing combina
 
 In the configuration for the `discord` transport should be two properties, `id` and `token`, representing the ID and token of the webhook to transport activity to. For example, if your webhook URL is:
 ```
-https://discordapp.com/api/webhooks/123456789012345678/aHDAkNAjao_l4JAS9A0qkl04pASCjLASD-ASLKjQWE_MASDA0ijASjkh23Spoqk-02nk
+https://discord.com/api/webhooks/123456789012345678/aHDAkNAjao_l4JAS9A0qkl04pASCjLASD-ASLKjQWE_MASDA0ijASjkh23Spoqk-02nk
 ```
 your webhook ID will be `123456789012345678` and your webhook token will be `aHDAkNAjao_l4JAS9A0qkl04pASCjLASD-ASLKjQWE_MASDA0ijASjkh23Spoqk-02nk`.
 

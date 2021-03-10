@@ -41,20 +41,20 @@ class Wiki {
             this._logger.error('Wiki configuration invalid:', config);
             return;
         }
-        this._name = config.wiki;
-        this._domain = config.domain || 'fandom.com';
-        this._bots = config.bots instanceof Array ?
-            config.bots :
-            DEFAULT_BOTS;
-        this._language = typeof config.language === 'string' ?
-            config.language :
-            'en';
+        const {
+            wiki, domain, bots, language, transports, transport, formats,
+            format, filters
+        } = config;
+        this._name = wiki;
+        this._domain = domain || 'fandom.com';
+        this._bots = bots instanceof Array ? bots : DEFAULT_BOTS;
+        this._language = typeof language === 'string' ? language : 'en';
         this._key = `${this._language}.${this._name}.${this._domain}`;
-        this._initFilters(config.filters);
-        if (!this._initTransports(config.transports, config.transport)) {
+        this._initFilters(filters);
+        if (!this._initTransports(transports, transport)) {
             return;
         }
-        this._initFormats(config.formats, config.format);
+        this._initFormats(formats, format);
         this._initialized = true;
     }
     /**
@@ -100,8 +100,8 @@ class Wiki {
         try {
             const Transport = require(`../../transports/${c.type || 'discord'}/main.js`);
             return new Transport(c);
-        } catch (e) {
-            this._logger.error('Error initializing transport', e);
+        } catch (error) {
+            this._logger.error('Error initializing transport', error);
         }
     }
     /**
@@ -153,27 +153,28 @@ class Wiki {
     }
     /**
      * Sets data from MediaWiki API response,
-     * @param {Object} data MediaWiki API response
-     * @todo Use the statistics somehow
+     * @param {Array<Object>} variables Publicly available wiki variables
+     * @param {Object} general General wiki information
+     * @param {Object} namespaces Wiki namespace information
      */
-    setData(data) {
-        this._id = Number(data.variables.filter((variable) => variable.id === 'wgCityId')[0]['*']);
-        this._sitename = data.general.sitename;
-        this._path = data.general.articlepath;
+    setData({variables, general, namespaces}) {
+        this._id = Number(variables.filter(
+            variable => variable.id === 'wgCityId'
+        )[0]['*']);
+        this._sitename = general.sitename;
+        this._path = general.articlepath;
         this._namespaces = {};
         this._namespaceNames = {};
         this._canonicalNamespaces = {};
-        for (const i in data.namespaces) {
-            const ns = data.namespaces[i],
-                  {id} = ns,
-                  name = ns['*'],
-                  canon = ns.canonical;
+        for (const i in namespaces) {
+            const ns = namespaces[i],
+                  {id, canonical} = ns,
+                  name = ns['*'];
             this._namespaces[name] = id;
-            this._namespaces[canon] = id;
+            this._namespaces[canonical] = id;
             this._namespaceNames[id] = name;
-            this._canonicalNamespaces[id] = canon;
+            this._canonicalNamespaces[id] = canonical;
         }
-        this._statistics = data.statistics;
     }
     /**
      * Gets namespace ID by its name.
@@ -203,7 +204,7 @@ class Wiki {
      * Dispatches a message to the appropriate transport.
      * @param {Message} message Message to dispatch
      */
-    execute(message) {
+    async execute(message) {
         const result = this._filterMessage(message);
         if (!result) {
             return;
@@ -220,10 +221,11 @@ class Wiki {
         }
         if (!transport) {
             this._logger.error('Nonexistent transport', result, this._name);
+            return;
         }
         const formatted = format.execute(message);
         if (formatted) {
-            transport.execute(formatted);
+            await transport.execute(formatted);
         }
     }
     /**
@@ -260,13 +262,20 @@ class Wiki {
     }
     /**
      * Cleans up the resources after a kill has been requested.
-     * @param {Function} callback Callback to call after cleaning up
      */
-    kill(callback) {
-        this._logger.close(callback);
+    kill() {
+        this._logger.close();
+        for (const format in this._formats) {
+            this._formats[format].kill();
+        }
+        for (const transport in this._transports) {
+            this._transports[transport].kill();
+        }
     }
     /**
-     * Gets if the wiki's configuration was initialized.
+     * Gets if the wiki's configuration was successfully initialized. If it was
+     * not, it means there was an error in configuration, and such a wiki
+     * should not be logged.
      * @returns {Boolean} If the wiki's configuration was initialized
      */
     get initialized() {
@@ -285,6 +294,13 @@ class Wiki {
      */
     get domain() {
         return this._domain;
+    }
+    /**
+     * Gets the wiki's language.
+     * @returns {String} Wiki's language
+     */
+    get language() {
+        return this._language;
     }
     /**
      * Gets a unique identifier for a wiki.
