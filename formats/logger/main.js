@@ -112,7 +112,6 @@ class Logger extends Format {
      * @param {Message} m Message to format
      * @returns {Object} Formatted message
      * @private
-     * @todo Split this up somehow
      */
     _handleLog(m) {
         const w = m.wiki,
@@ -297,8 +296,6 @@ class Logger extends Format {
      * @param {String} domain Domain of the wiki
      * @param {Array} args Arguments for the message
      * @returns {Object} Formatted message
-     * @todo Nested templates support
-     * @todo Split this up somehow
      */
     _msg(key, wiki, lang, domain, ...args) {
         const string = this._i18n[key];

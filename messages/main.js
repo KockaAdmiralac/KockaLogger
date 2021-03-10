@@ -342,7 +342,6 @@ class Loader {
     }
     /**
      * Disposes resources used by the message loader.
-     * @todo Remove callback
      */
     kill() {
         this._logger.close();
