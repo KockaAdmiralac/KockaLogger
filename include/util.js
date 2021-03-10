@@ -26,11 +26,6 @@ class Util {
     static url(wiki, lang, domain) {
         if (lang && lang !== 'en') {
             return `https://${wiki}.${domain}/${lang}`;
-        } else if (domain === 'wikia.com') {
-            if (wiki.includes('.')) {
-                return `http://${wiki}.wikia.com`;
-            }
-            return `https://${wiki}.wikia.com`;
         }
         return `https://${wiki}.${domain}`;
     }
