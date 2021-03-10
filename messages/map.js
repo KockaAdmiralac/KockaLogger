@@ -9,7 +9,7 @@
 /**
  * Importing modules
  */
-const util = require('../include/util.js');
+const {escapeRegex} = require('../include/util.js');
 
 /**
  * Constants
@@ -36,7 +36,7 @@ const MAPPING = {
      * @param {String} e Log entry
      * @returns {String} Regex'd log entry
      */
-    '1movedto2': e => `^${colorLink(util.escapeRegex(e))
+    '1movedto2': e => `^${colorLink(escapeRegex(e))
         .replace('\\$1', '([^\x03]+)')
         .replace('\\$2', '([^\\]\x03]+)')
     }(?:${REASON})?$`,
@@ -45,7 +45,7 @@ const MAPPING = {
      * @param {String} e Replacement autosummary
      * @returns {String} Regex'd autosummary
      */
-    'autosumm-replace': e => `^${util.escapeRegex(e)
+    'autosumm-replace': e => `^${escapeRegex(e)
         .replace('\\$1', '(.*)')
     }$`,
     /**
@@ -53,7 +53,7 @@ const MAPPING = {
      * @param {String} e Log entry
      * @returns {String} Regex'd log entry
      */
-    'blocklogentry': e => `^${colorLink(util.escapeRegex(e))
+    'blocklogentry': e => `^${colorLink(escapeRegex(e))
         .replace('\\$1', '[^:]+:([^\x03]+)')
         .replace('\\$2', '(.*)')
         .replace('\\$3', '(?:\\(|（)([^\\)）]*)(?:\\)|）)')
@@ -63,7 +63,7 @@ const MAPPING = {
      * @param {String} e Log entry
      * @returns {String} Regex'd log entry
      */
-    'blog-avatar-removed-log': e => `^${util.escapeRegex(e)
+    'blog-avatar-removed-log': e => `^${escapeRegex(e)
         .replace('\\$1', '[^:]+:(.+)')
     }`,
     /**
@@ -71,7 +71,7 @@ const MAPPING = {
      * @param {String} e Log entry
      * @returns {String} Regex'd log entry
      */
-    'chat-chatbanadd-log-entry': e => `^${colorLink(util.escapeRegex(e))
+    'chat-chatbanadd-log-entry': e => `^${colorLink(escapeRegex(e))
         .replace(
             '\\$1',
             '\\[\\[(?:\x0302)?[^:]+:([^\\]\x03]+)(?:\x0310)?\\]\\]'
@@ -84,7 +84,7 @@ const MAPPING = {
      * @param {String} e Log entry
      * @returns {String} Regex'd log entry
      */
-    'chat-chatbanremove-log-entry': e => `^${colorLink(util.escapeRegex(e))
+    'chat-chatbanremove-log-entry': e => `^${colorLink(escapeRegex(e))
         .replace(
             '\\$1',
             '\\[\\[(?:\x0302)?[^:]+:([^\\]\x03]+)(?:\x0310)?\\]\\]'
@@ -95,7 +95,7 @@ const MAPPING = {
      * @param {String} e Log entry
      * @returns {String} Regex'd log entry
      */
-    'deletedarticle': e => `^${util.escapeRegex(e).replace(
+    'deletedarticle': e => `^${escapeRegex(e).replace(
         /(?:\\\[\\\[)?\\\$1(?:\\\]\\\])?/,
         '(?:\\[\\[)?(?:\x0302)?([^\x03\\]]+)(?:\x0310)?(?:\\]\\])?'
     )}(?:${REASON})?$`,
@@ -104,7 +104,7 @@ const MAPPING = {
      * @param {String} e Log entry
      * @returns {String} Regex'd log entry
      */
-    'logentry-delete-revision-legacy': e => `^${colorLink(util.escapeRegex(e))
+    'logentry-delete-revision-legacy': e => `^${colorLink(escapeRegex(e))
         .replace('\\$1', '.+')
         .replace('\\$3', '\\[\\[\x0302([^\x03]+)\x0310\\]\\]')
     }(?:${REASON})?$`,
@@ -113,7 +113,7 @@ const MAPPING = {
      * @param {String} e Log entry
      * @returns {String} Regex'd log entry
      */
-    'movedarticleprotection': e => `^${util.escapeRegex(e)
+    'movedarticleprotection': e => `^${escapeRegex(e)
         .replace(
             '\\[\\[\\$1\\]\\]',
             '\\[\\[(?:\x0302)?([^\\]\x03]+)(?:\x0310)?\\]\\]'
@@ -125,7 +125,7 @@ const MAPPING = {
      * @param {String} e Log entry
      * @returns {String} Regex'd log entry
      */
-    'patrol-log-line': e => `^${colorLink(util.escapeRegex(e))
+    'patrol-log-line': e => `^${colorLink(escapeRegex(e))
         .replace('\\$1', '(\\d+)')
         .replace('\\$2', '\\[\\[(?:\x0302)?([^\\]\x03]+)(?:\x0310)?\\]\\]')
         .replace('\\$3', '')
@@ -135,7 +135,7 @@ const MAPPING = {
      * @param {String} e Log entry
      * @returns {String} Regex'd log entry
      */
-    'protectedarticle': e => `^${colorLink(util.escapeRegex(e))
+    'protectedarticle': e => `^${colorLink(escapeRegex(e))
         .replace('\\$1', '([^\x03]+)')
     }((?: (?:\\u200E|\\u200F)\\[(?:edit|move|upload|create|everything)=\\w+\\] \\([^\\u200E\\u200F]+\\)){1,3})(?:${REASON})?$`,
     /**
@@ -143,7 +143,7 @@ const MAPPING = {
      * @param {String} e Log entry
      * @returns {String} Regex'd log entry
      */
-    'rightslogentry': e => `^${util.escapeRegex(e)
+    'rightslogentry': e => `^${escapeRegex(e)
         .replace('\\$1', '[^:]+:(.+)')
         .replace('\\$2', '([^:]+)')
         .replace('\\$3', '([^:]+)')
@@ -153,7 +153,7 @@ const MAPPING = {
      * @param {String} e Log entry
      * @returns {String} Regex'd log entry
      */
-    'unblocklogentry': e => `^${util.escapeRegex(e)
+    'unblocklogentry': e => `^${escapeRegex(e)
         .replace('\\$1', '[^:]+:(.+)')
     }(?:${REASON})?$`,
     /**
@@ -161,7 +161,7 @@ const MAPPING = {
      * @param {String} e Log entry
      * @returns {String} Regex'd log entry
      */
-    'unprotectedarticle': e => `^${colorLink(util.escapeRegex(e))
+    'unprotectedarticle': e => `^${colorLink(escapeRegex(e))
         .replace('\\$1', '([^\x03]+)')
     }(?:${REASON})?$`,
     /**
@@ -169,7 +169,7 @@ const MAPPING = {
      * @param {String} e Log entry
      * @returns {String} Regex'd log entry
      */
-    'uploadedimage': e => `^${util.escapeRegex(e).replace(
+    'uploadedimage': e => `^${escapeRegex(e).replace(
         /(?:\\\[\\\[)?\\\$1(?:\\\]\\\])?/,
         '(?:\\[\\[)?(?:\x0302)?[^:]+:([^\\]\x03]+)(?:\x0310)?(?:\\]\\])?'
     )}(?:${REASON})?$`
