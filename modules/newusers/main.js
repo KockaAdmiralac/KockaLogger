@@ -9,7 +9,7 @@
  * Importing modules.
  */
 const {promisify} = require('util'),
-      redis = require('redis'),
+      Redis = require('ioredis'),
       Module = require('../module.js'),
       Logger = require('../../include/log.js'),
       {url, shorturl, encode} = require('../../include/util.js'),
@@ -89,9 +89,8 @@ class NewUsers extends Module {
      * @private
      */
     _initSubscriber() {
-        this._subscriber = redis.createClient({
-            path: '/tmp/redis_kockalogger.sock'
-        })
+        // WARNING: Risky! `Redis#options` undocumented.
+        this._subscriber = new Redis(this._cache.options)
             .on('connect', this._redisConnected.bind(this))
             .on('end', this._redisDisconnected.bind(this))
             .on('error', this._redisError.bind(this))
@@ -176,11 +175,11 @@ class NewUsers extends Module {
             this._logger.error('Query error', error);
         }
         const key = `newusers:${message.user}:${message.wiki}:${message.language}:${message.domain}`;
-        this._cache
-            .batch()
+        await this._cache
+            .multi()
             .setbit(key, 0, 1)
             .expire(key, CACHE_EXPIRY)
-            .exec(this._redisCallback.bind(this));
+            .exec();
     }
     /**
      * Relays all creations in a separate channel for logging new users.

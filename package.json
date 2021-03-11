@@ -26,9 +26,9 @@
     "dependencies": {
         "discord.js": ">=12.5.1",
         "got": ">=11.8.2",
+        "ioredis": ">=4.23.0",
         "irc-upd": ">=0.11.0",
-        "mysql2": ">=2.2.5",
-        "redis": ">=3.0.2"
+        "mysql2": ">=2.2.5"
     },
     "devDependencies": {
         "eslint": ">=7.21.0"

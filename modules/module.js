@@ -51,15 +51,6 @@ class Module {
      */
     kill() {}
     /* eslint-enable */
-    /**
-     * Standard Redis callback.
-     * @param {Error} error Error that occurred
-     */
-    _redisCallback(error) {
-        if (error && this._logger) {
-            this._logger.error('Redis error', error);
-        }
-    }
 }
 
 module.exports = Module;

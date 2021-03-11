@@ -9,7 +9,6 @@
  * Importing modules.
  */
 const {isIP} = require('net'),
-      {promisify} = require('util'),
       Module = require('../module.js'),
       Format = require('../../formats/logger/main.js'),
       Discord = require('../../transports/discord/main.js'),
@@ -87,14 +86,14 @@ class Vandalism extends Module {
         const {user, wiki, language, domain} = message,
               key = `vandalism:${user}:${language}:${wiki}:${domain}`;
         try {
-            if (await promisify(this._cache.exists).call(this._cache, key)) {
+            if (await this._cache.exists(key)) {
                 return;
             }
-            this._cache
-                .batch()
+            await this._cache
+                .multi()
                 .setbit(key, 0, 1)
                 .expire(key, CACHE_EXPIRY)
-                .exec(this._redisCallback.bind(this));
+                .exec();
             const formatted = this._format.execute(message);
             if (
                 typeof formatted === 'object' &&

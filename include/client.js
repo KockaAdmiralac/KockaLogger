@@ -10,7 +10,7 @@
  */
 const {promisify} = require('util'),
       irc = require('irc-upd'),
-      redis = require('redis'),
+      Redis = require('ioredis'),
       util = require('./util.js'),
       IO = require('./io.js'),
       Logger = require('./log.js'),
@@ -50,7 +50,7 @@ class Client {
         this._io = new IO();
         this._fetching = new Map();
         this._initLogger(config.logging || {}, config.client.discord);
-        this._initCache();
+        this._initCache(config.cache);
         this._initModules();
     }
     /**
@@ -70,12 +70,11 @@ class Client {
     }
     /**
      * Initializes a Redis client used for caching.
+     * @param {Object} config Redis client configuration
      * @private
      */
-    _initCache() {
-        this._cache = redis.createClient({
-            path: '/tmp/redis_kockalogger.sock'
-        })
+    _initCache(config) {
+        this._cache = new Redis(config || '/tmp/redis_kockalogger.sock')
             .on('connect', this._redisConnected.bind(this))
             .on('end', this._redisDisconnected.bind(this))
             .on('error', this._redisError.bind(this))
@@ -534,7 +533,7 @@ class Client {
                 .call(this._client, 'User-requested shutdown.');
         }
         // Quit Redis client.
-        await promisify(this._cache.quit).call(this._cache);
+        await this._cache.quit();
         // Let modules quit what they have to quit.
         for (const mod in this._modules) {
             await this._modules[mod].kill();
