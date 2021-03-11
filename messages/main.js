@@ -64,12 +64,7 @@ class Loader {
                 cache :
                 DEFAULT_CACHE_DIRECTORY
         );
-        this._caches = {
-            custom: this._loadCache('custom'),
-            i18n: this._loadCache('i18n'),
-            i18n2: this._loadCache('i18n2'),
-            messagecache: this._loadCache('messagecache')
-        };
+        this._caches = this._loadFile('_loader');
         this._io = new IO();
         this._logger = new Logger({
             file: true,
@@ -95,20 +90,15 @@ class Loader {
      */
     async run() {
         this._logger.info('KockaLogger started.');
-        if (this._doFetch || !this._caches.messagecache) {
+        const shouldFetch = this._doFetch || !this._caches.messagecache;
+        if (shouldFetch) {
             await this._fetch();
         }
         this._process();
         this._custom();
-        if (this._doFetch || !this._caches.messagecache) {
+        if (shouldFetch) {
             this._logger.info('Saving caches...');
-            if (this._debug) {
-                for (const cache in this._caches) {
-                    await this._saveCache(cache, this._caches[cache]);
-                }
-            } else {
-                await this._saveCache('', this._caches);
-            }
+            await this._saveCache('', this._caches);
         }
         this._logger.info('Exiting loader...');
         for (const msg of MESSAGES) {
@@ -136,26 +126,8 @@ class Loader {
             return require(`${this._cacheDir}/${file}.json`);
         } catch (_) {
             // Ignoring error because cache loading errors are unimportant.
-            return undefined;
+            return {};
         }
-    }
-    /**
-     * Loads a file from cache.
-     * @param {String} file File to load
-     * @returns {Object|undefined} Loaded file
-     * @private
-     */
-    _loadCache(file) {
-        if (this._debug) {
-            return this._loadFile(`_loader_${file}`);
-        } else if (this._cache) {
-            return this._cache[file];
-        }
-        this._cache = this._loadFile('_loader');
-        if (!this._cache) {
-            this._cache = {};
-        }
-        return this._cache[file];
     }
     /**
      * Saves a file to cache.
@@ -268,6 +240,10 @@ class Loader {
     _doMapping(key, value) {
         const placeholder = [];
         return MAPPING[key](value.replace(
+            // This happens for some reason.
+            /\{\{GENDER:[^|}]*\|?\}\}|/ig,
+            ''
+        ).replace(
             /\{\{GENDER:[^|]*\|([^}]+)\}\}/ig,
             function(_, match) {
                 const arr = match.split('|');
@@ -320,12 +296,7 @@ class Loader {
         this._caches.custom[`${language}:${wiki}:${domain}`] = data;
         this._custom();
         try {
-            if (this._debug) {
-                await this._saveCache('custom', this._caches.custom);
-                await this._saveCache('i18n2', this._caches.i18n2);
-            } else {
-                await this._saveCache('', this._caches);
-            }
+            await this._saveCache('', this._caches);
         } catch (error) {
             this._logger.error('Error while saving custom cache', error);
         }
