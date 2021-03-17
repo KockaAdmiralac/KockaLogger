@@ -1,6 +1,6 @@
 {
     "name": "kocka-logger",
-    "version": "1.2.0",
+    "version": "1.2.1",
     "description": "Parses IRC activity messages across all of Fandom and relays them to Discord in various formats.",
     "keywords": [
         "wikia",
@@ -26,11 +26,11 @@
     "dependencies": {
         "discord.js": ">=12.5.1",
         "got": ">=11.8.2",
-        "ioredis": ">=4.23.0",
+        "ioredis": ">=4.24.2",
         "irc-upd": ">=0.11.0",
         "mysql2": ">=2.2.5"
     },
     "devDependencies": {
-        "eslint": ">=7.21.0"
+        "eslint": ">=7.22.0"
     }
 }

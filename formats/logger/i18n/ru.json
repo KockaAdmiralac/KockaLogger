@@ -24,12 +24,16 @@
     "talk": "обс",
     "contribs": "вкл",
     "rights-none": "(нет)",
-    "discussions": "{{user|$1}} $2 {{dlink|$3|$4|$5}} ($6) в $7 {{summary|$8}}",
+    "discussions": "{{user|$1}} $2 {{dlink|$3|$4|$5|$6|$8}} ($7) {{board|$8|$4}} {{summary|$9}}",
     "discussions-reply": "ответ",
     "discussions-create-post": "опубликовал",
     "discussions-create-report": "пожаловался на",
     "discussions-deleted": "удалил",
     "discussions-un-deleted": "восстановил",
     "discussions-modified": "отредактировал",
-    "discussions-moved": "переместил"
+    "discussions-moved": "переместил",
+    "discussion-board": "в $1",
+    "message-wall-board": "on $1's wall",
+    "article-comment-board": "on $1",
+    "article-comment-comment": "a comment"
 }

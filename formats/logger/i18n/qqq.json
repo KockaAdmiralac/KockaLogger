@@ -24,12 +24,16 @@
     "talk": "Short for \"talk\" that will appear next to a user's userpage link.",
     "contribs": "Short for \"contributions\" that will appear next to a user's userpage link.",
     "rights-none": "When a user's had no rights before a promotion or has no rights after a demotion.",
-    "discussions": "Appears when a Discussions event occurs. $1: user doing the event; $2: one of the discussions-* messages representing the action being done; $3: thread ID; $4: reply ID; $5: thread title, or discussions-reply message if title is not available; $6: size in bytes; $7: Discussions category name; $8: short summary of the event",
+    "discussions": "Appears when a Discussions event occurs. $1: user doing the event; $2: one of the discussions-* messages representing the action being done; $3: the platform on which the action is done; $4: thread ID; $5: reply ID; $6: thread title, discussions-reply message if title is not available or article-comment-comment message if posting a comment; $7: size in bytes; $8: Discussions category name, the page being posted on, or the username of the wall user, this will be inserted in one of the *-board messages as the first argument; $9: short summary of the event",
     "discussions-reply": "When the title of a thread is not available (for example, an action was done on a thread reply)",
     "discussions-create-post": "When a Discussions post is created",
     "discussions-create-report": "When a Discussions post is reported",
     "discussions-deleted": "When a Discussions post is deleted",
     "discussions-un-deleted": "When a Discussions post is undeleted",
     "discussions-modified": "When a Discussions post is edited",
-    "discussions-moved": "When a Discussions post is moved"
+    "discussions-moved": "When a Discussions post is moved",
+    "discussion-board": "The 'posted on' part of the message when an event occurs in Discussions. $1: name of the Discussions board",
+    "message-wall-board": "The 'posted on' part of the message when an event occurs on a message wall. $1: username of the user whose wall was posted on",
+    "article-comment-board": "The 'posted on' part of the message when an event occurs in article or blog comments. $1: page name of the page that a comment was posted on",
+    "article-comment-comment": "Text on the link to a comment when an article comment has been posted."
 }

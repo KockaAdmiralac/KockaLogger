@@ -280,10 +280,11 @@ class Logger extends Format {
                     this._i18n['discussions-create-post'] :
                     this._i18n[`discussions-${m.action}`],
             m.title,
+            m.platform,
             m.thread,
             m.reply,
             m.size,
-            util.escape(m.category),
+            m.page || m.category,
             m.snippet.trim().replace(P_REGEX, '$1')
         );
     }
@@ -419,6 +420,27 @@ class Logger extends Format {
         return this._link(text, wiki, lang, domain, `wiki/${util.encode(page)}`);
     }
     /**
+     * Forms a path to a Discussions-based post.
+     * @param {String} platform Platform the post was made on
+     * @param {String} thread ID of the thread the post is on
+     * @param {String} reply ID of the post if it's a reply
+     * @param {String} page Page the post was posted on
+     * @returns {String} The path to the post
+     */
+    _discussionsPath(platform, thread, reply, page) {
+        switch (platform) {
+            case 'discussion':
+                return `f/p/${reply ? `${thread}/r/${reply}` : thread}`;
+            case 'message-wall':
+                return `wiki/Message_Wall:${util.encode(page)}?threadId=${reply ? `${thread}#${reply}` : thread}`;
+            case 'article-comment':
+                return `wiki/${util.encode(page)}?commentId=${reply ? `${thread}&replyId=${reply}` : thread}`;
+            default:
+                this._logger.error(`Unknown Discussions platform: ${platform}`);
+                return 'unknown_discussions_platform';
+        }
+    }
+    /**
      * Processes templates in i18n strings.
      * @param {String} wiki Related wiki for linking
      * @param {String} lang Language of the wiki for linking
@@ -503,14 +525,20 @@ class Logger extends Format {
                     `(${temp1}${util.escape(temp.replace(/(?:\n|\r|\s)+/g, ' '))}${temp1})`;
             case 'dlink':
                 return this._link(
-                    args[0] || this._i18n['discussions-reply'],
+                    args[0] || (
+                        args[1] === 'article-comment' ?
+                            this._i18n['article-comment-comment'] :
+                            this._i18n['discussions-reply']
+                    ),
                     wiki,
                     lang,
                     domain,
-                    `d/p/${args[2] ? `${args[1]}/r/${args[2]}` : args[1]}`
+                    this._discussionsPath(args[1], args[2], args[3], args[4])
                 );
             case 'flags':
                 return args[0] ? `[${args[0]}] ` : '';
+            case 'board':
+                return this._msg(`${args[1]}-board`, wiki, lang, domain, util.escape(args[0]));
             default:
                 return '';
         }

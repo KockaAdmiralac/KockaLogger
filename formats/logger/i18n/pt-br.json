@@ -24,12 +24,16 @@
     "talk": "d",
     "contribs": "c",
     "rights-none": "(nenhum)",
-    "discussions": "{{user|$1}} $2 {{dlink|$3|$4|$5}} ($6) em $7 {{summary|$8}}",
+    "discussions": "{{user|$1}} $2 {{dlink|$3|$4|$5|$6|$8}} ($7) {{board|$8|$4}} {{summary|$9}}",
     "discussions-reply": "uma resposta",
     "discussions-create-post": "postou",
     "discussions-create-report": "reportou",
     "discussions-deleted": "excluiu",
     "discussions-un-deleted": "restaurou",
     "discussions-modified": "editou",
-    "discussions-moved": "moveu"
+    "discussions-moved": "moveu",
+    "discussion-board": "em $1",
+    "message-wall-board": "on $1's wall",
+    "article-comment-board": "on $1",
+    "article-comment-comment": "a comment"
 }

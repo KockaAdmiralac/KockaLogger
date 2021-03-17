@@ -94,6 +94,26 @@ class Util {
             .replace(/%2F/g, '/');
     }
     /**
+     * Decodes URL components MediaWiki-style.
+     * @param {String} url URL to decode
+     * @returns {String} Decoded URL
+     * @static
+     */
+    static decode(url) {
+        return decodeURIComponent(
+            url
+                .replace(/%21/g, '!')
+                .replace(/%27/g, '\'')
+                .replace(/%28/g, '(')
+                .replace(/%29/g, ')')
+                .replace(/%2A/g, '*')
+                .replace(/%7E/g, '~')
+                .replace(/_/g, '%20')
+                .replace(/:/g, '%3A')
+                .replace(/\//g, '%2F')
+        );
+    }
+    /**
      * Decodes HTML.
      * Reverse of mw.html.encode.
      * @param {String} html HTML to decode

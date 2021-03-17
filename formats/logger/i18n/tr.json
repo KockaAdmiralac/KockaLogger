@@ -24,12 +24,16 @@
     "talk": "t",
     "contribs": "k",
     "rights-none": "(yok)",
-    "discussions": "{{user|$1}} tarafından $7 kategorisindeki durumu $2 olan tartışmaya {{dlink|$3|$4|$5}} eklendi {{summary|$8}}",
+    "discussions": "{{user|$1}} $2 {{dlink|$3|$4|$5|$6|$8}} ($7) {{board|$8|$4}} {{summary|$9}}",
     "discussions-reply": "yanıt",
     "discussions-create-post": "paylaşıldı",
     "discussions-create-report": "rapor edildi",
     "discussions-deleted": "silindi",
     "discussions-un-deleted": "silme geri alındı",
     "discussions-modified": "düzenlendi",
-    "discussions-moved": "taşındı"
+    "discussions-moved": "taşındı",
+    "discussion-board": "in $1",
+    "message-wall-board": "on $1's wall",
+    "article-comment-board": "on $1",
+    "article-comment-comment": "a comment"
 }

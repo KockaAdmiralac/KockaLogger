@@ -24,12 +24,16 @@
     "talk": "वा",
     "contribs": "कॉ",
     "rights-none": "(कुछ नहीं)",
-    "discussions": "{{user|$1}} ने {{dlink|$3|$4|$5}} में $2 ($6) {{summary|$8}}",
+    "discussions": "{{user|$1}} $2 {{dlink|$3|$4|$5|$6|$8}} ($7) {{board|$8|$4}} {{summary|$9}}",
     "discussions-reply": "एक जवाब",
     "discussions-create-post": "पोस्ट किया",
     "discussions-create-report": "रिपोर्ट किया",
     "discussions-deleted": "डिलीट किया",
     "discussions-un-deleted": "अनडिलीट किया",
     "discussions-modified": "सम्पादित किया",
-    "discussions-moved": "मूव किया"
+    "discussions-moved": "मूव किया",
+    "discussion-board": "in $1",
+    "message-wall-board": "on $1's wall",
+    "article-comment-board": "on $1",
+    "article-comment-comment": "a comment"
 }
