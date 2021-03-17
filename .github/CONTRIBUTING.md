@@ -7,12 +7,7 @@
 ## Translation
 To translate KockaLogger's logging module you would need to translate JSON files located in `formats/logger/i18n`. The English translation can be found in the `en.json` file. Template names (`{{something|...}}`) and variables (`$1`, `$2`...) should not be translated.
 
-As some translation files have been transferred from WikiaActivityLogger, they require update for full translations in KockaLogger. Languages that require update are:
-- Belarusian (`be`)
-- German (`de`)
-- Polish (`pl`)
-- Brazillian Portuguese (`pt-br`)
-- Ukrainian (`uk`)
+As of KockaLogger v1.2.1 (2021-03-17), all translations require some updates for newly added messages.
 
 After translation updates, the patch version of KockaLogger needs to be increased by 1. If you're confused by what some things in the messages mean, read `qqq.json` for full documentation about message and parameter meanings.
 

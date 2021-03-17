@@ -19,7 +19,7 @@ Thank you for your contributions, everybody!
 - [Unai Mengual](https://unai01.github.io) — Spanish translation **[WAL]**
 - [Dark Yada](https://community.fandom.com/wiki/User:Dark_Yada) — French translation **[WAL]**
 - [Mobius-One](https://github.com/Mobius-One) — Brazillian Portuguese translation **[WAL]**
-- [Ultragustavo25](https://community.fandom.com/wiki/User:Ultragustavo25) — Brazillian Portuguese translation fixes **[WAL]**
+- [Ultragustavo25](https://community.fandom.com/wiki/User:Ultragustavo25) — [Brazillian Portuguese translation fixes](https://github.com/KockaAdmiralac/KockaLogger/pull/41)
 - [ChromeCircus](https://community.fandom.com/wiki/User:ChromeCircus) — German translation **[WAL]**
 - [Rail01](https://dev.fandom.com/wiki/User:Rail01) — Polish translation **[WAL]**
 - [Mix Gerder](https://dev.fandom.com/wiki/User:Mix_Gerder) — Belarusian and Ukrainian translations, along with Russian translation fixes **[WAL]**
@@ -27,4 +27,4 @@ Thank you for your contributions, everybody!
 - [Dorumin](https://dev.fandom.com/wiki/User:Dorumin) — [Spanish translation and fixes](https://github.com/KockaAdmiralac/KockaLogger/pull/3)
 - [Tokina8937](https://dev.fandom.com/wiki/User:Tokina8937) — [French translation](https://github.com/KockaAdmiralac/KockaLogger/pull/4)
 - [East6](https://starwars.fandom.com/tr/wiki/User:East6) and [BaRaN6161TURK](https://dev.fandom.com/wiki/User:BaRaN6161TURK) — [Turkish](https://github.com/KockaAdmiralac/KockaLogger/pull/34) [translation](https://github.com/KockaAdmiralac/KockaLogger/pull/33)
-
+- [ThisIsACreeper0101](https://dev.fandom.com/wiki/User:ThisIsACreeper0101) — [Hindi and Bengali translation](https://github.com/KockaAdmiralac/KockaLogger/pull/38)
