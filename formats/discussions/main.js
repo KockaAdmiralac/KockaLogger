@@ -33,6 +33,7 @@ class DiscussionsFormat extends Format {
     execute(msg) {
         if (
             msg.type !== 'discussions' ||
+            msg.platform !== 'discussion' ||
             this._transport.constructor.name !== 'Discord'
         ) {
             return;

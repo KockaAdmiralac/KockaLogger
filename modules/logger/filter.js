@@ -65,7 +65,8 @@ class Filter {
      * @returns {Boolean} If the message is from Discussions
      */
     _discussions(message) {
-        return message.type === 'discussions';
+        return message.type === 'discussions' &&
+               message.platform === 'discussion';
     }
     /**
      * Filters out Discussions messages.
@@ -73,7 +74,7 @@ class Filter {
      * @returns {Boolean} If the message is from Discussions
      */
     _noDiscussions(message) {
-        return message.type !== 'discussions';
+        return !this._discussions(message);
     }
     /**
      * Filters Discussions messages but without replies unless they aren't
@@ -83,6 +84,7 @@ class Filter {
      */
     _noreply(message) {
         return message.type === 'discussions' &&
+               message.platform === 'discussion' &&
                (
                    message.dtype !== 'post' ||
                        message.action !== 'edited' &&
