@@ -62,7 +62,7 @@ class Filter {
     /**
      * Filters Discussions messages.
      * @param {Message} message Message to be transported
-     * @returns {Boolean} If the message is from Discussions
+     * @returns {Boolean} If the message is not from Discussions
      */
     _discussions(message) {
         return message.type === 'discussions' &&
@@ -80,7 +80,7 @@ class Filter {
      * Filters Discussions messages but without replies unless they aren't
      * created or edited.
      * @param {Message} message Message to be transported
-     * @returns {Boolean} If the message is from Discussions
+     * @returns {Boolean} If the above conditions are met
      */
     _noreply(message) {
         return message.type === 'discussions' &&
@@ -90,18 +90,6 @@ class Filter {
                        message.action !== 'edited' &&
                        message.action !== 'created'
                );
-    }
-    /**
-     * Filters activity in social namespaces (works only on English wikis).
-     * @param {Message} message Message to be transported
-     * @returns {Boolean} If the message is a comment or a thread
-     */
-    _social(message) {
-        return message.threadtitle ||
-            message.type === 'edit' &&
-            message.namespace === 1 ||
-            message.type === 'log' &&
-            message.log === 'thread';
     }
     /**
      * Filters activity in certain namespaces.
