@@ -16,7 +16,7 @@ const Message = require('./msg.js'),
  */
 const DISCUSSION_URL_REGEX = /^https?:\/\/([a-z0-9-.]+)\.(fandom\.com|gamepedia\.(?:com|io)|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:([a-z-]+)\/)?(?:d|f)\/p\/(\d{19,})(?:\/r\/(\d{19,}))?$/,
       ARTICLE_COMMENT_URL_REGEX = /^https?:\/\/([a-z0-9-.]+)\.(fandom\.com|gamepedia\.(?:com|io)|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:([a-z-]+)\/)?wiki\/([^?]+)\?commentId=(\d{19,})(?:&replyId=(\d{19,}))?$/,
-      MESSAGE_WALL_URL_REGEX = /^https?:\/\/([a-z0-9-.]+)\.(fandom\.com|gamepedia\.(?:com|io)|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:([a-z-]+)\/)?wiki\/[^:]+:([^?]+)\?threadId=(\d{19,})(?:#(\d{19,}))?$/,
+      MESSAGE_WALL_URL_REGEX = /^https?:\/\/([a-z0-9-.]+)\.(fandom\.com|gamepedia\.(?:com|io)|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:([a-z-]+)\/)?wiki\/[^:]+:(.+)\?threadId=(\d{19,})(?:#(\d{19,}))?$/,
       TYPE_REGEX = /^(discussion|article-comment|message-wall)-(thread|post|reply|report)$/;
 
 /**
