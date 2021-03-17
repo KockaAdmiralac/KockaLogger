@@ -131,7 +131,7 @@ class Logger extends Module {
                     this._logger.error(
                         'Error while handling message',
                         error,
-                        message,
+                        message.toJSON(),
                         wiki.key
                     );
                 }
