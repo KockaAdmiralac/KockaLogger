@@ -8,13 +8,16 @@
 /**
  * Importing modules.
  */
-const Message = require('./msg.js');
+const Message = require('./msg.js'),
+      {decode} = require('../include/util.js');
 
 /**
  * Constants.
  */
-const URL_REGEX = /^https?:\/\/([a-z0-9-.]+)\.(fandom\.com|gamepedia\.(?:com|io)|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:([a-z-]+)\/)?(?:d|f)\/p\/(\d{19,})(?:\/r\/(\d{19,}))?$/,
-      TYPE_REGEX = /^discussion-(thread|post|report)$/;
+const DISCUSSION_URL_REGEX = /^https?:\/\/([a-z0-9-.]+)\.(fandom\.com|gamepedia\.(?:com|io)|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:([a-z-]+)\/)?(?:d|f)\/p\/(\d{19,})(?:\/r\/(\d{19,}))?$/,
+      ARTICLE_COMMENT_URL_REGEX = /^https?:\/\/([a-z0-9-.]+)\.(fandom\.com|gamepedia\.(?:com|io)|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:([a-z-]+)\/)?wiki\/([^?]+)\?commentId=(\d{19,})(?:&replyId=(\d{19,}))?$/,
+      MESSAGE_WALL_URL_REGEX = /^https?:\/\/([a-z0-9-.]+)\.(fandom\.com|gamepedia\.(?:com|io)|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:([a-z-]+)\/)?wiki\/[^:]+:([^?]+)\?threadId=(\d{19,})(?:#(\d{19,}))?$/,
+      TYPE_REGEX = /^(discussion|article-comment|message-wall)-(thread|post|reply|report)$/;
 
 /**
  * Parses messages representing Discussions actions.
@@ -67,23 +70,43 @@ class DiscussionsMessage extends Message {
     }
     /**
      * Extracts further Discussions data from parsed URL.
+     *
+     * Wondering why we have to parse all three types?
+     * That is, of course, because Fandom uses the discussion-report type
+     * for all reports, regardless of the platform they were made on.
      * @param {String} url Discussions URL to parse
      * @private
      */
     _extractURL(url) {
-        const res = URL_REGEX.exec(url);
+        let res = DISCUSSION_URL_REGEX.exec(url);
         if (res) {
-            this.wiki = res[1];
-            this.domain = res[2];
-            this.language = res[3] || 'en';
-            this.thread = res[4];
-            this.reply = res[5];
+            this.platform = 'discussion';
         } else {
-            this._error(
-                'discussionsurl',
-                'Discussions URL failed to parse.'
-            );
+            res = ARTICLE_COMMENT_URL_REGEX.exec(url);
+            if (res) {
+                this.platform = 'article-comment';
+            } else {
+                res = MESSAGE_WALL_URL_REGEX.exec(url);
+                if (res) {
+                    this.platform = 'message-wall';
+                } else {
+                    this._error(
+                        'discussionsurl',
+                        'Discussions URL failed to parse.'
+                    );
+                    return;
+                }
+            }
         }
+        res.shift();
+        this.wiki = res.shift();
+        this.domain = res.shift();
+        this.language = res.shift() || 'en';
+        if (this.platform !== 'discussion') {
+            this.page = decode(res.shift());
+        }
+        this.thread = res.shift();
+        this.reply = res.shift();
     }
     /**
      * Extracts Discussions action type.
@@ -93,7 +116,8 @@ class DiscussionsMessage extends Message {
     _extractType(type) {
         const res = TYPE_REGEX.exec(type);
         if (res) {
-            this.dtype = res[1];
+            this.platform = res[1];
+            this.dtype = res[2];
         } else {
             this._error(
                 'discussionstype',
