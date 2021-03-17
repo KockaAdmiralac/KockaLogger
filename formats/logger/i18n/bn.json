@@ -24,12 +24,16 @@
     "talk": "ওয়া",
     "contribs": "ক",
     "rights-none": "(কিছু না)",
-    "discussions": "{{user|$1}} {{dlink|$3|$4|$5}}তে $2 ($6) {{summary|$8}}",
+    "discussions": "{{user|$1}} $2 {{dlink|$3|$4|$5|$6|$8}} ($7) {{board|$8|$4}} {{summary|$9}}",
     "discussions-reply": "একটি উত্তর",
     "discussions-create-post": "পোস্ট করেছে",
     "discussions-create-report": "রিপোর্ট করেছে",
     "discussions-deleted": "ডিলিট করেছে",
     "discussions-un-deleted": "আনডিলিট করেছে",
     "discussions-modified": "সম্পাদিত করেছে",
-    "discussions-moved": "মুভ করেছে"
+    "discussions-moved": "মুভ করেছে",
+    "discussion-board": "in $1",
+    "message-wall-board": "on $1's wall",
+    "article-comment-board": "on $1",
+    "article-comment-comment": "a comment"
 }
