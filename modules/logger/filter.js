@@ -62,7 +62,7 @@ class Filter {
     /**
      * Filters Discussions messages.
      * @param {Message} message Message to be transported
-     * @returns {Boolean} If the message is not from Discussions
+     * @returns {Boolean} If the message is from Discussions
      */
     _discussions(message) {
         return message.type === 'discussions' &&
@@ -71,7 +71,7 @@ class Filter {
     /**
      * Filters out Discussions messages.
      * @param {Message} message Message to be transported
-     * @returns {Boolean} If the message is from Discussions
+     * @returns {Boolean} If the message is not from Discussions
      */
     _noDiscussions(message) {
         return !this._discussions(message);
