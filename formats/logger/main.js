@@ -453,6 +453,10 @@ class Logger extends Format {
         let temp = null, temp1 = null;
         switch (type) {
             case 'user':
+                // Discussions does not relay the username for anons
+                if (args[0] === '') {
+                    return 'An unknown anonymous user';
+                }
                 // Hack for autoblocks and range blocks
                 if (args[0].startsWith('#') || util.isIPRange(args[0])) {
                     return util.escape(args[0]);
