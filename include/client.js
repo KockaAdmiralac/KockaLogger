@@ -336,7 +336,9 @@ class Client {
         } else if (end && this._dOverflow) {
             const overflow = this._dOverflow;
             this._dOverflow = '';
-            return this._parser.parse(`${overflow}${end}`, 'discussions');
+            return this._parser.parse(`${overflow}${message}`, 'discussions');
+        } else if (this._dOverflow) {
+            this._dOverflow = `${this._dOverflow}${message}`;
         }
     }
     /**
