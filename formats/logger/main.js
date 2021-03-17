@@ -434,7 +434,7 @@ class Logger extends Format {
             case 'message-wall':
                 return `wiki/Message_Wall:${util.encode(page)}?threadId=${reply ? `${thread}#${reply}` : thread}`;
             case 'article-comment':
-                return `wiki/${util.encode(page)}?commentId=${reply ? `${thread}&reply=${reply}` : thread}`;
+                return `wiki/${util.encode(page)}?commentId=${reply ? `${thread}&replyId=${reply}` : thread}`;
             default:
                 this._logger.error(`Unknown Discussions platform: ${platform}`);
                 return 'unknown_discussions_platform';
