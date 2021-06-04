@@ -224,9 +224,11 @@ class NewUsers extends Module {
             await wait(retry * RETRY_DELAY);
             try {
                 const userId = await this._getID(user, wiki, language, domain),
-                      {users} = await this._io.userInfo(userId);
-                if (users[userId].website) {
-                    await this._post(users[userId], wiki, language, domain);
+                      {users} = await this._io.userInfo(userId),
+                      userData = users[userId],
+                      {bio, discordHandle, fbPage, twitter, website} = userData;
+                if (bio || discordHandle || fbPage || twitter || website) {
+                    await this._post(userData, wiki, language, domain);
                 }
                 return;
             } catch (error) {
