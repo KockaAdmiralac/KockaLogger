@@ -28,3 +28,4 @@ Thank you for your contributions, everybody!
 - [Tokina8937](https://dev.fandom.com/wiki/User:Tokina8937) — [French translation](https://github.com/KockaAdmiralac/KockaLogger/pull/4)
 - [East6](https://starwars.fandom.com/tr/wiki/User:East6) and [BaRaN6161TURK](https://dev.fandom.com/wiki/User:BaRaN6161TURK) — [Turkish](https://github.com/KockaAdmiralac/KockaLogger/pull/34) [translation](https://github.com/KockaAdmiralac/KockaLogger/pull/33)
 - [ThisIsACreeper0101](https://dev.fandom.com/wiki/User:ThisIsACreeper0101) — [Hindi and Bengali translation](https://github.com/KockaAdmiralac/KockaLogger/pull/38)
+- [Miss Toki](https://dev.fandom.com/wiki/User:TokihikoH11) — [French translation fixes](https://github.com/KockaAdmiralac/KockaLogger/pull/48)
