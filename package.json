@@ -1,6 +1,6 @@
 {
     "name": "kocka-logger",
-    "version": "1.2.1",
+    "version": "1.2.2",
     "description": "Parses IRC activity messages across all of Fandom and relays them to Discord in various formats.",
     "keywords": [
         "wikia",
