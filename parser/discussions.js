@@ -103,7 +103,11 @@ class DiscussionsMessage extends Message {
         this.domain = res.shift();
         this.language = res.shift() || 'en';
         if (this.platform !== 'discussion') {
-            this.page = decode(res.shift());
+            try {
+                this.page = decode(res.shift());
+            } catch (error) {
+                this._error('discussionsurl2', 'Discussions URL failed to decode.', {error});
+            }
         }
         this.thread = res.shift();
         this.reply = res.shift();
