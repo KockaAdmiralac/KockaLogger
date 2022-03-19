@@ -268,13 +268,14 @@ class LogMessage extends RCMessage {
      * @private
      */
     _protect(res) {
-        this.page = res.shift();
+        const pageWithLevels = res.shift();
+        this.page = pageWithLevels.replace(/ \u200E.*$/g, '');
         if (this.action === 'move_prot') {
             this.target = res.shift();
         } else if (this.action !== 'unprotect') {
             this.level = [];
-            const level = res.shift(),
-                  regex = / \u200E\[(edit|move|upload|create|comment|everything)=(\w+)\] \(([^\u200E]+)\)(?: \u200E|$|:)/g;
+            const level = pageWithLevels + res.shift(),
+                  regex = /\u200E\[(edit|move|upload|create|comment|everything)=(\w+)\] \(([^\u200E]+)\)+/g;
             let res2 = null;
             do {
                 res2 = regex.exec(level);
