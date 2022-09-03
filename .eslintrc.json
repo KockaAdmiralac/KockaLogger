@@ -3,224 +3,203 @@
         "node": true,
         "es6": true
     },
+    "ignorePatterns": [
+        "dist",
+        "node_modules"
+    ],
     "globals": {
         "main": false
     },
     "parserOptions": {
-        "ecmaVersion": 2018
+        "ecmaVersion": "latest"
     },
+    "plugins": [
+        "jsdoc",
+        "node",
+        "promise"
+    ],
+    "root": true,
     "rules": {
-        "for-direction": "warn",
-        "getter-return": "error",
-        "no-await-in-loop": "off",
-        "no-compare-neg-zero": "error",
-        "no-cond-assign": "error",
-        "no-console": "off",
-        "no-constant-condition": "error",
-        "no-control-regex": "off",
-        "no-debugger": "error",
-        "no-dupe-args": "error",
-        "no-dupe-keys": "error",
-        "no-duplicate-case": "error",
-        "no-empty": "error",
-        "no-empty-character-class": "error",
-        "no-ex-assign": "error",
-        "no-extra-boolean-cast": "error",
-        "no-extra-parens": [
-            "error",
-            "all",
-            {
-                "enforceForArrowConditionals": false
-            }
-        ],
-        "no-extra-semi": "error",
-        "no-func-assign": "error",
-        "no-inner-declarations": "error",
-        "no-invalid-regexp": "error",
-        "no-irregular-whitespace": "error",
-        "no-obj-calls": "error",
-        "no-prototype-builtins": "error",
-        "no-regex-spaces": "error",
-        "no-sparse-arrays": "error",
-        "no-template-curly-in-string": "error",
-        "no-unexpected-multiline": "error",
-        "no-unreachable": "error",
-        "no-unsafe-finally": "error",
-        "no-unsafe-negation": "error",
-        "use-isnan": "error",
-        "valid-jsdoc": [
-            "error",
-            {
-                "prefer": {
-                    "virtual": "abstract",
-                    "extends": "augments",
-                    "class": "constructor",
-                    "const": "constant",
-                    "defaultvalue": "default",
-                    "desc": "description",
-                    "host": "external",
-                    "fileoverview": "file",
-                    "overview": "file",
-                    "emits": "fires",
-                    "func": "function",
-                    "method": "function",
-                    "var": "member",
-                    "prop": "property",
-                    "return": "returns",
-                    "exception": "throws",
-                    "yield": "yields"
-                },
-                "requireReturn": false,
-                "matchDescription": ".+"
-            }
-        ],
-        "valid-typeof": "error",
+        // There is not always a need for setters.
         "accessor-pairs": "off",
-        "array-callback-return": "error",
-        "block-scoped-var": "error",
-        "class-methods-use-this": "off",
-        "complexity": [
-            "error",
-            25
-        ],
-        "consistent-return": "off",
-        "curly": "error",
-        "default-case": "error",
-        "dot-location": [
-            "error",
-            "property"
-        ],
-        "dot-notation": "error",
-        "eqeqeq": "error",
-        "guard-for-in": "off",
-        "no-alert": "error",
-        "no-caller": "error",
-        "no-case-declarations": "error",
-        "no-div-regex": "error",
-        "no-else-return": "error",
-        "no-empty-function": "error",
-        "no-empty-pattern": "error",
-        "no-eq-null": "warn",
-        "no-eval": "error",
-        "no-extend-native": "error",
-        "no-extra-bind": "error",
-        "no-extra-label": "error",
-        "no-fallthrough": "error",
-        "no-floating-decimal": "error",
-        "no-global-assign": "error",
-        "no-implicit-coercion": "error",
-        "no-implicit-globals": "error",
-        "no-implied-eval": "error",
-        "no-invalid-this": "error",
-        "no-iterator": "error",
-        "no-labels": "error",
-        "no-lone-blocks": "error",
-        "no-loop-func": "error",
-        "no-magic-numbers": "off",
-        "no-multi-spaces": "warn",
-        "no-multi-str": "error",
-        "no-new": "error",
-        "no-new-func": "error",
-        "no-new-wrappers": "error",
-        "no-octal": "error",
-        "no-octal-escape": "error",
-        "no-param-reassign": "error",
-        "no-proto": "error",
-        "no-redeclare": "error",
-        "no-restricted-properties": "off",
-        "no-return-assign": "error",
-        "no-return-await": "error",
-        "no-script-url": "error",
-        "no-self-assign": "error",
-        "no-self-compare": "error",
-        "no-sequences": "error",
-        "no-throw-literal": "error",
-        "no-unmodified-loop-condition": "error",
-        "no-unused-expressions": "error",
-        "no-unused-labels": "error",
-        "no-useless-call": "error",
-        "no-useless-concat": "error",
-        "no-useless-escape": "error",
-        "no-useless-return": "error",
-        "no-void": "error",
-        "no-warning-comments": "off",
-        "no-with": "error",
-        "prefer-promise-reject-errors": "off",
-        "radix": "error",
-        "require-await": "error",
-        "vars-on-top": "error",
-        "wrap-iife": "error",
-        "yoda": [
-            "error",
-            "never"
-        ],
-        "strict": "error",
-        "init-declarations": "error",
-        "no-catch-shadow": "error",
-        "no-delete-var": "error",
-        "no-label-var": "error",
-        "no-restricted-globals": "off",
-        "no-shadow": "error",
-        "no-shadow-restricted-names": "error",
-        "no-undef": "error",
-        "no-undef-init": "error",
-        "no-undefined": "off",
-        "no-unused-vars": "error",
-        "no-use-before-define": "error",
-        "callback-return": "off",
-        "global-require": "off",
-        "handle-callback-err": "error",
-        "no-buffer-constructor": "error",
-        "no-mixed-requires": "error",
-        "no-new-require": "error",
-        "no-path-concat": "error",
-        "no-process-env": "error",
-        "no-process-exit": "off",
-        "no-restricted-modules": "off",
-        "no-sync": "error",
         "array-bracket-newline": [
             "error",
             "consistent"
         ],
         "array-bracket-spacing": "error",
-        "array-element-newline": "off",
-        "block-spacing": "error",
-        "brace-style": "error",
+        "array-callback-return": "error",
+        "array-element-newline": [
+            "error",
+            "consistent"
+        ],
+        "arrow-body-style": [
+            "error",
+            "never"
+        ],
+        "arrow-parens": [
+            "error",
+            "as-needed"
+        ],
+        "arrow-spacing": [
+            "error",
+            {
+                "before": true,
+                "after": true
+            }
+        ],
+        "block-scoped-var": "error",
+        "block-spacing": [
+            "error",
+            "always"
+        ],
+        "brace-style": [
+            "error",
+            "1tbs"
+        ],
         "camelcase": "error",
+        // It does not work well for my use cases.
         "capitalized-comments": "off",
-        "comma-dangle": "error",
-        "comma-spacing": "error",
-        "comma-style": "error",
-        "computed-property-spacing": "error",
+        "class-methods-use-this": "off",
+        "comma-dangle": [
+            "error",
+            "never"
+        ],
+        "comma-spacing": [
+            "error",
+            {
+                "before": false,
+                "after": true
+            }
+        ],
+        "comma-style": [
+            "error",
+            "last"
+        ],
+        // This can be adjusted as needed.
+        "complexity": [
+            "error",
+            25
+        ],
+        "computed-property-spacing": [
+            "error",
+            "never"
+        ],
+        // Looks like this prevents me from returning different types from a function.
+        "consistent-return": "off",
         "consistent-this": "error",
-        "eol-last": "error",
-        "func-call-spacing": "error",
+        "constructor-super": "error",
+        "curly": "error",
+        "default-case": "error",
+        "default-case-last": "error",
+        "default-param-last": "error",
+        "dot-location": [
+            "error",
+            "property"
+        ],
+        "dot-notation": "error",
+        "eol-last": [
+            "error",
+            "always"
+        ],
+        "eqeqeq": "error",
+        "for-direction": "error",
+        "func-call-spacing": [
+            "error",
+            "never"
+        ],
         "func-name-matching": "error",
         "func-names": [
             "error",
             "never"
         ],
+        // Both can be useful sometimes.
         "func-style": "off",
-        "function-paren-newline": "off",
-        "id-blacklist": "off",
+        "function-call-argument-newline": [
+            "error",
+            "consistent"
+        ],
+        "function-paren-newline": [
+            "error",
+            "consistent"
+        ],
+        "generator-star-spacing": [
+            "error",
+            {
+                "before": false,
+                "after": true,
+                "anonymous": {
+                    "before": false,
+                    "after": false
+                },
+                "method": {
+                    "before": true,
+                    "after": false
+                }
+            }
+        ],
+        "getter-return": "error",
+        "grouped-accessor-pairs": "error",
+        // Sometimes I know I am iterating over a plain object.
+        "guard-for-in": "off",
+        // I do not have any particularly bad identifies.
+        "id-denylist": "off",
+        // Identifiers can be as long as I want.
         "id-length": "off",
+        // My identifiers don't conform to any pattern.
         "id-match": "off",
-        "implicit-arrow-linebreak": "error",
+        "implicit-arrow-linebreak": [
+            "error",
+            "beside"
+        ],
+        // There were too many false positives.
         "indent": "off",
-        "jsx-quotes": "error",
-        "key-spacing": "error",
-        "keyword-spacing": "error",
-        "line-comment-position": "error",
-        "linebreak-style": "error",
+        "init-declarations": "error",
+        "jsx-quotes": [
+            "error",
+            "prefer-double"
+        ],
+        "key-spacing": [
+            "error",
+            {
+                "beforeColon": false,
+                "afterColon": true,
+                "mode": "strict"
+            }
+        ],
+        "keyword-spacing": [
+            "error",
+            {
+                "before": true,
+                "after": true
+            }
+        ],
+        "line-comment-position": [
+            "error",
+            "above"
+        ],
+        "linebreak-style": [
+            "error",
+            "unix"
+        ],
+        // Spacing *around* comments is not required.
         "lines-around-comment": "off",
         "lines-between-class-members": [
             "error",
             "never"
         ],
-        "max-depth": "error",
+        "max-classes-per-file": [
+            "error",
+            1
+        ],
+        "max-depth": [
+            "error",
+            4
+        ],
         "max-len": [
             "error",
             {
+                // This can be adjusted as needed.
+                "code": 80,
                 "ignoreTemplateLiterals": true,
                 "ignoreRegExpLiterals": true
             }
@@ -229,71 +208,268 @@
             "error",
             1000
         ],
+        "max-lines-per-function": [
+            "error",
+            100
+        ],
         "max-nested-callbacks": [
             "error",
-            {
-                "max": 3
-            }
+            3
         ],
         "max-params": [
             "error",
-            {
-                "max": 5
-            }
+            5
         ],
         "max-statements": [
             "error",
+            30
+        ],
+        "max-statements-per-line": [
+            "error",
             {
-                "max": 20
+                "max": 1
             }
         ],
-        "max-statements-per-line": "error",
-        "multiline-comment-style": "error",
+        "multiline-comment-style": [
+            "error",
+            "starred-block"
+        ],
+        // Sometimes it's better with, and sometimes it's better without newlines.
         "multiline-ternary": "off",
+        // False positives: express.Router, TypeScript annotations
         "new-cap": "error",
-        "new-parens": "error",
+        "new-parens": [
+            "error",
+            "always"
+        ],
         "newline-per-chained-call": [
             "error",
             {
                 "ignoreChainWithDepth": 4
             }
         ],
+        "no-alert": "error",
         "no-array-constructor": "error",
+        "no-async-promise-executor": "error",
+        // Awaiting tasks in a loop is one of await's big advantages.
+        "no-await-in-loop": "off",
+        // Why wouldn't I want to use bitwise operations?
         "no-bitwise": "off",
-        "no-continue": "error",
+        "no-caller": "error",
+        "no-case-declarations": "error",
+        "no-class-assign": "error",
+        "no-compare-neg-zero": "error",
+        "no-cond-assign": "error",
+        "no-confusing-arrow": "error",
+        "no-console": [
+            "error",
+            {
+                "allow": [
+                    "assert",
+                    "clear",
+                    "count",
+                    "countReset",
+                    "debug",
+                    "dir",
+                    "dirxml",
+                    "error",
+                    "group",
+                    "groupCollapsed",
+                    "groupEnd",
+                    "info",
+                    "table",
+                    "time",
+                    "timeEnd",
+                    "timeLog",
+                    "trace",
+                    "warn"
+                ]
+            }
+        ],
+        "no-const-assign": "error",
+        "no-constant-condition": "error",
+        "no-constructor-return": "error",
+        // When used correctly, `continue` can make things clearer.
+        "no-continue": "off",
+        "no-control-regex": "off",
+        "no-debugger": "error",
+        "no-delete-var": "error",
+        "no-div-regex": "error",
+        "no-dupe-args": "error",
+        "no-dupe-class-members": "error",
+        "no-dupe-else-if": "error",
+        "no-dupe-keys": "error",
+        "no-duplicate-case": "error",
+        "no-duplicate-imports": "error",
+        "no-else-return": "error",
+        "no-empty": "error",
+        "no-empty-character-class": "error",
+        "no-empty-function": "error",
+        "no-empty-pattern": "error",
+        "no-eq-null": "error",
+        "no-eval": "error",
+        "no-ex-assign": "error",
+        "no-extend-native": "error",
+        "no-extra-bind": "error",
+        "no-extra-boolean-cast": "error",
+        "no-extra-label": "error",
+        "no-extra-parens": [
+            "error",
+            "all",
+            {
+                "enforceForArrowConditionals": false
+            }
+        ],
+        "no-extra-semi": "error",
+        "no-fallthrough": "error",
+        "no-floating-decimal": "error",
+        "no-func-assign": "error",
+        "no-global-assign": "error",
+        "no-implicit-coercion": "error",
+        "no-implicit-globals": "error",
+        "no-implied-eval": "error",
+        "no-import-assign": "error",
         "no-inline-comments": "error",
+        "no-inner-declarations": "error",
+        "no-invalid-regexp": "error",
+        "no-invalid-this": "error",
+        "no-irregular-whitespace": "error",
+        "no-iterator": "error",
+        "no-label-var": "error",
+        "no-labels": "error",
+        "no-lone-blocks": "error",
         "no-lonely-if": "error",
+        "no-loop-func": "error",
+        "no-loss-of-precision": "error",
+        // Some numbers are pretty clear when used.
+        "no-magic-numbers": "off",
+        "no-misleading-character-class": "error",
+        // When surrounded by brackets, mixing operators is fine.
         "no-mixed-operators": "off",
         "no-mixed-spaces-and-tabs": "error",
         "no-multi-assign": "error",
+        "no-multi-spaces": "error",
+        // This is fine on web.
+        "no-multi-str": "error",
         "no-multiple-empty-lines": [
             "error",
             {
-                "max": 1
+                "max": 1,
+                "maxEOF": 1,
+                "maxBOF": 0
             }
         ],
         "no-negated-condition": "error",
+        // Ternaries can be ugly, but I don't need to completely disallow nesting.
         "no-nested-ternary": "off",
+        "no-new": "error",
+        "no-new-func": "error",
         "no-new-object": "error",
+        "no-new-symbol": "error",
+        "no-new-wrappers": "error",
+        "no-nonoctal-decimal-escape": "error",
+        "no-obj-calls": "error",
+        "no-octal": "error",
+        "no-octal-escape": "error",
+        "no-param-reassign": "error",
+        // There is no reason to disallow ++ and --.
         "no-plusplus": "off",
+        "no-promise-executor-return": "error",
+        "no-proto": "error",
+        "no-prototype-builtins": "error",
+        "no-redeclare": "error",
+        "no-regex-spaces": "error",
+        // I do not restrict any of the below.
+        "no-restricted-exports": "off",
+        "no-restricted-globals": "off",
+        "no-restricted-imports": "off",
+        "no-restricted-properties": "off",
         "no-restricted-syntax": "off",
+        "no-return-assign": "error",
+        "no-return-await": "error",
+        "no-script-url": "error",
+        "no-self-assign": "error",
+        "no-self-compare": "error",
+        "no-sequences": "error",
+        "no-setter-return": "error",
+        // In TypeScript this should be replaced with @typescript-eslint/no-shadow.
+        "no-shadow": "error",
+        "no-shadow-restricted-names": "error",
+        "no-sparse-arrays": "error",
         "no-tabs": "error",
+        "no-template-curly-in-string": "error",
+        // Ternaries can be useful.
         "no-ternary": "off",
+        "no-this-before-super": "error",
+        "no-throw-literal": "error",
         "no-trailing-spaces": "error",
+        "no-undef": "error",
+        "no-undef-init": "error",
+        // There are still a lot of cases where the `undefined` literal is needed.
+        "no-undefined": "off",
+        // I used to do this. I should probably stop, but until then, I'm disabling this.
         "no-underscore-dangle": "off",
+        "no-unexpected-multiline": "error",
+        "no-unmodified-loop-condition": "error",
         "no-unneeded-ternary": "error",
+        "no-unreachable": "error",
+        "no-unreachable-loop": "error",
+        "no-unsafe-finally": "error",
+        "no-unsafe-negation": "error",
+        "no-unsafe-optional-chaining": "error",
+        "no-unused-expressions": "error",
+        "no-unused-labels": "error",
+        "no-unused-private-class-members": "error",
+        // In TypeScript this should be replaced with @typescript-eslint/no-unused-vars.
+        "no-unused-vars": [
+            "error",
+            {
+                "argsIgnorePattern": "^_",
+                "caughtErrors": "all",
+                "caughtErrorsIgnorePattern": "^_",
+                "destructuredArrayIgnorePattern": "^_"
+            }
+        ],
+        "no-use-before-define": "error",
+        "no-useless-call": "error",
+        "no-useless-catch": "error",
+        "no-useless-computed-key": "error",
+        "no-useless-concat": "error",
+        "no-useless-constructor": "error",
+        "no-useless-escape": "error",
+        "no-useless-rename": "error",
+        "no-useless-return": "error",
+        // This is fine on web.
+        "no-var": "error",
+        "no-void": "error",
+        // I still warn myself in comments often.
+        "no-warning-comments": "off",
         "no-whitespace-before-property": "error",
-        "nonblock-statement-body-position": "error",
+        "no-with": "error",
+        "nonblock-statement-body-position": [
+            "error",
+            "beside"
+        ],
         "object-curly-newline": [
             "error",
             {
                 "consistent": true
             }
         ],
-        "object-curly-spacing": "error",
+        "object-curly-spacing": [
+            "error",
+            "never"
+        ],
         "object-property-newline": "error",
-        "one-var": "off",
-        "one-var-declaration-per-line": "off",
+        "object-shorthand": "error",
+        "one-var": [
+            "error",
+            "never"
+        ],
+        "one-var-declaration-per-line": [
+            "error",
+            "always"
+        ],
         "operator-assignment": "error",
         "operator-linebreak": [
             "error",
@@ -303,7 +479,34 @@
             "error",
             "never"
         ],
+        // I don't see any rules regarding when should newlines be inserted.
         "padding-line-between-statements": "off",
+        // I prefer extracting the callback functions.
+        "prefer-arrow-callback": "off",
+        "prefer-const": "error",
+        "prefer-destructuring": [
+            "error",
+            {
+                "array": true,
+                "object": true
+            }
+        ],
+        // This is fine on web, because it was introduced in ES2016.
+        "prefer-exponentiation-operator": "error",
+        // While this sounds like a good idea in theory, it can easily make regexes very long and even more unreadable.
+        "prefer-named-capture-group": "off",
+        "prefer-numeric-literals": "error",
+        "prefer-object-has-own": "error",
+        // This is fine on web.
+        "prefer-object-spread": "error",
+        "prefer-promise-reject-errors": "error",
+        "prefer-regex-literals": "error",
+        // This is fine on web.
+        "prefer-rest-params": "error",
+        // This is fine on web.
+        "prefer-spread": "error",
+        // This is fine on web.
+        "prefer-template": "error",
         "quote-props": [
             "error",
             "consistent-as-needed"
@@ -312,24 +515,27 @@
             "error",
             "single"
         ],
-        "require-jsdoc": [
+        "radix": "error",
+        "require-atomic-updates": "error",
+        "require-await": "error",
+        // This is fine on web.
+        "require-unicode-regexp": "error",
+        "require-yield": "error",
+        "rest-spread-spacing": "error",
+        "semi": [
             "error",
-            {
-                "require": {
-                    "FunctionDeclaration": true,
-                    "MethodDefinition": true,
-                    "ClassDeclaration": true,
-                    "ArrowFunctionExpression": false,
-                    "FunctionExpression": true
-                }
-            }
+            "always"
         ],
-        "semi": "error",
         "semi-spacing": "error",
         "semi-style": "error",
+        "sort-imports": "error",
         "sort-keys": "error",
+        // There is no good reason to sort variables by name instead of their logical order.
         "sort-vars": "off",
-        "space-before-blocks": "error",
+        "space-before-blocks": [
+            "error",
+            "always"
+        ],
         "space-before-function-paren": [
             "error",
             {
@@ -342,52 +548,258 @@
         "space-infix-ops": "error",
         "space-unary-ops": "error",
         "spaced-comment": "error",
+        "strict": "error",
         "switch-colon-spacing": "error",
+        "symbol-description": "error",
+        "template-curly-spacing": "error",
         "template-tag-spacing": "error",
         "unicode-bom": "error",
+        "use-isnan": "error",
+        "valid-typeof": "error",
+        "vars-on-top": "error",
+        "wrap-iife": "error",
+        // I do not need parenthesis around regex.
         "wrap-regex": "off",
-        "arrow-body-style": [
+        "yield-star-spacing": [
+            "error",
+            {
+                "before": false,
+                "after": true
+            }
+        ],
+        "yoda": [
             "error",
             "never"
         ],
-        "arrow-parens": [
-            "error",
-            "as-needed"
-        ],
-        "arrow-spacing": "error",
-        "constructor-super": "error",
-        "generator-star-spacing": "off",
-        "no-class-assign": "error",
-        "no-confusing-arrow": "error",
-        "no-const-assign": "error",
-        "no-dupe-class-members": "error",
-        "no-duplicate-imports": "error",
-        "no-new-symbol": "error",
-        "no-restricted-imports": "off",
-        "no-this-before-super": "error",
-        "no-useless-computed-key": "error",
-        "no-useless-constructor": "error",
-        "no-useless-rename": "error",
-        "no-var": "error",
-        "object-shorthand": "error",
-        "prefer-arrow-callback": "off",
-        "prefer-const": "error",
-        "prefer-destructuring": [
-            "error",
+        "jsdoc/check-access": "error",
+        "jsdoc/check-alignment": "error",
+        // Does not work on ESLint 8: https://github.com/eslint/eslint/issues/14745
+        "jsdoc/check-examples": [
+            "off",
             {
-                "array": false,
-                "object": true
+                "captionRequired": true,
+                "paddedIndent": 4,
+                "reportUnusedDisableDirectives": true
             }
         ],
-        "prefer-numeric-literals": "error",
-        "prefer-rest-params": "error",
-        "prefer-spread": "error",
-        "prefer-template": "error",
-        "require-yield": "error",
-        "rest-spread-spacing": "off",
-        "sort-imports": "error",
-        "symbol-description": "error",
-        "template-curly-spacing": "error",
-        "yield-star-spacing": "off"
+        "jsdoc/check-indentation": "error",
+        "jsdoc/check-line-alignment": "error",
+        "jsdoc/check-param-names": [
+            "error",
+            {
+                "enableFixer": true
+            }
+        ],
+        "jsdoc/check-property-names": [
+            "error",
+            {
+                "enableFixer": true
+            }
+        ],
+        "jsdoc/check-syntax": "error",
+        "jsdoc/check-tag-names": "error",
+        "jsdoc/check-types": "error",
+        "jsdoc/check-values": "error",
+        "jsdoc/empty-tags": "error",
+        "jsdoc/implements-on-classes": "error",
+        // There is no particular pattern that descriptions or names should adhere to.
+        "jsdoc/match-description": "off",
+        "jsdoc/match-name": "off",
+        "jsdoc/multiline-blocks": [
+            "error",
+            {
+                "noZeroLineText": true,
+                "noFinalLineText": true,
+                "noSingleLineBlocks": true
+            }
+        ],
+        "jsdoc/newline-after-description": [
+            "error",
+            "never"
+        ],
+        "jsdoc/no-bad-blocks": "error",
+        "jsdoc/no-defaults": "error",
+        // I don't have any required syntax right now.
+        "jsdoc/no-missing-syntax": "off",
+        "jsdoc/no-multi-asterisks": [
+            "error",
+            {
+                "allowWhitespace": true
+            }
+        ],
+        // I don't have any syntax to restrict.
+        "jsdoc/no-restricted-syntax": "off",
+        // This should be turned on for TypeScript.
+        "jsdoc/no-types": "off",
+        "jsdoc/no-undefined-types": "error",
+        "jsdoc/require-asterisk-prefix": "error",
+        // This throws false positives.
+        "jsdoc/require-description-complete-sentence": "off",
+        "jsdoc/require-description": "error",
+        // Not every function needs an example.
+        "jsdoc/require-example": "off",
+        // I don't see an option to make this accept regular descriptions without tags.
+        "jsdoc/require-file-overview": "off",
+        "jsdoc/require-hyphen-before-param-description": [
+            "error",
+            "never"
+        ],
+        "jsdoc/require-jsdoc": [
+            "error",
+            {
+                "require": {
+                    "ArrowFunctionExpression": false,
+                    "ClassDeclaration": true,
+                    "ClassExpression": false,
+                    "FunctionDeclaration": true,
+                    "FunctionExpression": false,
+                    "MethodDefinition": true
+                }
+            }
+        ],
+        "jsdoc/require-param-description": "error",
+        "jsdoc/require-param-name": "error",
+        // This should be turned off for TypeScript.
+        "jsdoc/require-param-type": "error",
+        "jsdoc/require-param": [
+            "error",
+            {
+                "checkRestProperty": true,
+                "checkSetters": true,
+                "unnamedRootBase": ["options"]
+            }
+        ],
+        "jsdoc/require-property": "error",
+        "jsdoc/require-property-description": "error",
+        "jsdoc/require-property-name": "error",
+        // This can be turned off for TypeScript.
+        "jsdoc/require-property-type": "error",
+        "jsdoc/require-returns-check": "error",
+        "jsdoc/require-returns-description": "error",
+        // This can be turned off for TypeScript.
+        "jsdoc/require-returns-type": "error",
+        "jsdoc/require-returns": "error",
+        "jsdoc/require-throws": "error",
+        "jsdoc/require-yields": "error",
+        "jsdoc/require-yields-check": "error",
+        "jsdoc/sort-tags": "error",
+        "jsdoc/tag-lines": [
+            "error",
+            "never"
+        ],
+        "jsdoc/valid-types": "error",
+        "node/callback-return": "error",
+        "node/exports-style": [
+            "error",
+            "module.exports"
+        ],
+        "node/file-extension-in-import": [
+            "error",
+            "always",
+            {
+                ".ts": "never"
+            }
+        ],
+        // I sometimes want to dynamically require().
+        "node/global-require": "off",
+        "node/handle-callback-err": "error",
+        "node/no-callback-literal": "error",
+        "node/no-deprecated-api": "error",
+        "node/no-exports-assign": "error",
+        "node/no-extraneous-import": "error",
+        "node/no-extraneous-require": "error",
+        // This should be turned off for TypeScript.
+        "node/no-missing-import": "error",
+        "node/no-missing-require": "error",
+        "node/no-mixed-requires": "error",
+        "node/no-new-require": "error",
+        "node/no-path-concat": "error",
+        // Sometimes, we do want to read environment variables.
+        "node/no-process-env": "off",
+        // I know when is process.exit() acceptable and when it is not.
+        "node/no-process-exit": "off",
+        // No modules to restrict from importing or requiring.
+        "node/no-restricted-import": "off",
+        "node/no-restricted-require": "off",
+        "node/no-sync": "error",
+        "node/no-unpublished-bin": "error",
+        "node/no-unpublished-import": "error",
+        "node/no-unpublished-require": "error",
+        "node/no-unsupported-features/es-builtins": "error",
+        // This does not work: https://github.com/mysticatea/eslint-plugin-node/issues/216
+        "node/no-unsupported-features/es-syntax": "off",
+        "node/no-unsupported-features/node-builtins": "error",
+        "node/prefer-global/buffer": [
+            "error",
+            "never"
+        ],
+        "node/prefer-global/console": [
+            "error",
+            "always"
+        ],
+        "node/prefer-global/process": [
+            "error",
+            "never"
+        ],
+        "node/prefer-global/text-decoder": [
+            "error",
+            "never"
+        ],
+        "node/prefer-global/text-encoder": [
+            "error",
+            "never"
+        ],
+        "node/prefer-global/url-search-params": [
+            "error",
+            "never"
+        ],
+        "node/prefer-global/url": [
+            "error",
+            "never"
+        ],
+        "node/prefer-promises/dns": "error",
+        "node/prefer-promises/fs": "error",
+        "node/process-exit-as-throw": "error",
+        "node/shebang": "error",
+        // Why would every promise need a return value?
+        "promise/always-return": "off",
+        // I think I know when is creating new Promise objects needed.
+        "promise/avoid-new": "off",
+        "promise/catch-or-return": "error",
+        "promise/no-callback-in-promise": "error",
+        // Rule is broken: https://github.com/xjamundx/eslint-plugin-promise/issues/205
+        "promise/no-native": "off",
+        "promise/no-nesting": "error",
+        "promise/no-new-statics": "error",
+        "promise/no-promise-in-callback": "error",
+        "promise/no-return-in-finally": "error",
+        "promise/no-return-wrap": "error",
+        "promise/param-names": "error",
+        "promise/prefer-await-to-callbacks": "error",
+        "promise/prefer-await-to-then": "error",
+        "promise/valid-params": "error"
+    },
+    "settings": {
+        "jsdoc": {
+            "tagNamePreference": {
+                "virtual": "abstract",
+                "extends": "augments",
+                "class": "constructor",
+                "const": "constant",
+                "defaultvalue": "default",
+                "desc": "description",
+                "host": "external",
+                "fileoverview": "file",
+                "overview": "file",
+                "emits": "fires",
+                "func": "function",
+                "method": "function",
+                "var": "member",
+                "prop": "property",
+                "return": "returns",
+                "exception": "throws",
+                "yield": "yields"
+            }
+        }
     }
 }

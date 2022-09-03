@@ -17,6 +17,7 @@
     },
     "contributors": [],
     "main": "main.js",
+    "bin": "main.js",
     "scripts": {
         "start": "node main.js"
     },
@@ -32,7 +33,10 @@
         "mysql2": "2.3.3"
     },
     "devDependencies": {
-        "eslint": "8.23.0"
+        "eslint": "8.23.0",
+        "eslint-plugin-jsdoc": "39.3.6",
+        "eslint-plugin-node": "11.1.0",
+        "eslint-plugin-promise": "6.0.1"
     },
     "engines": {
         "node": "16.x"
