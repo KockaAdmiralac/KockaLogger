@@ -34,6 +34,18 @@ HANDLED_COMMANDS = [
 FETCH_MAX_RETRIES = 5,
 FETCH_DELAY = 10000;
 
+const IGNORED_LOGS = [
+    'ro-tournament',
+    'ro-news',
+    'curseprofile',
+    'review',
+    'thanks',
+    'cargo',
+    'import',
+    'merge',
+    'tournamentpurge'
+];
+
 /**
  * IRC client class.
  */
@@ -297,25 +309,7 @@ class Client {
             }
             this._overflow = '';
         }
-        // This is a UCP bug where the URL isn't included in log messages.
-        if (msg && !msg.wiki) {
-            /*
-             * You might want to use this for debugging:
-             *if (
-             *    msg.error &&
-             *    ![
-             *        'ro-tournament',
-             *        'ro-news',
-             *        'curseprofile',
-             *        'review',
-             *        'thanks',
-             *        'cargo',
-             *        'import'
-             *    ].includes(msg.log)
-             *) {
-             *    console.info(msg.toJSON());
-             *}
-             */
+        if (msg && msg.error && IGNORED_LOGS.includes(msg.log)) {
             return null;
         }
         return msg;
