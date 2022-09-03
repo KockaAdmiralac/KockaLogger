@@ -32,8 +32,11 @@ function option(opt) {
  */
 let config = {};
 try {
-    // eslint-disable-next-line node/no-unpublished-require
+    /* eslint-disable node/no-unpublished-require */
+    /* eslint-disable node/no-missing-require */
     config = require('./config.json');
+    /* eslint-enable node/no-unpublished-require */
+    /* eslint-enable node/no-missing-require */
 } catch (error) {
     console.error(
         'You forgot to rename config.sample.json or your config.json has ' +
