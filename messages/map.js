@@ -56,7 +56,7 @@ const MAPPING = {
     'blocklogentry': e => `^${colorLink(escapeRegex(e))
         .replace('\\$1', '[^:]+:([^\x03]+)')
         .replace('\\$2', '(.*)')
-        .replace('\\$3', '(?:\\(|（)([^\\)）]*)(?:\\)|）)')
+        .replace('\\$3', '(?:(?:\\(|（)([^\\)）]*)(?:\\)|）))?')
     }(?:${REASON})?$`,
     /**
      * Transforms the avatar log entry representing avatar removal
