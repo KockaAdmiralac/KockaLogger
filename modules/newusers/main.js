@@ -238,7 +238,7 @@ class NewUsers extends Module {
                 errors.push(error);
             }
         }
-        this._logger.error('Errors while fetching user ID:', errors);
+        this._logger.error(`Errors while fetching user ID (${message}):`, ...errors);
     }
     /**
      * Fetches a user's ID.
