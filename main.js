@@ -6,27 +6,23 @@
  */
 'use strict';
 
-/**
- * Importing modules.
- */
-const Client = require('./include/client.js'),
-      Loader = require('./messages/main.js');
+const process = require('process');
+const Client = require('./include/client.js');
+const Loader = require('./messages/main.js');
 
-/**
- * Constants
- */
 const optionCache = {};
+const {argv, exit} = process;
 
 /**
  * Checks whether an option is in executable arguments.
- * @param {String} opt Option to check
- * @returns {Boolean} Whether the specified option is in arguments
+ * @param {string} opt Option to check
+ * @returns {boolean} Whether the specified option is in arguments
  */
 function option(opt) {
     if (optionCache[opt]) {
         return true;
     }
-    const arg = process.argv.includes(`--${opt}`);
+    const arg = argv.includes(`--${opt}`);
     optionCache[opt] = arg;
     return arg;
 }
@@ -36,6 +32,7 @@ function option(opt) {
  */
 let config = {};
 try {
+    // eslint-disable-next-line node/no-unpublished-require
     config = require('./config.json');
 } catch (error) {
     console.error(
@@ -43,16 +40,16 @@ try {
         'a syntax error',
         error
     );
-    process.exit(1);
+    exit(1);
 }
 
-const fetch = option('fetch'),
-      debug = option('debug'),
-      client = new Client(config, {debug}),
-      loader = new Loader(config, {
-          debug,
-          fetch
-      });
+const fetch = option('fetch');
+const debug = option('debug');
+const client = new Client(config, {debug});
+const loader = new Loader(config, {
+    debug,
+    fetch
+});
 
 /**
  * Stop KockaLogger.

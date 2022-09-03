@@ -5,13 +5,16 @@
  */
 'use strict';
 
+const Transport = require('../transports/transport.js');
+const Message = require('../parser/msg.js');
+
 /**
  * Base format class
  */
 class Format {
     /**
      * Class constructor
-     * @param {Object} config Format configuration
+     * @param {object} config Format configuration
      * @param {Transport} transport Transport used for the format
      */
     constructor(config, transport) {
@@ -20,9 +23,10 @@ class Format {
     }
     /**
      * Formats the RC message
-     * @param {Message} message Message to be transported
+     * @param {Message} _message Message to be transported
+     * @throws {Error} If not implemented
      */
-    execute() {
+    execute(_message) {
         throw new Error('Implement this method!');
     }
     /* eslint-disable no-empty-function */

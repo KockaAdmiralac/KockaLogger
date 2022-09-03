@@ -5,11 +5,8 @@
  */
 'use strict';
 
-/**
- * Importing modules.
- */
-const Transport = require('../transport.js'),
-      {WebhookClient} = require('discord.js');
+const Transport = require('../transport.js');
+const {WebhookClient} = require('discord.js');
 
 /**
  * Discord transport class.
@@ -18,7 +15,7 @@ const Transport = require('../transport.js'),
 class Discord extends Transport {
     /**
      * Class constructor.
-     * @param {Object} config Transport configuration
+     * @param {object} config Transport configuration
      */
     constructor(config) {
         super(config);
@@ -33,7 +30,7 @@ class Discord extends Transport {
     }
     /**
      * Executes the transport.
-     * @param {Object} message Formatted message to transport
+     * @param {object} message Formatted message to transport
      */
     async execute(message) {
         try {

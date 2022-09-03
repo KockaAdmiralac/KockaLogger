@@ -5,18 +5,14 @@
  */
 'use strict';
 
-/**
- * Importing modules.
- */
-const {isIP} = require('net'),
-      Format = require('../format.js'),
-      util = require('../../include/util.js'),
-      Logging = require('../../include/log.js');
+const {isIP} = require('net');
+const Format = require('../format.js');
+const {cap, url, escape, encode, isIPRange} = require('../../include/util.js');
+const Logging = require('../../include/log.js');
+const Transport = require('../../transports/transport.js');
+const Message = require('../../parser/msg.js');
 
-/**
- * Constants.
- */
-const P_REGEX = /^<p>(.*)(?:<\/p>)?$/;
+const P_REGEX = /^<p>(.*)(?:<\/p>)?$/u;
 
 /**
  * Logger format's class.
@@ -25,7 +21,7 @@ const P_REGEX = /^<p>(.*)(?:<\/p>)?$/;
 class Logger extends Format {
     /**
      * Class constructor.
-     * @param {Object} config Format configuration
+     * @param {object} config Format configuration
      * @param {Transport} transport Transport used for the format
      */
     constructor(config, transport) {
@@ -39,7 +35,10 @@ class Logger extends Format {
         if (config.language && config.language !== 'en') {
             try {
                 const i18n = require(`./i18n/${config.language}.json`);
-                this._i18n = Object.assign({}, this._i18n, i18n);
+                this._i18n = {
+                    ...this._i18n,
+                    ...i18n
+                };
             } catch (e) {
                 if (e.code === 'MODULE_NOT_FOUND') {
                     this._logger.warn(
@@ -57,10 +56,10 @@ class Logger extends Format {
     /**
      * Formats the RC message.
      * @param {Message} message Message to format
-     * @returns {Object} Formatted message
+     * @returns {object} Formatted message
      */
     execute(message) {
-        const func = this[`_handle${util.cap(message.type)}`];
+        const func = this[`_handle${cap(message.type)}`];
         if (typeof func === 'function') {
             const result = func.call(this, message);
             switch (this._transportType) {
@@ -78,106 +77,66 @@ class Logger extends Format {
     /**
      * Handles edits.
      * @param {Message} m Message to format
-     * @returns {Object} Formatted message
+     * @returns {object} Formatted message
      * @private
      */
     _handleEdit(m) {
-        const n = m.flags.includes('N');
-        if (n) {
-            return this._msg(
-                'new',
-                m.wiki,
-                m.language,
-                m.domain,
-                m.user,
-                m.page,
-                m.diff,
-                m.summary
-            );
-        }
-        return this._msg(
-            'edit',
+        const newPage = m.flags.includes('N');
+        const commonArgs = [
             m.wiki,
             m.language,
             m.domain,
             m.user,
             m.page,
-            m.diff,
-            m.params.diff,
-            m.summary
-        );
+            m.diff
+        ];
+        if (newPage) {
+            return this._msg('new', ...commonArgs, m.summary);
+        }
+        return this._msg('edit', ...commonArgs, m.params.diff, m.summary);
     }
     /**
      * Handles logs.
      * @param {Message} m Message to format
-     * @returns {Object} Formatted message
+     * @returns {object} Formatted message
      * @private
      */
     _handleLog(m) {
-        const w = m.wiki,
-              l = m.language,
-              d = m.domain;
-        let temp = null, temp2 = null, temp3 = null;
+        const wldu = [m.wiki, m.language, m.domain, m.user];
+        let temp = null;
+        let temp2 = null;
+        let temp3 = null;
+        let action = '';
         switch (m.log) {
-            case 'block':
-                switch (m.action) {
-                    case 'block':
-                    case 'reblock':
-                        return this._msg(
-                            m.action,
-                            w,
-                            l,
-                            d,
-                            m.user,
-                            m.target,
-                            m.expiry,
-                            m.flags.join(', '),
-                            m.reason
-                        );
-                    case 'unblock':
-                        return this._msg(
-                            'unblock',
-                            w,
-                            l,
-                            d,
-                            m.user,
-                            m.target,
-                            m.reason
-                        );
-                    default:
-                        return '';
-                }
-            case 'newusers':
-                return this._msg('newusers', w, l, d, m.user);
-            case 'delete':
-                if (m.action === 'revision' || m.action === 'event') {
+            case 'block': switch (m.action) {
+                case 'block':
+                case 'reblock':
                     return this._msg(
-                        m.action === 'revision' ? 'revdel' : 'logdel',
-                        w,
-                        l,
-                        d,
-                        m.user,
+                        m.action,
+                        ...wldu,
                         m.target,
+                        m.expiry,
+                        m.flags.join(', '),
                         m.reason
                     );
+                case 'unblock':
+                    return this._msg('unblock', ...wldu, m.target, m.reason);
+                default:
+                    return '';
+            }
+            case 'newusers':
+                return this._msg('newusers', ...wldu);
+            case 'delete':
+                if (m.action === 'revision' || m.action === 'event') {
+                    action = m.action === 'revision' ? 'revdel' : 'logdel';
+                    return this._msg(action, ...wldu, m.target, m.reason);
                 }
-                return this._msg(
-                    m.action,
-                    w,
-                    l,
-                    d,
-                    m.user,
-                    util.escape(m.page),
-                    m.reason
-                );
+                return this._msg(m.action, ...wldu, escape(m.page), m.reason);
             case 'move':
                 return this._msg(
                     m.action === 'move_redir' ? 'moveredir' : 'move',
-                    w,
-                    l,
-                    d,
-                    m.user,
-                    util.escape(m.page),
+                    ...wldu,
+                    escape(m.page),
                     m.target,
                     (m.reason || '')
                         .replace('[[\x0302', '[[')
@@ -199,10 +158,7 @@ class Logger extends Format {
                 }).join(', ') || this._i18n['rights-none'];
                 return this._msg(
                     'rights',
-                    w,
-                    l,
-                    d,
-                    m.user,
+                    ...wldu,
                     m.target,
                     temp,
                     temp2,
@@ -211,32 +167,18 @@ class Logger extends Format {
             case 'upload':
                 return this._msg(
                     m.action === 'overwrite' ? 'reupload' : 'upload',
-                    w,
-                    l,
-                    d,
-                    m.user,
+                    ...wldu,
                     `File:${m.file}`,
                     m.file,
                     m.reason
                 );
             case 'protect':
                 if (m.action === 'unprotect') {
-                    return this._msg(
-                        'unprotect',
-                        w,
-                        l,
-                        d,
-                        m.user,
-                        m.page,
-                        m.reason
-                    );
+                    return this._msg('unprotect', ...wldu, m.page, m.reason);
                 } else if (m.action === 'move_prot') {
                     return this._msg(
                         'moveprotect',
-                        w,
-                        l,
-                        d,
-                        m.user,
+                        ...wldu,
                         m.page,
                         m.target,
                         m.reason
@@ -244,10 +186,7 @@ class Logger extends Format {
                 }
                 return this._msg(
                     m.action === 'modify' ? 'reprotect' : 'protect',
-                    w,
-                    l,
-                    d,
-                    m.user,
+                    ...wldu,
                     m.page,
                     m.level
                         .map(lv => `[${lv.feature}=${lv.level}] (${lv.expiry})`)
@@ -255,7 +194,7 @@ class Logger extends Format {
                     m.reason
                 );
             case 'abusefilter':
-                return this._msg('abusefilter', w, l, d, m.user, m.id, m.diff);
+                return this._msg('abusefilter', ...wldu, m.id, m.diff);
             // patrol doesn't need to be logged
             default:
                 return '';
@@ -264,7 +203,7 @@ class Logger extends Format {
     /**
      * Handles Discussions.
      * @param {Message} m Message to format
-     * @returns {Object} Formatted message
+     * @returns {object} Formatted message
      * @private
      */
     _handleDiscussions(m) {
@@ -291,12 +230,12 @@ class Logger extends Format {
     /* eslint-disable max-statements */
     /**
      * Formats an RC message by type.
-     * @param {String} key I18n message key
-     * @param {String} wiki Wiki where the message occurred
-     * @param {String} lang Language of the wiki
-     * @param {String} domain Domain of the wiki
+     * @param {string} key I18n message key
+     * @param {string} wiki Wiki where the message occurred
+     * @param {string} lang Language of the wiki
+     * @param {string} domain Domain of the wiki
      * @param {Array} args Arguments for the message
-     * @returns {Object} Formatted message
+     * @returns {object} Formatted message
      */
     _msg(key, wiki, lang, domain, ...args) {
         const string = this._i18n[key];
@@ -305,11 +244,11 @@ class Logger extends Format {
                 `Unknown message key: ${key}` :
                 'Undefined message key';
         }
-        let mode = 0,
-            temp = 0,
-            result = '';
-        const templates = [],
-              tArgs = [];
+        let mode = 0;
+            let temp = 0;
+            let result = '';
+        const templates = [];
+              const tArgs = [];
         for (let i = 0, l = string.length; i < l; ++i) {
             let char = string.charAt(i);
             if (mode === 1) {
@@ -380,61 +319,58 @@ class Logger extends Format {
     /* eslint-enable max-statements */
     /**
      * Makes a Markdown link.
-     * @param {String} text Text in the link
-     * @param {String} wiki Wiki for the link
-     * @param {String} lang Language for the wiki
-     * @param {String} domain Domain of the wiki
-     * @param {String} url URL in the link
-     * @returns {String} Markdown link
+     * @param {string} text Text in the link
+     * @param {string} wiki Wiki for the link
+     * @param {string} lang Language for the wiki
+     * @param {string} domain Domain of the wiki
+     * @param {string} link URL in the link
+     * @returns {string} Markdown link
      */
-    _link(text, wiki, lang, domain, url) {
+    _link(text, wiki, lang, domain, link) {
+        const wikiURL = url(wiki, lang, domain);
+        // Escape the link-ending character
+        const replacedLink = link
+            .replace(/\|/ug, '%7C')
+            .replace(/\)/ug, '%29');
+        // Escape the text as well as the link-ending character
+        const escapedText = escape(text)
+            .replace(/<|>/ug, '')
+            .replace(/\[|\]/ug, '');
         if (this._transportType === 'Slack') {
             // Slack link: <link|text>
-            return `<${
-                util.url(wiki, lang, domain)
-            }/${
-                url.replace(/\|/g, '%7C')
-            }|${
-                util.escape(text).replace(/<|>/g, '')
-            }>`;
+            return `<${wikiURL}/${replacedLink}|${escapedText}>`;
         }
         // Markdown link: [Text](Link)
-        return `[${
-            util.escape(text).replace(/\[|\]/g, '')
-        }](<${
-            util.url(wiki, lang, domain)
-        }/${
-            url.replace(/\)/g, '%29')
-        }>)`;
+        return `[${escapedText}](<${wikiURL}/${replacedLink}>)`;
     }
     /**
      * Makes a Markdown link to a wiki page.
-     * @param {String} text Text in the link
-     * @param {String} wiki Wiki to link to
-     * @param {String} lang Language of the wiki
-     * @param {String} domain Domain of the wiki
-     * @param {String} page Page to link to
-     * @returns {String} Markdown link
+     * @param {string} text Text in the link
+     * @param {string} wiki Wiki to link to
+     * @param {string} lang Language of the wiki
+     * @param {string} domain Domain of the wiki
+     * @param {string} page Page to link to
+     * @returns {string} Markdown link
      */
     _wikiLink(text, wiki, lang, domain, page) {
-        return this._link(text, wiki, lang, domain, `wiki/${util.encode(page)}`);
+        return this._link(text, wiki, lang, domain, `wiki/${encode(page)}`);
     }
     /**
      * Forms a path to a Discussions-based post.
-     * @param {String} platform Platform the post was made on
-     * @param {String} thread ID of the thread the post is on
-     * @param {String} reply ID of the post if it's a reply
-     * @param {String} page Page the post was posted on
-     * @returns {String} The path to the post
+     * @param {string} platform Platform the post was made on
+     * @param {string} thread ID of the thread the post is on
+     * @param {string} reply ID of the post if it's a reply
+     * @param {string} page Page the post was posted on
+     * @returns {string} The path to the post
      */
     _discussionsPath(platform, thread, reply, page) {
         switch (platform) {
             case 'discussion':
                 return `f/p/${reply ? `${thread}/r/${reply}` : thread}`;
             case 'message-wall':
-                return `wiki/Message_Wall:${util.encode(page)}?threadId=${reply ? `${thread}#${reply}` : thread}`;
+                return `wiki/Message_Wall:${encode(page)}?threadId=${reply ? `${thread}#${reply}` : thread}`;
             case 'article-comment':
-                return `wiki/${util.encode(page)}?commentId=${reply ? `${thread}&replyId=${reply}` : thread}`;
+                return `wiki/${encode(page)}?commentId=${reply ? `${thread}&replyId=${reply}` : thread}`;
             default:
                 this._logger.error(`Unknown Discussions platform: ${platform}`);
                 return 'unknown_discussions_platform';
@@ -442,15 +378,20 @@ class Logger extends Format {
     }
     /**
      * Processes templates in i18n strings.
-     * @param {String} wiki Related wiki for linking
-     * @param {String} lang Language of the wiki for linking
-     * @param {String} domain Domain of the wiki
-     * @param {String} type Template type
-     * @param {Array<String>} args Template arguments
-     * @returns {String} Processed template
+     * @param {string} wiki Related wiki for linking
+     * @param {string} lang Language of the wiki for linking
+     * @param {string} domain Domain of the wiki
+     * @param {string} type Template type
+     * @param {string[]} args Template arguments
+     * @returns {string} Processed template
      */
     _template(wiki, lang, domain, type, ...args) {
-        let temp = null, temp1 = null;
+        let temp = null;
+        let temp1 = null;
+        const wld = [wiki, lang, domain];
+        let userLink = '';
+        let talkLink = '';
+        let contribsLink = '';
         switch (type) {
             case 'user':
                 // Discussions does not relay the username for anons
@@ -458,57 +399,26 @@ class Logger extends Format {
                     return 'An unknown anonymous user';
                 }
                 // Hack for autoblocks and range blocks
-                if (args[0].startsWith('#') || util.isIPRange(args[0])) {
-                    return util.escape(args[0]);
+                if (args[0].startsWith('#') || isIPRange(args[0])) {
+                    return escape(args[0]);
                 }
                 if (isIP(args[0])) {
                     return this._wikiLink(
                         args[0],
-                        wiki,
-                        lang,
-                        domain,
+                        ...wld,
                         `Special:Contribs/${args[0]}`
                     );
                 }
-                return `${
-                    this._wikiLink(
-                        args[0],
-                        wiki,
-                        lang,
-                        domain,
-                        `User:${args[0]}`
-                    )
-                } (${
-                    this._wikiLink(
-                        this._i18n.talk,
-                        wiki,
-                        lang,
-                        domain,
-                        `User talk:${args[0]}`
-                    )
-                }|${
-                    this._wikiLink(
-                        this._i18n.contribs,
-                        wiki,
-                        lang,
-                        domain,
-                        `Special:Contribs/${args[0]}`
-                    )
-                })`;
+                userLink = this._wikiLink(args[0], ...wld, `User:${args[0]}`);
+                talkLink = this._wikiLink(this._i18n.talk, ...wld, `User talk:${args[0]}`);
+                contribsLink = this._wikiLink(this._i18n.contribs, ...wld, `Special:Contribs/${args[0]}`);
+                return `${userLink} (${talkLink}|${contribsLink})`;
             case 'link':
-                return this._wikiLink(
-                    args[1] || args[0],
-                    wiki,
-                    lang,
-                    domain,
-                    args[0]
-                );
+                return this._wikiLink(args[1] || args[0], ...wld, args[0]);
             case 'diff':
                 return `(${this._link(
                     this._i18n.diff,
-                    wiki,
-                    lang,
-                    domain,
+                    ...wld,
                     `?diff=${args[0]}`
                 )})`;
             case 'diffSize':
@@ -526,7 +436,7 @@ class Logger extends Format {
                 temp1 = this._transportType === 'Slack' ? '_' : '*';
                 return temp.length === 0 ?
                     '' :
-                    `(${temp1}${util.escape(temp.replace(/(?:\n|\r|\s)+/g, ' '))}${temp1})`;
+                    `(${temp1}${escape(temp.replace(/(?:\n|\r|\s)+/ug, ' '))}${temp1})`;
             case 'dlink':
                 return this._link(
                     args[0] || (
@@ -534,15 +444,13 @@ class Logger extends Format {
                             this._i18n['article-comment-comment'] :
                             this._i18n['discussions-reply']
                     ),
-                    wiki,
-                    lang,
-                    domain,
+                    ...wld,
                     this._discussionsPath(args[1], args[2], args[3], args[4])
                 );
             case 'flags':
                 return args[0] ? `[${args[0]}] ` : '';
             case 'board':
-                return this._msg(`${args[1]}-board`, wiki, lang, domain, util.escape(args[0]));
+                return this._msg(`${args[1]}-board`, wiki, lang, domain, escape(args[0]));
             default:
                 return '';
         }

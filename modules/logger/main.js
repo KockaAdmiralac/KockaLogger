@@ -5,16 +5,12 @@
  */
 'use strict';
 
-/**
- * Importing modules
- */
-const Module = require('../module.js'),
-      Logging = require('../../include/log.js'),
-      Wiki = require('./wiki.js');
+const Client = require('../../include/client.js');
+const Message = require('../../parser/msg.js');
+const Module = require('../module.js');
+const Logging = require('../../include/log.js');
+const Wiki = require('./wiki.js');
 
-/**
- * Constants
- */
 const INFO_THREADS = 10;
 
 /**
@@ -24,7 +20,7 @@ const INFO_THREADS = 10;
 class Logger extends Module {
     /**
      * Class constructor.
-     * @param {Object} config Module configuration
+     * @param {object} config Module configuration
      * @param {Client} client Client instance
      */
     constructor(config, client) {
@@ -40,7 +36,7 @@ class Logger extends Module {
     }
     /**
      * Initializes wiki objects.
-     * @param {Object} caches Cached system message data from loader
+     * @param {object} caches Cached system message data from loader
      */
     async setup(caches) {
         super.setup(caches);
@@ -87,9 +83,9 @@ class Logger extends Module {
                 typeof response.query === 'object' &&
                 typeof response.error !== 'object'
             ) {
-                const {query} = response,
-                      wikis = this._wikiMap.get(wiki.key)
-                          .map(index => this._wikis[index]);
+                const {query} = response;
+                const wikis = this._wikiMap.get(wiki.key)
+                    .map(index => this._wikis[index]);
                 for (const dataWiki of wikis) {
                     dataWiki.setData(query);
                 }
@@ -104,7 +100,7 @@ class Logger extends Module {
      * Determines whether the module is interested to receive the message
      * and which set of properties does it expect to receive.
      * @param {Message} message Message to check
-     * @returns {Boolean} Whether the module is interested in the message
+     * @returns {boolean} Whether the module is interested in the message
      */
     interested(message) {
         const indexes = this._wikiMap.get(
@@ -120,9 +116,9 @@ class Logger extends Module {
      * @param {Message} message Received message
      */
     async execute(message) {
-        const wikiKey = `${message.language}.${message.wiki}.${message.domain}`,
-              wikis = this._wikiMap.get(wikiKey)
-                  .map(index => this._wikis[index]);
+        const wikiKey = `${message.language}.${message.wiki}.${message.domain}`;
+        const wikis = this._wikiMap.get(wikiKey)
+            .map(index => this._wikis[index]);
         for (const wiki of wikis) {
             if (wiki && wiki.id) {
                 try {

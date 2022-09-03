@@ -5,13 +5,15 @@
  */
 'use strict';
 
+const Message = require('../../parser/msg.js');
+
 /**
  * Class for filtering wiki activity.
  */
 class Filter {
     /**
      * Class constructor.
-     * @param {Object} config Filter configuration
+     * @param {object} config Filter configuration
      */
     constructor(config) {
         if (typeof config === 'object' && config) {
@@ -45,21 +47,21 @@ class Filter {
     /**
      * Filters a message.
      * @param {Message} message Message to filter
-     * @returns {String} The transport name for the message
+     * @returns {string} The transport name for the message
      */
     execute(message) {
         try {
             if (this._func(message) !== this._negation) {
                 return this._transport;
             }
-        } catch (error) {
+        } catch (_error) {
             // TODO: Log failure
             return false;
         }
     }
     /**
      * Filters all messages.
-     * @returns {Boolean} If the message should be transported
+     * @returns {boolean} If the message should be transported
      */
     _all() {
         return true;
@@ -67,7 +69,7 @@ class Filter {
     /**
      * Filters Discussions messages.
      * @param {Message} message Message to be transported
-     * @returns {Boolean} If the message is from Discussions
+     * @returns {boolean} If the message is from Discussions
      */
     _discussions(message) {
         return message.type === 'discussions' &&
@@ -76,7 +78,7 @@ class Filter {
     /**
      * Filters out Discussions messages.
      * @param {Message} message Message to be transported
-     * @returns {Boolean} If the message is not from Discussions
+     * @returns {boolean} If the message is not from Discussions
      */
     _noDiscussions(message) {
         return !this._discussions(message);
@@ -85,7 +87,7 @@ class Filter {
      * Filters Discussions messages but without replies unless they aren't
      * created or edited.
      * @param {Message} message Message to be transported
-     * @returns {Boolean} If the above conditions are met
+     * @returns {boolean} If the above conditions are met
      */
     _noreply(message) {
         return message.type === 'discussions' &&
@@ -99,7 +101,7 @@ class Filter {
     /**
      * Filters activity in certain namespaces.
      * @param {Message} message Message to be transported
-     * @returns {Boolean} If the message is in the specified namespace(s)
+     * @returns {boolean} If the message is in the specified namespace(s)
      */
     _namespaces(message) {
         return message.type === 'edit' &&
@@ -109,7 +111,7 @@ class Filter {
     /**
      * Filters activity by log type.
      * @param {Message} message Message to be transported
-     * @returns {Boolean} If the message is a log of specified type
+     * @returns {boolean} If the message is a log of specified type
      */
     _logs(message) {
         return message.type === 'log' &&
@@ -125,7 +127,7 @@ class Filter {
      * value in the `options` property means either of these values will be
      * matched.
      * @param {Message} message Message to be transported
-     * @returns {Boolean} If the message matches specified rules
+     * @returns {boolean} If the message matches specified rules
      */
     _advanced(message) {
         for (const [property, values] of Object.entries(this._options)) {

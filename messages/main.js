@@ -5,44 +5,38 @@
  */
 'use strict';
 
-/**
- * Importing modules.
- */
-const {resolve} = require('path'),
-      {writeFile} = require('fs/promises'),
-      messages = require('./messages.json'),
-      MAPPING = require('./map.js'),
-      IO = require('../include/io.js'),
-      util = require('../include/util.js'),
-      Logger = require('../include/log.js');
+const {resolve} = require('path');
+const {writeFile} = require('fs/promises');
+const messages = require('./messages.json');
+const MAPPING = require('./map.js');
+const IO = require('../include/io.js');
+const util = require('../include/util.js');
+const Logger = require('../include/log.js');
 
-/**
- * Constants.
- */
-const DEFAULT_CACHE_DIRECTORY = 'cache',
-      THREADS = 10,
-      GENDER_PLACEHOLDER = 'GENDER PLACEHOLDER',
-      MESSAGES = [
-        'blocklogentry',
-        'unblocklogentry',
-        'reblock-logentry',
-        'protectedarticle',
-        'modifiedarticleprotection',
-        'unprotectedarticle',
-        'movedarticleprotection',
-        'rightslogentry',
-        'deletedarticle',
-        'undeletedarticle',
-        'logentry-delete-delete_redir',
-        'logentry-delete-event-legacy',
-        'logentry-delete-revision-legacy',
-        'uploadedimage',
-        'overwroteimage',
-        '1movedto2',
-        '1movedto2_redir',
-        'patrol-log-line',
-        'autosumm-replace'
-    ];
+const DEFAULT_CACHE_DIRECTORY = 'cache';
+const THREADS = 10;
+const GENDER_PLACEHOLDER = 'GENDER PLACEHOLDER';
+const MESSAGES = [
+    'blocklogentry',
+    'unblocklogentry',
+    'reblock-logentry',
+    'protectedarticle',
+    'modifiedarticleprotection',
+    'unprotectedarticle',
+    'movedarticleprotection',
+    'rightslogentry',
+    'deletedarticle',
+    'undeletedarticle',
+    'logentry-delete-delete_redir',
+    'logentry-delete-event-legacy',
+    'logentry-delete-revision-legacy',
+    'uploadedimage',
+    'overwroteimage',
+    '1movedto2',
+    '1movedto2_redir',
+    'patrol-log-line',
+    'autosumm-replace'
+];
 
 /**
  * Message loader and processor class
@@ -50,11 +44,11 @@ const DEFAULT_CACHE_DIRECTORY = 'cache',
 class Loader {
     /**
      * Class constructor.
-     * @param {Object} config KockaLogger configuration
-     * @param {String} cache Loader cache directory
-     * @param {Boolean} debug KockaLogger debug mode
-     * @param {Boolean} fetch If messages should be fetched beforehand
-     * @param {Boolean} generate If messages should only be generated
+     * @param {object} config KockaLogger configuration
+     * @param {object} options Additional loader options
+     * @param {string} options.cache Loader cache directory
+     * @param {boolean} options.debug KockaLogger debug mode
+     * @param {boolean} options.fetch If messages should be fetched beforehand
      */
     constructor(config, {cache, debug, fetch}) {
         this._debug = debug;
@@ -75,7 +69,7 @@ class Loader {
     /**
      * Serializes RegExp objects into plain strings.
      * Used as a replacer function for JSON.stringify.
-     * @param {String} key Key of the current property
+     * @param {string} key Key of the current property
      * @param {*} value Value of the current property
      * @returns {*} Serialized RegExp or original value
      */
@@ -103,13 +97,13 @@ class Loader {
         this._logger.info('Exiting loader...');
         for (const msg of MESSAGES) {
             this._caches.i18n[msg] = this._caches.i18n[msg]
-                .map(m => (m instanceof RegExp ? m : new RegExp(m)));
+                .map(m => (m instanceof RegExp ? m : new RegExp(m, 'u')));
         }
         for (const wiki in this._caches.i18n2) {
             const w = this._caches.i18n2[wiki];
             for (const msg in w) {
                 if (!(w[msg] instanceof RegExp)) {
-                    w[msg] = new RegExp(w[msg]);
+                    w[msg] = new RegExp(w[msg], 'u');
                 }
             }
         }
@@ -117,8 +111,8 @@ class Loader {
     }
     /**
      * Loads a JSON file.
-     * @param {String} file File to load
-     * @returns {Object|undefined} Loaded file
+     * @param {string} file File to load
+     * @returns {object?} Loaded file
      * @private
      */
     _loadFile(file) {
@@ -131,8 +125,8 @@ class Loader {
     }
     /**
      * Saves a file to cache.
-     * @param {String} file File to save to cache
-     * @param {Object} object Object to save to cache
+     * @param {string} file File to save to cache
+     * @param {object} object Object to save to cache
      * @returns {Promise} Promise for file saving
      * @private
      */
@@ -169,7 +163,7 @@ class Loader {
                 );
             }
             delete this._results['patrol-log-diff'];
-            this._caches.messagecache = Object.assign({}, this._results);
+            this._caches.messagecache = {...this._results};
         } catch (error) {
             this._logger.error('Error while fetching', error);
         }
@@ -187,7 +181,7 @@ class Loader {
     }
     /**
      * Fetches messages for a specific language.
-     * @param {String} lang Language code for which to fetch messages
+     * @param {string} lang Language code for which to fetch messages
      * @private
      */
     async _fetchMessages(lang) {
@@ -232,19 +226,19 @@ class Loader {
     /**
      * Processes {{GENDER:}} magic words in system messages and maps
      * them using respective regular expressions.
-     * @param {String} key System message key
-     * @param {String} value System message contents
-     * @returns {String} System message mapped to a regular expression
+     * @param {string} key System message key
+     * @param {string} value System message contents
+     * @returns {string} System message mapped to a regular expression
      * @private
      */
     _doMapping(key, value) {
         const placeholder = [];
         return MAPPING[key](value.replace(
             // This happens for some reason.
-            /\{\{GENDER:[^|}]*\|?\}\}|/ig,
+            /\{\{GENDER:[^|}]*\|?\}\}|/uig,
             ''
         ).replace(
-            /\{\{GENDER:[^|]*\|([^}]+)\}\}/ig,
+            /\{\{GENDER:[^|]*\|([^}]+)\}\}/uig,
             function(_, match) {
                 const arr = match.split('|');
                 if (
@@ -257,7 +251,7 @@ class Loader {
                 return GENDER_PLACEHOLDER;
             }
         )).replace(
-            new RegExp(GENDER_PLACEHOLDER, 'g'),
+            new RegExp(GENDER_PLACEHOLDER, 'ug'),
             () => placeholder.shift()
         );
     }
@@ -284,10 +278,10 @@ class Loader {
     }
     /**
      * Updates custom messages and saves them to cache.
-     * @param {String} wiki Wiki to update the custom messages for
-     * @param {String} language Language of the wiki
-     * @param {String} domain Domain of the wiki
-     * @param {Object} data Custom messages for the wiki
+     * @param {string} wiki Wiki to update the custom messages for
+     * @param {string} language Language of the wiki
+     * @param {string} domain Domain of the wiki
+     * @param {object} data Custom messages for the wiki
      */
     async updateCustom(wiki, language, domain, data) {
         if (!this._caches.custom) {
@@ -303,7 +297,7 @@ class Loader {
         for (const w in this._caches.i18n2) {
             for (const msg in this._caches.i18n2[w]) {
                 this._caches.i18n2[w][msg] =
-                    new RegExp(this._caches.i18n2[w][msg]);
+                    new RegExp(this._caches.i18n2[w][msg], 'u');
             }
         }
         return {

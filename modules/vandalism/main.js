@@ -5,19 +5,15 @@
  */
 'use strict';
 
-/**
- * Importing modules.
- */
-const {isIP} = require('net'),
-      Module = require('../module.js'),
-      Format = require('../../formats/logger/main.js'),
-      Discord = require('../../transports/discord/main.js'),
-      Logger = require('../../include/log.js'),
-      {shorturl} = require('../../include/util.js');
+const {isIP} = require('net');
+const Module = require('../module.js');
+const Format = require('../../formats/logger/main.js');
+const Discord = require('../../transports/discord/main.js');
+const Client = require('../../include/client.js');
+const Logger = require('../../include/log.js');
+const {shorturl} = require('../../include/util.js');
+const Message = require('../../parser/msg.js');
 
-/**
- * Constants.
- */
 const CACHE_EXPIRY = 3 * 60 * 60;
 
 /**
@@ -27,14 +23,14 @@ const CACHE_EXPIRY = 3 * 60 * 60;
 class Vandalism extends Module {
     /**
      * Class constructor
-     * @param {Object} config Module configuration
+     * @param {object} config Module configuration
      * @param {Client} client Client instance
      */
     constructor(config, client) {
         super(config, client);
         const {summaries, wikiwl, removal, transport} = config;
         this._summaries = summaries instanceof Array ?
-            summaries.map(s => new RegExp(s, 'i')) :
+            summaries.map(s => new RegExp(s, 'ui')) :
             [];
         this._wikiwl = wikiwl instanceof Array ? wikiwl : [];
         this._removal = typeof removal === 'number' ? removal : 1500;
@@ -53,7 +49,7 @@ class Vandalism extends Module {
      * Determines whether the module is interested to receive the message
      * and which set of properties does it expect to receive.
      * @param {Message} message Message to check
-     * @returns {Boolean} Whether the module is interested in receiving
+     * @returns {boolean} Whether the module is interested in receiving
      */
     interested(message) {
         // Only return true if it's an edit,
@@ -83,8 +79,8 @@ class Vandalism extends Module {
      * @param {Message} message Received message
      */
     async execute(message) {
-        const {user, wiki, language, domain} = message,
-              key = `vandalism:${user}:${language}:${wiki}:${domain}`;
+        const {user, wiki, language, domain} = message;
+        const key = `vandalism:${user}:${language}:${wiki}:${domain}`;
         try {
             if (await this._cache.exists(key)) {
                 return;

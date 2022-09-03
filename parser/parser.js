@@ -5,22 +5,18 @@
  */
 'use strict';
 
-/**
- * Importing modules.
- */
-const DiscussionsMessage = require('./discussions.js'),
-      EditMessage = require('./edit.js'),
-      ErrorMessage = require('./error.js'),
-      LogMessage = require('./log.js'),
-      NewUsersMessage = require('./newusers.js'),
-      {escapeRegex} = require('../include/util.js');
+const Client = require('../include/client.js');
+const DiscussionsMessage = require('./discussions.js');
+const EditMessage = require('./edit.js');
+const ErrorMessage = require('./error.js');
+const LogMessage = require('./log.js');
+const Message = require('./msg.js');
+const NewUsersMessage = require('./newusers.js');
+const {escapeRegex} = require('../include/util.js');
 
-/**
- * Constants.
- */
-const EDIT_REGEX = /^\x0314\[\[\x0307([^\]]+)\x0314\]\]\x034 ([!NBM]*)\x0310 \x0302https?:\/\/([a-z0-9-.]+)\.(fandom\.com|gamepedia\.(?:com|io)|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:([a-z-]+)\/)?index\.php\?(\S+)\x03 \x035\*\x03 \x0303([^\x03]+)\x03 \x035\*\x03 \(\x02?(\+|-)(\d+)\x02?\) \x0310(.*)$/,
-      // NOTE: \s{2} is \s{1,2} due to overflow space removal.
-      LOG_REGEX = /^\x0314\[\[\x0307[^:]+:Log\/([^\x03]+)\x0314\]\]\x034 ([^\x03]+)\x0310 \x0302(?:https?:\/\/([a-z0-9-.]+)\.(fandom\.com|gamepedia\.(?:com|io)|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:([a-z-]+)\/)?wiki\/[^:]+:Log\/[^\x03]+)?\x03 \x035\*\x03 \x0303([^\x03]+)\x03 \x035\*\x03\s{1,2}\x0310(.*)$/;
+const EDIT_REGEX = /^\x0314\[\[\x0307([^\]]+)\x0314\]\]\x034 ([!NBM]*)\x0310 \x0302https?:\/\/([a-z0-9-.]+)\.(fandom\.com|gamepedia\.(?:com|io)|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:([a-z-]+)\/)?index\.php\?(\S+)\x03 \x035\*\x03 \x0303([^\x03]+)\x03 \x035\*\x03 \(\x02?(\+|-)(\d+)\x02?\) \x0310(.*)$/u;
+// NOTE: \s{2} is \s{1,2} due to overflow space removal.
+const LOG_REGEX = /^\x0314\[\[\x0307[^:]+:Log\/([^\x03]+)\x0314\]\]\x034 ([^\x03]+)\x0310 \x0302(?:https?:\/\/([a-z0-9-.]+)\.(fandom\.com|gamepedia\.(?:com|io)|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:([a-z-]+)\/)?wiki\/[^:]+:Log\/[^\x03]+)?\x03 \x035\*\x03 \x0303([^\x03]+)\x03 \x035\*\x03\s{1,2}\x0310(.*)$/u;
 
 /**
  * Class for parsing messages received from WikiaRC.
@@ -29,7 +25,7 @@ class Parser {
     /**
      * Class constructor.
      * @param {Client} client Client instance
-     * @param {Object} data Loader data
+     * @param {object} data Loader data
      */
     constructor(client, data) {
         this._client = client;
@@ -39,20 +35,21 @@ class Parser {
         for (const flag of LogMessage.BLOCK_FLAGS) {
             const key = `block-log-flags-${flag}`;
             if (typeof this._i18n[key] === 'string') {
-                this._i18n[key] = new RegExp(this._i18n[key]);
+                this._i18n[key] = new RegExp(this._i18n[key], 'u');
             } else if (this._i18n[key] instanceof Array) {
                 this._i18n[key] = new RegExp(
                     this._i18n[key]
                         .map(escapeRegex)
-                        .join('|')
+                        .join('|'),
+                    'u'
                 );
             }
         }
     }
     /**
      * Parses a message.
-     * @param {String} raw Raw string from WikiaRC
-     * @param {String} type Type of WikiaRC message
+     * @param {string} raw Raw string from WikiaRC
+     * @param {string} type Type of WikiaRC message
      * @returns {Message} Parsed message
      */
     parse(raw, type) {
@@ -89,9 +86,9 @@ class Parser {
     }
     /**
      * Updates custom messages.
-     * @param {String} key Key to store the messages under
-     * @param {Object} messages Custom messages on the wiki
-     * @param {Object} generated Processed custom messages on the wiki
+     * @param {string} key Key to store the messages under
+     * @param {object} messages Custom messages on the wiki
+     * @param {object} generated Processed custom messages on the wiki
      */
     update(key, messages, generated) {
         this._custom[key] = messages[key];
@@ -99,28 +96,28 @@ class Parser {
     }
     /**
      * Gets maps of i18n data-based regular expressions.
-     * @returns {Object} I18n data-based regular expressions
+     * @returns {object} I18n data-based regular expressions
      */
     get i18n() {
         return this._i18n;
     }
     /**
      * Gets message cache.
-     * @returns {Object} Message cache
+     * @returns {object} Message cache
      */
     get messagecache() {
         return this._messagecache;
     }
     /**
      * Gets the map of custom messages.
-     * @returns {Object} Map of custom messages
+     * @returns {object} Map of custom messages
      */
     get custom() {
         return this._custom;
     }
     /**
      * Gets maps of custom message-based regular expressions.
-     * @returns {Object} Custom message-based regular expressions
+     * @returns {object} Custom message-based regular expressions
      */
     get i18n2() {
         return this._i18n2;

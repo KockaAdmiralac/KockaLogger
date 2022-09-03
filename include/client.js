@@ -5,20 +5,18 @@
  */
 'use strict';
 
-/**
- * Importing modules
- */
-const {promisify} = require('util'),
-      irc = require('irc-upd'),
-      Redis = require('ioredis'),
-      util = require('./util.js'),
-      IO = require('./io.js'),
-      Logger = require('./log.js'),
-      Parser = require('../parser/parser.js');
+const {promisify} = require('util');
+const {exit, stdout} = require('process');
+const irc = require('irc-upd');
+const Redis = require('ioredis');
+const util = require('./util.js');
+const IO = require('./io.js');
+const Logger = require('./log.js');
+const Parser = require('../parser/parser.js');
+const Loader = require('../messages/main.js');
+const Message = require('../parser/msg.js');
+const Module = require('../modules/module.js');
 
-/**
- * Constants.
- */
 const EVENTS = [
     'registered',
     'join',
@@ -26,14 +24,13 @@ const EVENTS = [
     'netError',
     'message',
     'ctcp-version'
-],
-HANDLED_COMMANDS = [
+];
+const HANDLED_COMMANDS = [
     '338',
     'rpl_whoismodes'
-],
-FETCH_MAX_RETRIES = 5,
-FETCH_DELAY = 10000;
-
+];
+const FETCH_MAX_RETRIES = 5;
+const FETCH_DELAY = 10000;
 const IGNORED_LOGS = [
     'ro-tournament',
     'ro-news',
@@ -52,9 +49,9 @@ const IGNORED_LOGS = [
 class Client {
     /**
      * Class constructor.
-     * @param {Object} config KockaLogger configuration
-     * @param {Boolean} debug KockaLogger debug mode
-     * @param {Loader} loader Loader instance
+     * @param {object} config KockaLogger configuration
+     * @param {object} options Client options
+     * @param {boolean} options.debug KockaLogger debug mode
      */
     constructor(config, {debug}) {
         this._config = config;
@@ -67,8 +64,8 @@ class Client {
     }
     /**
      * Initializes the debug/info/error logger.
-     * @param {Object} config Logging configuration
-     * @param {Object} discord Discord logging configuration
+     * @param {object} config Logging configuration
+     * @param {object} discord Discord logging configuration
      * @private
      */
     _initLogger(config, discord) {
@@ -82,7 +79,7 @@ class Client {
     }
     /**
      * Initializes a Redis client used for caching.
-     * @param {Object} config Redis client configuration
+     * @param {object} config Redis client configuration
      * @private
      */
     _initCache(config) {
@@ -117,7 +114,7 @@ class Client {
         if (error) {
             if (error.code === 'ENOENT') {
                 this._logger.error('Redis not started up, exiting...');
-                process.exit();
+                exit();
             } else {
                 this._logger.error('Redis error:', error);
             }
@@ -141,22 +138,24 @@ class Client {
         }
         for (const mod in this._config.modules) {
             try {
-                const Module = require(`../modules/${mod}/main.js`);
-                this._modules[mod] = new Module(
+                const OurModule = require(`../modules/${mod}/main.js`);
+                this._modules[mod] = new OurModule(
                     this._config.modules[mod],
                     this
                 );
             } catch (e) {
                 this._logger.error(
                     'Error while initializing module',
-                    mod, ':', e
+                    mod,
+                    ':',
+                    e
                 );
             }
         }
     }
     /**
      * Initializes the IRC client.
-     * @param {Object} data Loader data
+     * @param {object} data Loader data
      * @param {Loader} loader Message loader
      */
     async run(data, loader) {
@@ -183,7 +182,7 @@ class Client {
         this._client.out.error = this._errorOverride.bind(this);
         for (const e of EVENTS) {
             this._client.on(e, this[`_${e.replace(
-                /-(\w)/,
+                /-(\w)/u,
                 (_, m) => m.toUpperCase()
             )}`].bind(this));
         }
@@ -216,8 +215,8 @@ class Client {
     }
     /**
      * The client has joined the IRC server.
+     * @param {object} command IRC command sent upon joining
      * @private
-     * @param {Object} command IRC command sent upon joining
      */
     _registered(command) {
         if (!this._killing) {
@@ -226,9 +225,9 @@ class Client {
     }
     /**
      * The client has joined an IRC channel.
+     * @param {string} channel Channel that was joined
+     * @param {string} user User that joined the channel
      * @private
-     * @param {String} channel Channel that was joined
-     * @param {String} user User that joined the channel
      */
     _join(channel, user) {
         for (const type in this._config.client.channels) {
@@ -243,26 +242,26 @@ class Client {
     }
     /**
      * An IRC error occurred.
+     * @param {object} command IRC command sent upon error
      * @private
-     * @param {Object} command IRC command sent upon error
      */
     _error(command) {
         this._logger.error('IRC error:', command);
     }
     /**
      * A network error with the IRC socket occurred,
-     * @private
      * @param {Error} error Error event that occurred in the socket
+     * @private
      */
     _netError(error) {
         this._logger.error('Socket error:', error);
     }
     /**
      * An IRC message has been sent.
+     * @param {string} user User sending the message
+     * @param {string} channel Channel the message was sent to
+     * @param {string} message Message contents
      * @private
-     * @param {String} user User sending the message
-     * @param {String} channel Channel the message was sent to
-     * @param {String} message Message contents
      */
     async _message(user, channel, message) {
         for (const i in this._config.client.channels) {
@@ -282,9 +281,9 @@ class Client {
     }
     /**
      * Handles messages in the RC channel.
-     * @private
-     * @param {String} message Message to handle
+     * @param {string} message Message to handle
      * @returns {Message} Parsed message object
+     * @private
      */
     _rcMessage(message) {
         let msg = null;
@@ -316,13 +315,13 @@ class Client {
     }
     /**
      * Handles messages in the Discussions channel.
-     * @param {String} message Message to handle
+     * @param {string} message Message to handle
      * @returns {Message} Parsed message object
      * @private
      */
     _discussionsMessage(message) {
-        const start = message.startsWith('{'),
-              end = message.endsWith('}');
+        const start = message.startsWith('{');
+        const end = message.endsWith('}');
         if (start && end) {
             return this._parser.parse(message, 'discussions');
         } else if (start) {
@@ -337,7 +336,7 @@ class Client {
     }
     /**
      * Handles messages in the new users channel.
-     * @param {String} message Message to handle
+     * @param {string} message Message to handle
      * @returns {Message} Parsed message object
      * @private
      */
@@ -353,12 +352,12 @@ class Client {
      * @private
      */
     async _dispatchMessage(message) {
-        const interested = [],
-              properties = [];
+        const interested = [];
+        const properties = [];
         for (const mod in this._modules) {
             try {
-                const m = this._modules[mod],
-                      interest = m.interested(message);
+                const m = this._modules[mod];
+                const interest = m.interested(message);
                 if (interest === true) {
                     await m.execute(message);
                 } else if (typeof interest === 'string') {
@@ -371,7 +370,9 @@ class Client {
             } catch (e) {
                 this._logger.error(
                     'Dispatch error to module',
-                    mod, ':', e
+                    mod,
+                    ':',
+                    e
                 );
             }
         }
@@ -380,16 +381,16 @@ class Client {
     /**
      * Fetches additional information about a message.
      * @param {Message} message Message whose information should be fetched
-     * @param {Array<String>} properties Additional information to fetch
-     * @param {Array<Module>} interested Modules interested in that information
+     * @param {string[]} properties Additional information to fetch
+     * @param {Module[]} interested Modules interested in that information
      */
     async _fetchMessage(message, properties, interested) {
         if (properties.length === 0) {
             return;
         }
         let successful = false;
-        const errors = [],
-              wait = promisify(setTimeout);
+        const errors = [];
+        const wait = promisify(setTimeout);
         for (let retry = 0; retry < FETCH_MAX_RETRIES; ++retry) {
             await wait(retry * FETCH_DELAY);
             try {
@@ -415,7 +416,9 @@ class Client {
             } catch (error) {
                 this._logger.error(
                     'Dispatch error to module',
-                    mod, ':', error
+                    mod,
+                    ':',
+                    error
                 );
             }
         }
@@ -433,8 +436,8 @@ class Client {
             );
             return;
         }
-        const {language, wiki, domain} = message,
-              key = `${language}:${wiki}:${domain}`;
+        const {language, wiki, domain} = message;
+        const key = `${language}:${wiki}:${domain}`;
         if (
             typeof wiki !== 'string' ||
             typeof language !== 'string' ||
@@ -457,7 +460,8 @@ class Client {
                 ammessages: Object.keys(this._caches.i18n).join('|'),
                 amprop: 'default',
                 meta: 'allmessages'
-            }), {query} = data;
+            });
+            const {query} = data;
             if (!query || !(query.allmessages instanceof Array)) {
                 this._logger.error('Unusual MediaWiki API response', data);
             } else {
@@ -471,8 +475,8 @@ class Client {
     }
     /**
      * Updates custom messages with newly fetched data.
-     * @param {Object} allmessages MediaWiki API response
-     * @param {String} key Serialized wiki information
+     * @param {object} allmessages MediaWiki API response
+     * @param {string} key Serialized wiki information
      */
     async _updateCustomMessages(allmessages, key) {
         const messages = {};
@@ -493,8 +497,8 @@ class Client {
     }
     /**
      * Handles a CTCP VERSION.
-     * @param {String} from User sending the CTCP
-     * @param {String} to User receiving the CTCP
+     * @param {string} from User sending the CTCP
+     * @param {string} to User receiving the CTCP
      * @private
      */
     _ctcpVersion(from, to) {
@@ -508,7 +512,7 @@ class Client {
      */
     async kill() {
         // Clear ^C from console line.
-        process.stdout.write(`${String.fromCharCode(27)}[0G`);
+        stdout.write(`${String.fromCharCode(27)}[0G`);
         if (this._killing) {
             this._logger.error(
                 'KockaLogger already shutting down, please wait. ' +
@@ -537,7 +541,7 @@ class Client {
     }
     /**
      * Gets whether the debug mode is enabled.
-     * @returns {Boolean} Whether the debug mode is enabled
+     * @returns {boolean} Whether the debug mode is enabled
      */
     get debug() {
         return this._debug;

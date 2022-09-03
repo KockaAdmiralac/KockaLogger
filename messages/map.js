@@ -6,21 +6,15 @@
  */
 'use strict';
 
-/**
- * Importing modules
- */
 const {escapeRegex} = require('../include/util.js');
 
-/**
- * Constants
- */
 const REASON = '\\s?(?::|：)\\s?(.*)';
 
 /**
  * Function that marks the first wikitext link as colored
  * in a log entry
- * @param {String} e Log entry
- * @returns {String} Log entry with the first link IRC-colored
+ * @param {string} e Log entry
+ * @returns {string} Log entry with the first link IRC-colored
  */
 function colorLink(e) {
     return e.replace('\\[\\[', '\\[\\[(?:\x0302)?')
@@ -33,8 +27,8 @@ function colorLink(e) {
 const MAPPING = {
     /**
      * Transforms the move log entry
-     * @param {String} e Log entry
-     * @returns {String} Regex'd log entry
+     * @param {string} e Log entry
+     * @returns {string} Regex'd log entry
      */
     '1movedto2': e => `^${colorLink(escapeRegex(e))
         .replace('\\$1', '([^\x03]+)')
@@ -42,16 +36,16 @@ const MAPPING = {
     }(?:${REASON})?$`,
     /**
      * Transforms the replacement autosummary
-     * @param {String} e Replacement autosummary
-     * @returns {String} Regex'd autosummary
+     * @param {string} e Replacement autosummary
+     * @returns {string} Regex'd autosummary
      */
     'autosumm-replace': e => `^${escapeRegex(e)
         .replace('\\$1', '(.*)')
     }$`,
     /**
      * Transforms the block log entry
-     * @param {String} e Log entry
-     * @returns {String} Regex'd log entry
+     * @param {string} e Log entry
+     * @returns {string} Regex'd log entry
      */
     'blocklogentry': e => `^${colorLink(escapeRegex(e))
         .replace('\\$1', '[^:]+:([^\x03]+)')
@@ -60,16 +54,16 @@ const MAPPING = {
     }(?:${REASON})?$`,
     /**
      * Transforms the avatar log entry representing avatar removal
-     * @param {String} e Log entry
-     * @returns {String} Regex'd log entry
+     * @param {string} e Log entry
+     * @returns {string} Regex'd log entry
      */
     'blog-avatar-removed-log': e => `^${escapeRegex(e)
         .replace('\\$1', '[^:]+:(.+)')
     }`,
     /**
      * Transforms the chat ban log entry
-     * @param {String} e Log entry
-     * @returns {String} Regex'd log entry
+     * @param {string} e Log entry
+     * @returns {string} Regex'd log entry
      */
     'chat-chatbanadd-log-entry': e => `^${colorLink(escapeRegex(e))
         .replace(
@@ -81,8 +75,8 @@ const MAPPING = {
     }${REASON}$`,
     /**
      * Transforms the chat unban log entry
-     * @param {String} e Log entry
-     * @returns {String} Regex'd log entry
+     * @param {string} e Log entry
+     * @returns {string} Regex'd log entry
      */
     'chat-chatbanremove-log-entry': e => `^${colorLink(escapeRegex(e))
         .replace(
@@ -92,17 +86,17 @@ const MAPPING = {
     }${REASON}$`,
     /**
      * Transforms the delete log entry
-     * @param {String} e Log entry
-     * @returns {String} Regex'd log entry
+     * @param {string} e Log entry
+     * @returns {string} Regex'd log entry
      */
     'deletedarticle': e => `^${escapeRegex(e).replace(
-        /(?:\\\[\\\[)?\\\$1(?:\\\]\\\])?/,
+        /(?:\\\[\\\[)?\\\$1(?:\\\]\\\])?/u,
         '(?:\\[\\[)?(?:\x0302)?([^\x03\\]]+)(?:\x0310)?(?:\\]\\])?'
     )}(?:${REASON})?$`,
     /**
      * Transforms the log entry for revision deletion
-     * @param {String} e Log entry
-     * @returns {String} Regex'd log entry
+     * @param {string} e Log entry
+     * @returns {string} Regex'd log entry
      */
     'logentry-delete-revision-legacy': e => `^${colorLink(escapeRegex(e))
         .replace('\\$1', '.+')
@@ -110,8 +104,8 @@ const MAPPING = {
     }(?:${REASON})?$`,
     /**
      * Transforms the log entry for moving protection
-     * @param {String} e Log entry
-     * @returns {String} Regex'd log entry
+     * @param {string} e Log entry
+     * @returns {string} Regex'd log entry
      */
     'movedarticleprotection': e => `^${escapeRegex(e)
         .replace(
@@ -122,8 +116,8 @@ const MAPPING = {
     }(?:${REASON})?$`,
     /**
      * Transforms the patrol log entry
-     * @param {String} e Log entry
-     * @returns {String} Regex'd log entry
+     * @param {string} e Log entry
+     * @returns {string} Regex'd log entry
      */
     'patrol-log-line': e => `^${colorLink(escapeRegex(e))
         .replace('\\$1', '(\\d+)')
@@ -132,8 +126,8 @@ const MAPPING = {
     }$`,
     /**
      * Transforms the protect log entry
-     * @param {String} e Log entry
-     * @returns {String} Regex'd log entry
+     * @param {string} e Log entry
+     * @returns {string} Regex'd log entry
      */
     'protectedarticle': e => `^${colorLink(escapeRegex(e))
         .replace('\\$1', '([^\x03]+)')
@@ -143,8 +137,8 @@ const MAPPING = {
     }(?:${REASON})?$`,
     /**
      * Transforms the rights log entry
-     * @param {String} e Log entry
-     * @returns {String} Regex'd log entry
+     * @param {string} e Log entry
+     * @returns {string} Regex'd log entry
      */
     'rightslogentry': e => `^${escapeRegex(e)
         .replace('\\$1', '[^:]+:(.+)')
@@ -153,27 +147,27 @@ const MAPPING = {
     }(?:${REASON})?$`,
     /**
      * Transforms the unblock log entry
-     * @param {String} e Log entry
-     * @returns {String} Regex'd log entry
+     * @param {string} e Log entry
+     * @returns {string} Regex'd log entry
      */
     'unblocklogentry': e => `^${escapeRegex(e)
         .replace('\\$1', '[^:]+:([^:]+)')
     }(?:${REASON})?$`,
     /**
      * Transforms the unprotect log entry
-     * @param {String} e Log entry
-     * @returns {String} Regex'd log entry
+     * @param {string} e Log entry
+     * @returns {string} Regex'd log entry
      */
     'unprotectedarticle': e => `^${colorLink(escapeRegex(e))
         .replace('\\$1', '([^\x03]+)')
     }(?:${REASON})?$`,
     /**
      * Transforms the delete log entry
-     * @param {String} e Log entry
-     * @returns {String} Regex'd log entry
+     * @param {string} e Log entry
+     * @returns {string} Regex'd log entry
      */
     'uploadedimage': e => `^${escapeRegex(e).replace(
-        /(?:\\\[\\\[)?\\\$1(?:\\\]\\\])?/,
+        /(?:\\\[\\\[)?\\\$1(?:\\\]\\\])?/u,
         '(?:\\[\\[)?(?:\x0302)?[^:]+:([^\\]\x03]+)(?:\x0310)?(?:\\]\\])?'
     )}(?:${REASON})?$`
 };

@@ -5,17 +5,13 @@
  */
 'use strict';
 
-/**
- * Importing modules.
- */
-const Module = require('../module.js'),
-      {escape, url} = require('../../include/util.js'),
-      Discord = require('../../transports/discord/main.js');
+const Client = require('../../include/client.js');
+const Message = require('../../parser/msg.js');
+const Module = require('../module.js');
+const {escape, url} = require('../../include/util.js');
+const Discord = require('../../transports/discord/main.js');
 
-/**
- * Constants.
- */
-const QA_REGEX = /^([a-z-]*\.)?qatestwiki\d+$/;
+const QA_REGEX = /^([a-z-]*\.)?qatestwiki\d+$/u;
 
 /**
  * New wiki transport module.
@@ -24,7 +20,7 @@ const QA_REGEX = /^([a-z-]*\.)?qatestwiki\d+$/;
 class NewWikis extends Module {
     /**
      * Class constructor.
-     * @param {Object} config Module configuration
+     * @param {object} config Module configuration
      * @param {Client} client Client instance
      */
     constructor(config, client) {
@@ -36,7 +32,7 @@ class NewWikis extends Module {
      * Determines whether the module is interested to receive the message
      * and which set of properties does it expect to receive.
      * @param {Message} message Message to check
-     * @returns {Boolean} Whether the module is interested in receiving
+     * @returns {boolean} Whether the module is interested in receiving
      */
     interested(message) {
         return message.user === 'FANDOM' &&
@@ -54,7 +50,7 @@ class NewWikis extends Module {
     execute(message) {
         const {target, wiki, language, domain} = message;
         this._transport.execute({
-            content: `New wiki! [${escape(target).replace(/\[|\]/g, '')}](<${url(wiki, language, domain)}>)`
+            content: `New wiki! [${escape(target).replace(/\[|\]/ug, '')}](<${url(wiki, language, domain)}>)`
         });
     }
     /**

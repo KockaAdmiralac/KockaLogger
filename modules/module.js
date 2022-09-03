@@ -5,13 +5,16 @@
  */
 'use strict';
 
+const Client = require('../include/client.js');
+const Message = require('../parser/msg.js');
+
 /**
  * Base module class.
  */
 class Module {
     /**
      * Class constructor.
-     * @param {Object} config Module configuration
+     * @param {object} config Module configuration
      * @param {Client} client Client instance
      */
     constructor(config, client) {
@@ -22,7 +25,7 @@ class Module {
     }
     /**
      * Sets up required caches.
-     * @param {Object} caches Cached system message data from loader
+     * @param {object} caches Cached system message data from loader
      */
     setup(caches) {
         this._caches = caches;
@@ -30,15 +33,16 @@ class Module {
     /**
      * Determines whether the module is interested to receive the message
      * and which set of properties does it expect to receive.
-     * @param {Message} message Message to check
-     * @returns {Boolean|String|Array} Set(s) of expected properties
+     * @param {Message} _message Message to check
+     * @returns {boolean | string | Array} Set(s) of expected properties
      */
-    interested() {
+    interested(_message) {
         return false;
     }
     /**
      * Handles messages.
      * @param {Message} message Received message
+     * @throws {Error} If not implemented
      */
     execute(message) {
         if (message.type) {

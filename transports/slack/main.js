@@ -5,15 +5,9 @@
  */
 'use strict';
 
-/**
- * Importing modules.
- */
-const Transport = require('../transport.js'),
-      got = require('got');
+const Transport = require('../transport.js');
+const got = require('got');
 
-/**
- * Constants.
- */
 const PREFIX = 'https://hooks.slack.com/services/';
 
 /**
@@ -23,7 +17,7 @@ const PREFIX = 'https://hooks.slack.com/services/';
 class Slack extends Transport {
     /**
      * Class constructor.
-     * @param {Object} config Transport configuration
+     * @param {object} config Transport configuration
      */
     constructor(config) {
         super(config);
@@ -39,7 +33,7 @@ class Slack extends Transport {
     }
     /**
      * Executes the transport.
-     * @param {Object} message Formatted message to transport
+     * @param {object} message Formatted message to transport
      */
     async execute(message) {
         try {

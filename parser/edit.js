@@ -6,10 +6,8 @@
  */
 'use strict';
 
-/**
- * Importing modules.
- */
 const RCMessage = require('./rc.js');
+const Parser = require('./parser.js');
 
 /**
  * Parses WikiaRC messages representing edits.
@@ -19,7 +17,7 @@ class EditMessage extends RCMessage {
     /**
      * Class constructor.
      * @param {Parser} parser Parser instance
-     * @param {String} raw Unparsed WikiaRC message
+     * @param {string} raw Unparsed WikiaRC message
      * @param {Array} res Regular expression execution result
      */
     constructor(parser, raw, res) {
@@ -32,14 +30,14 @@ class EditMessage extends RCMessage {
         this.params = {};
         res.shift().split('&').forEach(this._parseParam, this);
         this.user = res.shift();
-        const sign = res.shift(),
-              num = Number(res.shift());
+        const sign = res.shift();
+        const num = Number(res.shift());
         this.diff = sign === '-' ? -num : num;
         this.summary = this._trimSummary(res.shift());
     }
     /**
      * Parses a URL parameter.
-     * @param {String} param Parameter to parse
+     * @param {string} param Parameter to parse
      * @private
      */
     _parseParam(param) {

@@ -5,11 +5,8 @@
  */
 'use strict';
 
-/**
- * Importing modules
- */
-const got = require('got'),
-      util = require('./util.js');
+const got = require('got');
+const util = require('./util.js');
 
 /**
  * HTTP communication handler.
@@ -27,10 +24,10 @@ class IO {
     }
     /**
      * Queries the MediaWiki API.
-     * @param {String} wiki Wiki to query
-     * @param {String} lang Language of the wiki to query
-     * @param {String} domain Domain of the wiki to query
-     * @param {Object} options Query parameters
+     * @param {string} wiki Wiki to query
+     * @param {string} lang Language of the wiki to query
+     * @param {string} domain Domain of the wiki to query
+     * @param {object} options Query parameters
      * @param {Function} transform Transformation function
      * @returns {Promise} Promise to listen for response
      */
@@ -59,7 +56,7 @@ class IO {
     }
     /**
      * Gets user info for a user with specified user ID.
-     * @param {Number} id User ID of the user
+     * @param {number} id User ID of the user
      * @returns {Promise} Promise to listen on for response
      */
     userInfo(id) {

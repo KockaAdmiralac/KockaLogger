@@ -5,39 +5,35 @@
  */
 'use strict';
 
-/**
- * Importing modules.
- */
-const {promisify} = require('util'),
-      Redis = require('ioredis'),
-      Module = require('../module.js'),
-      Logger = require('../../include/log.js'),
-      {url, shorturl, encode} = require('../../include/util.js'),
-      Discord = require('../../transports/discord/main.js'),
-      mysql = require('mysql2/promise');
+const {promisify} = require('util');
+const Redis = require('ioredis');
+const Client = require('../../include/client.js');
+const Message = require('../../parser/msg.js');
+const Module = require('../module.js');
+const Logger = require('../../include/log.js');
+const {url, shorturl, encode} = require('../../include/util.js');
+const Discord = require('../../transports/discord/main.js');
+const mysql = require('mysql2/promise');
 
-/**
- * Constants.
- */
 const QUERY = 'INSERT INTO `newusers` (`name`, `wiki`, `language`, `domain`) ' +
-              'VALUES(?, ?, ?, ?)',
+              'VALUES(?, ?, ?, ?)';
 /* eslint-disable sort-keys */
-PROPERTY_MAP = {
+const PROPERTY_MAP = {
     website: 'Website',
     bio: 'Bio',
     name: 'aka',
     fbPage: 'Facebook',
     twitter: 'Twitter',
     discordHandle: 'Discord'
-},
+};
 /* eslint-enable */
-PREFIXES = {
+const PREFIXES = {
     fbPage: 'https://facebook.com/',
     twitter: 'https://twitter.com/'
-},
-CACHE_EXPIRY = 30 * 60,
-MAX_RETRIES = 5,
-RETRY_DELAY = 10000;
+};
+const CACHE_EXPIRY = 30 * 60;
+const MAX_RETRIES = 5;
+const RETRY_DELAY = 10000;
 
 /**
  * Module for recording account creations and reporting possible profile spam.
@@ -46,7 +42,7 @@ RETRY_DELAY = 10000;
 class NewUsers extends Module {
     /**
      * Class constructor.
-     * @param {Object} config Module configuration
+     * @param {object} config Module configuration
      * @param {Client} client Client instance
      */
     constructor(config, client) {
@@ -71,7 +67,7 @@ class NewUsers extends Module {
     }
     /**
      * Initializes the database connection.
-     * @param {Object} config Database configuration
+     * @param {object} config Database configuration
      * @private
      */
     _initDB(config) {
@@ -140,8 +136,9 @@ class NewUsers extends Module {
      * Currently shared by two instance initializations:
      * - `log`: Transport where all new users are logged.
      * - `profiles`: Transport where possible spam profiles are logged.
-     * @param {Object} config Transport configuration
-     * @param {String} name Transport name
+     * @param {object} config Transport configuration
+     * @param {string} name Transport name
+     * @throws {Error} If the transport configuration is not an object
      * @private
      */
     _initTransport(config, name) {
@@ -155,7 +152,7 @@ class NewUsers extends Module {
      * Determines whether the module is interested to receive the message
      * and which set of properties does it expect to receive.
      * @param {Message} message Message to check
-     * @returns {Boolean} Whether the module is interested in receiving
+     * @returns {boolean} Whether the module is interested in receiving
      */
     interested(message) {
         return message.type === 'log' && message.log === 'newusers';
@@ -187,8 +184,8 @@ class NewUsers extends Module {
      * @private
      */
     async _relay(message) {
-        const {wiki, language, domain, user} = message,
-              wikiUrl = url(wiki, language, domain);
+        const {wiki, language, domain, user} = message;
+        const wikiUrl = url(wiki, language, domain);
         await this._logTransport.execute({
             content: `[${user}](<${wikiUrl}/wiki/Special:Contribs/${encode(user)}>) ([talk](<${wikiUrl}/wiki/User_talk:${encode(user)}>) | [${
                 shorturl(wiki, language, domain)
@@ -209,8 +206,8 @@ class NewUsers extends Module {
     }
     /**
      * Callback after a key expires in Redis.
-     * @param {String} channel Subscription channel
-     * @param {String} message Message sent in the channel
+     * @param {string} channel Subscription channel
+     * @param {string} message Message sent in the channel
      * @private
      */
     async _redisMessage(channel, message) {
@@ -218,15 +215,15 @@ class NewUsers extends Module {
         if (channel !== '__keyevent@0__:expired' || type !== 'newusers') {
             return;
         }
-        const wait = promisify(setTimeout),
-              errors = [];
+        const wait = promisify(setTimeout);
+        const errors = [];
         for (let retry = 0; retry < MAX_RETRIES; ++retry) {
             await wait(retry * RETRY_DELAY);
             try {
-                const userId = await this._getID(user, wiki, language, domain),
-                      {users} = await this._io.userInfo(userId),
-                      userData = users[userId],
-                      {bio, discordHandle, fbPage, twitter, website} = userData;
+                const userId = await this._getID(user, wiki, language, domain);
+                const {users} = await this._io.userInfo(userId);
+                const userData = users[userId];
+                const {bio, discordHandle, fbPage, twitter, website} = userData;
                 if (bio || discordHandle || fbPage || twitter || website) {
                     await this._post(userData, wiki, language, domain);
                 }
@@ -244,10 +241,7 @@ class NewUsers extends Module {
      * Fetches a user's ID.
      * This method needs to fail if it wants the parent loop to retry
      * the request.
-     * @param {String} user User whose ID is being obtained
-     * @param {String} wiki Wiki the user created their account on
-     * @param {String} language Language path of the wiki
-     * @param {String} domain Domain of the wiki
+     * @param {string} user User whose ID is being obtained
      * @private
      */
     async _getID(user) {
@@ -258,10 +252,10 @@ class NewUsers extends Module {
     }
     /**
      * Posts profile information to a Discord channel.
-     * @param {Object} info User information
-     * @param {String} wiki Wiki the user created their account on
-     * @param {String} language Language path of the wiki
-     * @param {String} domain Domain of the wiki
+     * @param {object} info User information
+     * @param {string} wiki Wiki the user created their account on
+     * @param {string} language Language path of the wiki
+     * @param {string} domain Domain of the wiki
      */
     async _post(info, wiki, language, domain) {
         await this._profilesTransport.execute({

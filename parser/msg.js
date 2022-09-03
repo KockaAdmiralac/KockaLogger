@@ -5,6 +5,9 @@
  */
 'use strict';
 
+const Client = require('../include/client.js');
+const Parser = require('./parser.js');
+
 /**
  * Base inteface for other message classes.
  */
@@ -12,8 +15,8 @@ class Message {
     /**
      * Class constructor.
      * @param {Parser} parser Parser instance
-     * @param {String} raw Unparsed message from WikiaRC
-     * @param {String} type Message type
+     * @param {string} raw Unparsed message from WikiaRC
+     * @param {string} type Message type
      */
     constructor(parser, raw, type) {
         this._parser = parser;
@@ -23,9 +26,9 @@ class Message {
     }
     /**
      * Marks a message as errored out.
-     * @param {String} code Error code
-     * @param {String} message Error message
-     * @param {Object} details Error details
+     * @param {string} code Error code
+     * @param {string} message Error message
+     * @param {object} details Error details
      * @protected
      */
     _error(code, message, details) {
@@ -36,10 +39,10 @@ class Message {
     /**
      * Starts fetching more details about the message.
      * @param {Client} client Client instance to get external clients from
-     * @param {Array<String>} properties Details to fetch
-     * @param {Array<String>} interested Modules interested in the message
+     * @param {string[]} properties Details to fetch
+     * @param {string[]} _interested Modules interested in the message
      */
-    fetch(client, properties) {
+    fetch(client, properties, _interested) {
         this._client = client;
         this._properties = properties;
     }
@@ -57,7 +60,7 @@ class Message {
     }
     /**
      * Stringifies the object when passed through JSON.stringify.
-     * @returns {Object} Object to stringify
+     * @returns {object} Object to stringify
      */
     toJSON() {
         const clone = {};

@@ -5,20 +5,16 @@
  */
 'use strict';
 
-/**
- * Importing modules.
- */
-const Format = require('../format.js'),
-      util = require('../../include/util.js');
+const Format = require('../format.js');
+const {cap, encode, url, shorturl} = require('../../include/util.js');
+const Message = require('../../parser/msg.js');
 
-/**
- * Constants.
- */
 const COLOR = {
     post: 0x00FF00,
     report: 0xFF0000,
     thread: 0xFFFF00
-}, P_REGEX = /^<p>(.*)(?:<\/p>)?$/;
+};
+const P_REGEX = /^<p>(.*)(?:<\/p>)?$/u;
 
 /**
  * Main class.
@@ -28,7 +24,7 @@ class DiscussionsFormat extends Format {
     /**
      * Main class method.
      * @param {Message} msg Message to format
-     * @returns {Object} Formatted embed
+     * @returns {object} Formatted embed
      */
     execute(msg) {
         if (
@@ -42,14 +38,14 @@ class DiscussionsFormat extends Format {
             embeds: [
                 {
                     author: {
-                        name: `${msg.user} [${util.shorturl(msg.wiki, msg.language, msg.domain)}]`,
-                        url: `${util.url(msg.wiki, msg.language, msg.domain)}/wiki/Special:Contribs/${util.encode(msg.user)}`
+                        name: `${msg.user} [${shorturl(msg.wiki, msg.language, msg.domain)}]`,
+                        url: `${url(msg.wiki, msg.language, msg.domain)}/wiki/Special:Contribs/${encode(msg.user)}`
                     },
                     color: COLOR[msg.dtype],
                     description: msg.snippet.trim().replace(P_REGEX, '$1'),
                     title: msg.title ?
-                        `${msg.title} [${util.cap(msg.dtype)} ${msg.action}]` :
-                        `${util.cap(msg.dtype)} ${msg.action}`,
+                        `${msg.title} [${cap(msg.dtype)} ${msg.action}]` :
+                        `${cap(msg.dtype)} ${msg.action}`,
                     url: msg.url
                 }
             ]

@@ -5,15 +5,12 @@
  */
 'use strict';
 
-/**
- * Importing modules.
- */
-const Logger = require('../../include/log.js'),
-      Filter = require('./filter.js');
+const Logger = require('../../include/log.js');
+const Filter = require('./filter.js');
+const Format = require('../../formats/format.js');
+const Message = require('../../parser/msg.js');
+const Transport = require('../../transports/transport.js');
 
-/**
- * Constants.
- */
 const DEFAULT_BOTS = [
     'Fandom',
     'FandomBot',
@@ -29,7 +26,7 @@ const DEFAULT_BOTS = [
 class Wiki {
     /**
      * Class constructor.
-     * @param {Object} config Wiki configuration
+     * @param {object} config Wiki configuration
      */
     constructor(config) {
         this._logger = new Logger({
@@ -59,7 +56,7 @@ class Wiki {
     }
     /**
      * Initializes filters.
-     * @param {Array<Object>} filters Filters to initialize
+     * @param {object[]} filters Filters to initialize
      * @private
      */
     _initFilters(filters) {
@@ -71,9 +68,9 @@ class Wiki {
     }
     /**
      * Initializes transports.
-     * @param {Object} transports Transports to initialize
-     * @param {Object} transport Single transport to initialize
-     * @returns {Boolean} Whether transports managed to initialize
+     * @param {object} transports Transports to initialize
+     * @param {object} transport Single transport to initialize
+     * @returns {boolean} Whether transports managed to initialize
      */
     _initTransports(transports, transport) {
         this._transports = {};
@@ -91,23 +88,23 @@ class Wiki {
     }
     /**
      * Initializes a single transport.
-     * @param {Object} config Transport configuration
-     * @returns {Transport|undefined} Initialized transport on success
+     * @param {object} config Transport configuration
+     * @returns {Transport?} Initialized transport on success
      * @private
      */
     _initTransport(config) {
         const c = typeof config === 'object' ? config : {};
         try {
-            const Transport = require(`../../transports/${c.type || 'discord'}/main.js`);
-            return new Transport(c);
+            const OurTransport = require(`../../transports/${c.type || 'discord'}/main.js`);
+            return new OurTransport(c);
         } catch (error) {
             this._logger.error('Error initializing transport', error);
         }
     }
     /**
      * Initializes formats.
-     * @param {Object} formats Formats to initialize
-     * @param {Object} format Single format to initialize
+     * @param {object} formats Formats to initialize
+     * @param {object} format Single format to initialize
      * @private
      */
     _initFormats(formats, format) {
@@ -134,9 +131,9 @@ class Wiki {
     }
     /**
      * Initializes a single format,
-     * @param {Object} config Format configuration
+     * @param {object} config Format configuration
      * @param {Transport} transport Transport the format is for
-     * @returns {Format|undefined} Initialized format or nothing on failure
+     * @returns {Format?} Initialized format or nothing on failure
      * @private
      */
     _initFormat(config, transport) {
@@ -145,17 +142,18 @@ class Wiki {
             c.language = this._language;
         }
         try {
-            const Format = require(`../../formats/${c.type || 'logger'}/main.js`);
-            return new Format(c, transport);
+            const OurFormat = require(`../../formats/${c.type || 'logger'}/main.js`);
+            return new OurFormat(c, transport);
         } catch (e) {
             this._logger.error('Error initializing format', e);
         }
     }
     /**
-     * Sets data from MediaWiki API response,
-     * @param {Array<Object>} variables Publicly available wiki variables
-     * @param {Object} general General wiki information
-     * @param {Object} namespaces Wiki namespace information
+     * Sets data from MediaWiki API response.
+     * @param {object} response MediaWiki API response
+     * @param {object[]} response.variables Publicly available wiki variables
+     * @param {object} response.general General wiki information
+     * @param {object} response.namespaces Wiki namespace information
      */
     setData({variables, general, namespaces}) {
         this._id = Number(variables.filter(
@@ -167,9 +165,9 @@ class Wiki {
         this._namespaceNames = {};
         this._canonicalNamespaces = {};
         for (const i in namespaces) {
-            const ns = namespaces[i],
-                  {id, canonical} = ns,
-                  name = ns['*'];
+            const ns = namespaces[i];
+            const {id, canonical} = ns;
+            const name = ns['*'];
             this._namespaces[name] = id;
             this._namespaces[canonical] = id;
             this._namespaceNames[id] = name;
@@ -178,24 +176,24 @@ class Wiki {
     }
     /**
      * Gets namespace ID by its name.
-     * @param {String} name Namespace name
-     * @returns {Number} Namespace ID
+     * @param {string} name Namespace name
+     * @returns {number} Namespace ID
      */
     getNamespaceID(name) {
         return this._namespaces[name];
     }
     /**
      * Gets namespace local name by its ID.
-     * @param {Number} id Namespace ID
-     * @returns {String} Namespace local name
+     * @param {number} id Namespace ID
+     * @returns {string} Namespace local name
      */
     getNamespace(id) {
         return this._namespaceNames[id];
     }
     /**
      * Gets namespace canonical name by its ID.
-     * @param {Number} id Namespace ID
-     * @returns {String} Namespace canonical name
+     * @param {number} id Namespace ID
+     * @returns {string} Namespace canonical name
      */
     getCanonicalNamespace(id) {
         return this._canonicalNamespaces[id];
@@ -210,12 +208,13 @@ class Wiki {
             return;
         }
         this._identifyNamespace(message);
-        const format = this._formats[result] || this._formats.default,
-              transport = this._transports[result];
+        const format = this._formats[result] || this._formats.default;
+        const transport = this._transports[result];
         if (!format) {
             this._logger.error(
                 'Nonexistent format with no fallback',
-                result, this._name
+                result,
+                this._name
             );
             return;
         }
@@ -231,15 +230,15 @@ class Wiki {
     /**
      * Passes a message through filters.
      * @param {Message} message Message to filter
-     * @returns {String} Transport to use, if the message should be transported
+     * @returns {string} Transport to use, if the message should be transported
      */
     _filterMessage(message) {
         if (this._bots.includes(message.user)) {
             return;
         }
         for (let i = 0, l = this._filters.length; i < l; ++i) {
-            const filter = this._filters[i],
-                  result = filter.execute(message);
+            const filter = this._filters[i];
+            const result = filter.execute(message);
             if (result) {
                 return result;
             }
@@ -276,49 +275,49 @@ class Wiki {
      * Gets if the wiki's configuration was successfully initialized. If it was
      * not, it means there was an error in configuration, and such a wiki
      * should not be logged.
-     * @returns {Boolean} If the wiki's configuration was initialized
+     * @returns {boolean} If the wiki's configuration was initialized
      */
     get initialized() {
         return this._initialized;
     }
     /**
      * Gets wiki's subdomain.
-     * @returns {String} Wiki's subdomain
+     * @returns {string} Wiki's subdomain
      */
     get name() {
         return this._name;
     }
     /**
      * Gets the wiki's domain.
-     * @returns {String} Wiki's domain
+     * @returns {string} Wiki's domain
      */
     get domain() {
         return this._domain;
     }
     /**
      * Gets the wiki's language.
-     * @returns {String} Wiki's language
+     * @returns {string} Wiki's language
      */
     get language() {
         return this._language;
     }
     /**
      * Gets a unique identifier for a wiki.
-     * @returns {String} Wiki language concatenated with wiki domain
+     * @returns {string} Wiki language concatenated with wiki domain
      */
     get key() {
         return this._key;
     }
     /**
      * Gets the wiki's ID.
-     * @returns {Number} Wiki's ID
+     * @returns {number} Wiki's ID
      */
     get id() {
         return this._id;
     }
     /**
      * Gets the wiki's name.
-     * @returns {String} Wiki's name
+     * @returns {string} Wiki's name
      */
     get sitename() {
         return this._sitename;

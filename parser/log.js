@@ -6,16 +6,11 @@
  */
 'use strict';
 
-/**
- * Importing modules.
- */
+const Parser = require('./parser.js');
 const RCMessage = require('./rc.js');
 
-/**
- * Constants.
- */
-const AF_REGEX = /\[\[\x0302[^:]+:[^/]+\/(\d+)\x0310\]\].*(?:\(|（)\[\[[^:]+:[^/]+\/history\/\d+\/diff\/prev\/(\d+)\]\](?:\)|）)$/,
-BLOCK_FLAGS = [
+const AF_REGEX = /\[\[\x0302[^:]+:[^/]+\/(\d+)\x0310\]\].*(?:\(|（)\[\[[^:]+:[^/]+\/history\/\d+\/diff\/prev\/(\d+)\]\](?:\)|）)$/u;
+const BLOCK_FLAGS = [
     'angry-autoblock',
     'anononly',
     'hiddenname',
@@ -23,7 +18,8 @@ BLOCK_FLAGS = [
     'nocreate',
     'noemail',
     'nousertalk'
-], MESSAGE_MAP = {
+];
+const MESSAGE_MAP = {
     block: {
         block: 'blocklogentry',
         reblock: 'reblock-logentry',
@@ -63,8 +59,8 @@ BLOCK_FLAGS = [
         revert: 'overwroteimage',
         upload: 'uploadedimage'
     }
-},
-PROTECTSITE_REGEX = / (\d+ (?:second|minute|hour|day|week|month|year)s?)?(?:\s?(?::|：)\s?(.*))?$/;
+};
+const PROTECTSITE_REGEX = / (\d+ (?:second|minute|hour|day|week|month|year)s?)?(?:\s?(?::|：)\s?(.*))?$/u;
 
 /**
  * Parses log action related messages.
@@ -74,7 +70,7 @@ class LogMessage extends RCMessage {
     /**
      * Class constructor.
      * @param {Parser} parser Parser instance
-     * @param {String} raw Unparsed message from WikiaRC
+     * @param {string} raw Unparsed message from WikiaRC
      * @param {Array} res Regular expression execution result
      */
     constructor(parser, raw, res) {
@@ -115,9 +111,7 @@ class LogMessage extends RCMessage {
     /**
      * Attempts to parse the summary based on regular expressions
      * generated from i18n MediaWiki messages.
-     * @param {String} msg Message to get the summary from
-     * @param {String} summary Summary to attempt parsing on
-     * @returns {Array<String>|null} Parsing results if successful
+     * @returns {string[] | null} Parsing results if successful
      */
     _i18n() {
         const msg = MESSAGE_MAP[this.log][this.action];
@@ -125,9 +119,9 @@ class LogMessage extends RCMessage {
             return null;
         }
         // May be expensive.
-        const clone = this._parser.i18n[msg].slice(0),
-              originalClone = this._parser.messagecache[msg].slice(0),
-              key = `${this.language}:${this.wiki}:${this.domain}`;
+        const clone = this._parser.i18n[msg].slice(0);
+        const originalClone = this._parser.messagecache[msg].slice(0);
+        const key = `${this.language}:${this.wiki}:${this.domain}`;
         if (this._parser.i18n2[key] && this._parser.i18n2[key][msg]) {
             clone.unshift(this._parser.i18n2[key][msg]);
             originalClone.unshift(this._parser.custom[key][msg]);
@@ -137,7 +131,7 @@ class LogMessage extends RCMessage {
             if (res) {
                 const ret = Array(res.length - 1);
                 let max = 0;
-                originalClone[i].match(/(?<!GENDER:)\$(\d+)/g).forEach(function(m, j) {
+                originalClone[i].match(/(?<!GENDER:)\$(\d+)/ug).forEach(function(m, j) {
                     const n = Number(m.substring(1));
                     if (n > max) {
                         max = n;
@@ -183,9 +177,9 @@ class LogMessage extends RCMessage {
     /**
      * Replaces a ProtectSite summary with something parsable.
      * @param {*} _ Unused
-     * @param {String} duration Duration of the protection
-     * @param {String} reason Protection reason, if specified
-     * @returns {String} Parsable protect log summary
+     * @param {string} duration Duration of the protection
+     * @param {string} reason Protection reason, if specified
+     * @returns {string} Parsable protect log summary
      * @private
      */
     _protectSiteReplace(_, duration, reason) {
@@ -197,7 +191,7 @@ class LogMessage extends RCMessage {
     }
     /**
      * Handles abuse filter summary extraction.
-     * @returns {Boolean|undefined} False if summary failed to parse
+     * @returns {boolean?} False if summary failed to parse
      * @private
      */
     _abusefilter() {
@@ -212,7 +206,7 @@ class LogMessage extends RCMessage {
     }
     /**
      * Handles block summary extraction.
-     * @param {Array<String>} res I18n checking result
+     * @param {string[]} res I18n checking result
      * @private
      */
     _block(res) {
@@ -231,31 +225,27 @@ class LogMessage extends RCMessage {
     }
     /**
      * Handles delete summary extraction.
-     * @param {Array<String>} res I18n checking result
+     * @param {string[]} res I18n checking result
      * @private
      */
     _delete(res) {
         if (this.action === 'revision' || this.action === 'event') {
-            this.target = res[2];
-            this.reason = res[3];
+            [, , this.target, this.reason] = res;
         } else {
-            this.page = res.shift();
-            this.reason = res.shift();
+            [this.page, this.reason] = res;
         }
     }
     /**
      * Handles move summary extraction.
-     * @param {Array<String>} res I18n checking result
+     * @param {string[]} res I18n checking result
      * @private
      */
     _move(res) {
-        this.page = res.shift();
-        this.target = res.shift();
-        this.reason = res.shift();
+        [this.page, this.target, this.reason] = res;
     }
     /**
      * Handles patrol summary extraction.
-     * @param {Array<String>} res I18n checking result
+     * @param {string[]} res I18n checking result
      * @private
      */
     _patrol(res) {
@@ -264,18 +254,18 @@ class LogMessage extends RCMessage {
     }
     /**
      * Handles protect summary extraction.
-     * @param {Array<String>} res I18n checking result
+     * @param {string[]} res I18n checking result
      * @private
      */
     _protect(res) {
         const pageWithLevels = res.shift();
-        this.page = pageWithLevels.replace(/ \u200E.*$/g, '');
+        this.page = pageWithLevels.replace(/ \u200E.*$/ug, '');
         if (this.action === 'move_prot') {
             this.target = res.shift();
         } else if (this.action !== 'unprotect') {
             this.level = [];
-            const level = pageWithLevels + res.shift(),
-                  regex = /\u200E\[(edit|move|upload|create|comment|everything)=(\w+)\] \(([^\u200E]+)\)+/g;
+            const level = pageWithLevels + res.shift();
+            const regex = /\u200E\[(edit|move|upload|create|comment|everything)=(\w+)\] \(([^\u200E]+)\)+/ug;
             let res2 = null;
             do {
                 res2 = regex.exec(level);
@@ -293,14 +283,14 @@ class LogMessage extends RCMessage {
     }
     /**
      * Handles rights summary extraction.
-     * @param {Array<String>} res I18n checking result
+     * @param {string[]} res I18n checking result
      * @private
      */
     _rights(res) {
         const regex = res.slice(0, 3);
         this.target = res.shift();
-        const oldgroups = res.shift(),
-              newgroups = res.shift();
+        const oldgroups = res.shift();
+        const newgroups = res.shift();
         if (!oldgroups || !newgroups) {
             this._error(
                 'missinggroups',
@@ -318,12 +308,11 @@ class LogMessage extends RCMessage {
     }
     /**
      * Handles upload summary extraction.
-     * @param {Array<String>} res I18n checking result
+     * @param {string[]} res I18n checking result
      * @private
      */
     _upload(res) {
-        this.file = res.shift();
-        this.reason = res.shift();
+        [this.file, this.reason] = res;
     }
 }
 

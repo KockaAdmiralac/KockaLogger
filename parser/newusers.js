@@ -5,15 +5,10 @@
  */
 'use strict';
 
-/**
- * Importing modules.
- */
 const Message = require('./msg.js');
+const Parser = require('./parser.js');
 
-/**
- * Constants.
- */
-const REGEX = /^(.+) New user registration https?:\/\/([a-z0-9-.]+)\.(fandom\.com|gamepedia\.(?:com|io)|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:([a-z-]+)\/)?wiki\/Special:Log\/newusers$/;
+const REGEX = /^(.+) New user registration https?:\/\/([a-z0-9-.]+)\.(fandom\.com|gamepedia\.(?:com|io)|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:([a-z-]+)\/)?wiki\/Special:Log\/newusers$/u;
 
 /**
  * Parses messages representing user account creations.
@@ -23,7 +18,7 @@ class NewUsersMessage extends Message {
     /**
      * Class constructor.
      * @param {Parser} parser Parser instance
-     * @param {String} raw Unparsed message from WikiaRC
+     * @param {string} raw Unparsed message from WikiaRC
      */
     constructor(parser, raw) {
         super(parser, raw, 'log');
@@ -31,10 +26,8 @@ class NewUsersMessage extends Message {
         this.action = 'newusers';
         const res = REGEX.exec(raw);
         if (res) {
-            this.user = res[1];
-            this.wiki = res[2];
-            this.domain = res[3];
-            this.language = res[4] || 'en';
+            [, this.user, this.wiki, this.domain, this.language] = res;
+            this.language = this.language || 'en';
         } else {
             this._error(
                 'newuserserror',

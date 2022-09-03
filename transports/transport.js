@@ -5,10 +5,8 @@
  */
 'use strict';
 
-/**
- * Importing modules
- */
 const Logger = require('../include/log.js');
+const Message = require('../parser/msg.js');
 
 /**
  * Base transport class
@@ -16,7 +14,7 @@ const Logger = require('../include/log.js');
 class Transport {
     /**
      * Class constructor
-     * @param {Object} config Transport configuration
+     * @param {object} config Transport configuration
      */
     constructor(config) {
         this._config = config;
@@ -27,9 +25,10 @@ class Transport {
     }
     /**
      * Executes the transport
-     * @param {Message} message Message to transport
+     * @param {Message} _message Message to transport
+     * @throws {Error} If not implemented
      */
-    execute() {
+    execute(_message) {
         throw new Error('Implement this method!');
     }
     /* eslint-disable no-empty-function */

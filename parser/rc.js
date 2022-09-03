@@ -5,10 +5,8 @@
  */
 'use strict';
 
-/**
- * Importing modules.
- */
 const Message = require('./msg.js');
+const Parser = require('./parser.js');
 
 /**
  * Parses messages received from the recent changes channel.
@@ -18,9 +16,9 @@ class RCMessage extends Message {
     /**
      * Class constructor.
      * @param {Parser} parser Parser instance
-     * @param {String} raw Unparsed message from WikiaRC
+     * @param {string} raw Unparsed message from WikiaRC
      * @param {Array} res Regular expression execution result
-     * @param {String} type Message type
+     * @param {string} type Message type
      */
     constructor(parser, raw, res, type) {
         super(parser, raw, type);
@@ -28,8 +26,8 @@ class RCMessage extends Message {
     }
     /**
      * Trims the unnecessary character off the summary.
-     * @param {String} summary Summary to trim
-     * @returns {String} Trimmed summary
+     * @param {string} summary Summary to trim
+     * @returns {string} Trimmed summary
      * @protected
      */
     _trimSummary(summary) {

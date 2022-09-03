@@ -5,19 +5,14 @@
  */
 'use strict';
 
-/**
- * Importing modules.
- */
-const Message = require('./msg.js'),
-      {decode} = require('../include/util.js');
+const Parser = require('./parser.js');
+const Message = require('./msg.js');
+const {decode} = require('../include/util.js');
 
-/**
- * Constants.
- */
-const DISCUSSION_URL_REGEX = /^https?:\/\/([a-z0-9-.]+)\.(fandom\.com|gamepedia\.(?:com|io)|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:([a-z-]+)\/)?(?:d|f)\/p\/(\d{19,})(?:\/r\/(\d{19,}))?$/,
-      ARTICLE_COMMENT_URL_REGEX = /^https?:\/\/([a-z0-9-.]+)\.(fandom\.com|gamepedia\.(?:com|io)|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:([a-z-]+)\/)?wiki\/([^?]+)\?commentId=(\d{19,})(?:&replyId=(\d{19,}))?$/,
-      MESSAGE_WALL_URL_REGEX = /^https?:\/\/([a-z0-9-.]+)\.(fandom\.com|gamepedia\.(?:com|io)|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:([a-z-]+)\/)?wiki\/[^:]+:(.+)\?threadId=(\d{19,})(?:#(\d{19,}))?$/,
-      TYPE_REGEX = /^(discussion|article-comment|message-wall)-(thread|post|reply|report)$/;
+const DISCUSSION_URL_REGEX = /^https?:\/\/([a-z0-9-.]+)\.(fandom\.com|gamepedia\.(?:com|io)|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:([a-z-]+)\/)?(?:d|f)\/p\/(\d{19,})(?:\/r\/(\d{19,}))?$/u;
+const ARTICLE_COMMENT_URL_REGEX = /^https?:\/\/([a-z0-9-.]+)\.(fandom\.com|gamepedia\.(?:com|io)|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:([a-z-]+)\/)?wiki\/([^?]+)\?commentId=(\d{19,})(?:&replyId=(\d{19,}))?$/u;
+const MESSAGE_WALL_URL_REGEX = /^https?:\/\/([a-z0-9-.]+)\.(fandom\.com|gamepedia\.(?:com|io)|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:([a-z-]+)\/)?wiki\/[^:]+:(.+)\?threadId=(\d{19,})(?:#(\d{19,}))?$/u;
+const TYPE_REGEX = /^(discussion|article-comment|message-wall)-(thread|post|reply|report)$/u;
 
 /**
  * Parses messages representing Discussions actions.
@@ -27,7 +22,7 @@ class DiscussionsMessage extends Message {
     /**
      * Class constructor.
      * @param {Parser} parser Parser instance
-     * @param {String} raw Unparsed WikiaRC message
+     * @param {string} raw Unparsed WikiaRC message
      */
     constructor(parser, raw) {
         super(parser, raw, 'discussions');
@@ -47,14 +42,15 @@ class DiscussionsMessage extends Message {
     }
     /**
      * Extracts Discussions data from parsed JSON.
-     * @param {String} url URL to the Discussions post
-     * @param {String} type Type of the action taken
-     * @param {String} snippet Snippet of the post
-     * @param {String} size Size of the post
-     * @param {String} category Category the post is in
-     * @param {String} userName User who took the action
-     * @param {String} action The taken action
-     * @param {String} title Discussions post title
+     * @param {object} json Parsed JSON object to extract data from
+     * @param {string} json.url URL to the Discussions post
+     * @param {string} json.type Type of the action taken
+     * @param {string} json.snippet Snippet of the post
+     * @param {string} json.size Size of the post
+     * @param {string} json.category Category the post is in
+     * @param {string} json.userName User who took the action
+     * @param {string} json.action The taken action
+     * @param {string} json.title Discussions post title
      * @private
      */
     _extract({url, type, snippet, size, category, userName, action, title}) {
@@ -74,7 +70,7 @@ class DiscussionsMessage extends Message {
      * Wondering why we have to parse all three types?
      * That is, of course, because Fandom uses the discussion-report type
      * for all reports, regardless of the platform they were made on.
-     * @param {String} url Discussions URL to parse
+     * @param {string} url Discussions URL to parse
      * @private
      */
     _extractURL(url) {
@@ -106,7 +102,11 @@ class DiscussionsMessage extends Message {
             try {
                 this.page = decode(res.shift());
             } catch (error) {
-                this._error('discussionsurl2', 'Discussions URL failed to decode.', {error});
+                this._error(
+                    'discussionsurl2',
+                    'Discussions URL failed to decode.',
+                    {error}
+                );
             }
         }
         this.thread = res.shift();
@@ -114,14 +114,13 @@ class DiscussionsMessage extends Message {
     }
     /**
      * Extracts Discussions action type.
-     * @param {String} type Discussions action type
+     * @param {string} type Discussions action type
      * @private
      */
     _extractType(type) {
         const res = TYPE_REGEX.exec(type);
         if (res) {
-            this.platform = res[1];
-            this.dtype = res[2];
+            [, this.platform, this.dtype] = res;
         } else {
             this._error(
                 'discussionstype',
