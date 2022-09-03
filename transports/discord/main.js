@@ -23,11 +23,12 @@ class Discord extends Transport {
     constructor(config) {
         super(config);
         this._webhook = new WebhookClient({
-            allowedMentions: {
-                parse: ['users']
-            },
             id: config.id,
             token: config.token
+        }, {
+            allowedMentions: {
+                parse: ['users']
+            }
         });
     }
     /**

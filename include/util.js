@@ -9,6 +9,7 @@
  * Importing modules.
  */
 const net = require('net'),
+      {escapeMarkdown} = require('discord.js'),
       pkg = require('../package.json');
 
 /**
@@ -45,24 +46,32 @@ class Util {
         return url;
     }
     /**
-     * Makes Markdown safe to post through a webhook.
+     * Escapes Markdown used on Discord so it can be safely relayed as an edit
+     * summary/log reason.
+     *
+     * Does not escape mentions, because it may be useful to see them. Whether
+     * mentions should actually mention someone should be controlled through
+     * the `allowedMentions` field of `WebhookClientOptions` from discord.js.
      * @param {String} text Markdown to escape
      * @returns {String} Escaped parameter
      * @static
      */
     static escape(text) {
-        return text
-            // Escape links.
-            .replace(/(https?):\/\//g, '$1:/\u200B/')
-            // Escape mentions.
-            .replace(/@/g, '@\u200B')
-            // Escape invite links.
-            .replace(/discord\.gg/g, 'discord\u200B.\u200Bgg')
-            // Escapes certain Markdown constructs.
-            .replace(/_{1,2}([^_*]+)_{1,2}/g, '$1')
-            .replace(/\*{1,2}([^_*]+)\*{1,2}/g, '$1')
-            .replace(/\r?\n|\r/g, '')
-            .replace(/\\/g, '\\\\');
+        return escapeMarkdown(
+            text
+                // Escape links.
+                .replace(/(https?):\/\//g, '$1:/\u200B/')
+                // Escape invite links.
+                .replace(/discord\.gg/g, 'discord\u200B.\u200Bgg')
+                // Remove line breaks.
+                .replace(/\r?\n|\r/g, '')
+                // Escape Markdown escape sequences
+                .replace(/\\/g, '\\\\'),
+            {
+                inlineCode: false,
+                strikethrough: false
+            }
+        );
     }
     /**
      * Escapes a string from special regex characters.
