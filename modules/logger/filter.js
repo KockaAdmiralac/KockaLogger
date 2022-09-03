@@ -15,7 +15,9 @@ class Filter {
      */
     constructor(config) {
         if (typeof config === 'object' && config) {
-            const {type, transport, negation, namespaces, logs} = config;
+            const {
+                type, transport, negation, namespaces, logs, options
+            } = config;
             this._type = typeof type === 'string' ? type : 'all';
             this._transport = typeof transport === 'string' ?
                 transport :
@@ -26,6 +28,9 @@ class Filter {
             }
             if (logs instanceof Array) {
                 this._logFilter = logs;
+            }
+            if (typeof options === 'object') {
+                this._options = options;
             }
         } else {
             this._type = 'all';
@@ -110,6 +115,30 @@ class Filter {
         return message.type === 'log' &&
                this._logFilter &&
                this._logFilter.includes(message.log);
+    }
+    /**
+     * Filters activity by message fields.
+     *
+     * This filter works by specifying message field keys as keys to the
+     * `options` property, and possible message field values as values,
+     * either as single values or arrays of values (array of value as the)
+     * value in the `options` property means either of these values will be
+     * matched.
+     * @param {Message} message Message to be transported
+     * @returns {Boolean} If the message matches specified rules
+     */
+    _advanced(message) {
+        for (const [property, values] of Object.entries(this._options)) {
+            const isArray = Array.isArray(values);
+            const value = message[property];
+            const matchesIfArray = isArray && values.includes(value);
+            const matchesIfNotArray = !isArray && value === values;
+            const matches = matchesIfArray || matchesIfNotArray;
+            if (!matches) {
+                return false;
+            }
+        }
+        return true;
     }
 }
 
