@@ -22,10 +22,12 @@ class Discord extends Transport {
      */
     constructor(config) {
         super(config);
-        this._webhook = new WebhookClient(config.id, config.token, {
+        this._webhook = new WebhookClient({
             allowedMentions: {
                 parse: ['users']
-            }
+            },
+            id: config.id,
+            token: config.token
         });
     }
     /**
@@ -34,7 +36,7 @@ class Discord extends Transport {
      */
     async execute(message) {
         try {
-            await this._webhook.send(message.content, message);
+            await this._webhook.send(message);
         } catch (error) {
             this._logger.error('Discord transport error:', error);
         }

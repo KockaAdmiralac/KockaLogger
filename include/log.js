@@ -47,7 +47,10 @@ class Logger {
             );
         }
         if (typeof discord === 'object') {
-            this._webhook = new WebhookClient(discord.id, discord.token);
+            this._webhook = new WebhookClient({
+                id: discord.id,
+                token: discord.token
+            });
         }
         if (!this._console && !this._stream && !this._url) {
             throw new Error('No logging route specified!');
