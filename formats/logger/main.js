@@ -131,7 +131,8 @@ class Logger extends Format {
                     action = m.action === 'revision' ? 'revdel' : 'logdel';
                     return this._msg(action, ...wldu, m.target, m.reason);
                 }
-                return this._msg(m.action, ...wldu, escape(m.page), m.reason);
+                action = m.action === 'delete_redir' ? 'deleteredir' : m.action;
+                return this._msg(action, ...wldu, escape(m.page), m.reason);
             case 'move':
                 return this._msg(
                     m.action === 'move_redir' ? 'moveredir' : 'move',
@@ -245,10 +246,10 @@ class Logger extends Format {
                 'Undefined message key';
         }
         let mode = 0;
-            let temp = 0;
-            let result = '';
+        let temp = 0;
+        let result = '';
         const templates = [];
-              const tArgs = [];
+        const tArgs = [];
         for (let i = 0, l = string.length; i < l; ++i) {
             let char = string.charAt(i);
             if (mode === 1) {

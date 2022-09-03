@@ -10,6 +10,7 @@
     "moveprotect": "{{user|$1}} moved protection from $2 to {{link|$3}} {{summary|$4}}",
     "rights": "{{user|$1}} changed rights for {{user|$2}} from $3 to $4 {{summary|$5}}",
     "delete": "{{user|$1}} deleted $2 {{summary|$3}}",
+    "deleteredir": "{{user|$1}} deleted redirect $2 by overwriting {{summary|$3}}",
     "restore": "{{user|$1}} restored revisions on {{link|$2}} {{summary|$3}}",
     "revdel": "{{user|$1}} deleted revisions on {{link|$2}} {{summary|$3}}",
     "logdel": "{{user|$1}} has hidden a log event on {{link|$2}} {{summary|$3}}",
