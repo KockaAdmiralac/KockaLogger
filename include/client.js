@@ -40,7 +40,8 @@ const IGNORED_LOGS = [
     'cargo',
     'import',
     'merge',
-    'tournamentpurge'
+    'tournamentpurge',
+    'contentmodel'
 ];
 
 /**
