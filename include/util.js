@@ -72,13 +72,18 @@ class Util {
     }
     /**
      * Escapes a string from special regex characters.
+     *
+     * A dash `-` is not escaped, because needlessly escaped characters cause
+     * errors in Unicode mode and it is only useful when the escaped regex is
+     * about to be used in a character class, which is not the case in
+     * KockaLogger.
      * @param {string} text String to escape
      * @returns {string} String with special regex characters escaped
      * @static
      * @see https://stackoverflow.com/a/3561711
      */
     static escapeRegex(text) {
-        return text.replace(/[-/\\^$*+?.()|[\]{}]/ug, '\\$&');
+        return text.replace(/[/\\^$*+?.()|[\]{}]/ug, '\\$&');
     }
     /**
      * Encodes URL components MediaWiki-style.
