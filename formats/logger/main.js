@@ -208,6 +208,20 @@ class Logger extends Format {
      * @private
      */
     _handleDiscussions(m) {
+        const trimmedSnippet = m.snippet.trim().replace(P_REGEX, '$1');
+        if (m.hit) {
+            return this._msg(
+                'discussions-abuse-filter-hit',
+                m.wiki,
+                m.language,
+                m.domain,
+                m.user,
+                m.hit,
+                m.size,
+                m.category,
+                trimmedSnippet
+            );
+        }
         return this._msg(
             'discussions',
             m.wiki,
@@ -225,7 +239,7 @@ class Logger extends Format {
             m.reply,
             m.size,
             m.page || m.category,
-            m.snippet.trim().replace(P_REGEX, '$1')
+            trimmedSnippet
         );
     }
     /* eslint-disable max-statements */
@@ -377,6 +391,7 @@ class Logger extends Format {
                 return 'unknown_discussions_platform';
         }
     }
+    /* eslint-disable complexity */
     /**
      * Processes templates in i18n strings.
      * @param {string} wiki Related wiki for linking
@@ -451,11 +466,14 @@ class Logger extends Format {
             case 'flags':
                 return args[0] ? `[${args[0]}] ` : '';
             case 'board':
-                return this._msg(`${args[1]}-board`, wiki, lang, domain, escape(args[0]));
+                return this._msg(`${args[1]}-board`, ...wld, escape(args[0]));
+            case 'flink':
+                return this._wikiLink(args[0], ...wld, `Special:DiscussionsAbuseFilter/examine/log/${args[0]}`);
             default:
                 return '';
         }
     }
+    /* eslint-enable complexity */
     /**
      * Disposes resources used by the format so KockaLogger can cleanly exit.
      */

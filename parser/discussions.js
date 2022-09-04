@@ -10,10 +10,13 @@ const Message = require('./msg.js');
 const Client = require('../include/client.js');
 const {decode} = require('../include/util.js');
 
-const DISCUSSION_URL_REGEX = /^https?:\/\/([a-z0-9-.]+)\.(fandom\.com|gamepedia\.(?:com|io)|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:([a-z-]+)\/)?(?:d|f)\/p\/(\d{19,})(?:\/r\/(\d{19,}))?$/u;
-const ARTICLE_COMMENT_URL_REGEX = /^https?:\/\/([a-z0-9-.]+)\.(fandom\.com|gamepedia\.(?:com|io)|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:([a-z-]+)\/)?index\.php\?curid=(\d+)&commentId=(\d{19,})(?:&replyId=(\d{19,}))?$/u;
-const MESSAGE_WALL_URL_REGEX = /^https?:\/\/([a-z0-9-.]+)\.(fandom\.com|gamepedia\.(?:com|io)|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:([a-z-]+)\/)?wiki\/[^:]+:(.+)\?threadId=(\d{19,})(?:#(\d{19,}))?$/u;
-const TYPE_REGEX = /^(discussion|article-comment|message-wall)-(thread|post|reply|report)$/u;
+const URL_REGEXES = {
+    'abuse-filter': /https?:\/\/([a-z0-9-.]+)\.(fandom\.com|gamepedia\.(?:com|io)|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:([a-z-]+)\/)?wiki\/Special:DiscussionsAbuseFilter\/examine\/log\/(\d+)$/u,
+    'article-comment': /^https?:\/\/([a-z0-9-.]+)\.(fandom\.com|gamepedia\.(?:com|io)|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:([a-z-]+)\/)?index\.php\?curid=(\d+)&commentId=(\d{19,})(?:&replyId=(\d{19,}))?$/u,
+    'discussion': /^https?:\/\/([a-z0-9-.]+)\.(fandom\.com|gamepedia\.(?:com|io)|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:([a-z-]+)\/)?(?:d|f)\/p\/(\d{19,})(?:\/r\/(\d{19,}))?$/u,
+    'message-wall': /^https?:\/\/([a-z0-9-.]+)\.(fandom\.com|gamepedia\.(?:com|io)|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:([a-z-]+)\/)?wiki\/[^:]+:(.+)\?threadId=(\d{19,})(?:#(\d{19,}))?$/u
+};
+const TYPE_REGEX = /^(discussion|article-comment|message-wall|abuse-filter)-(thread|post|reply|report|hit)$/u;
 const ARTICLE_TITLE_EXPIRY = 3 * 24 * 60 * 60;
 
 /**
@@ -50,12 +53,15 @@ class DiscussionsMessage extends Message {
      * @param {string} json.snippet Snippet of the post
      * @param {string} json.size Size of the post
      * @param {string} json.category Category the post is in
+     * @param {string} json.userId ID of the user who took the action
      * @param {string} json.userName User who took the action
      * @param {string} json.action The taken action
      * @param {string} json.title Discussions post title
      * @private
      */
-    _extract({url, type, snippet, size, category, userName, action, title}) {
+    _extract({
+        url, type, snippet, size, category, userId, userName, action, title
+    }) {
         this.url = url;
         this.snippet = snippet;
         this.size = Number(size);
@@ -63,6 +69,9 @@ class DiscussionsMessage extends Message {
         this.user = userName;
         this.action = action;
         this.title = title;
+        if (userId) {
+            this.userId = Number(userId);
+        }
         this._extractType(type);
         this._extractURL(url);
     }
@@ -76,43 +85,46 @@ class DiscussionsMessage extends Message {
      * @private
      */
     _extractURL(url) {
-        let res = DISCUSSION_URL_REGEX.exec(url);
-        if (res) {
-            this.platform = 'discussion';
-        } else {
-            res = ARTICLE_COMMENT_URL_REGEX.exec(url);
+        let res = null;
+        for (const [platform, regex] of Object.entries(URL_REGEXES)) {
+            res = regex.exec(url);
             if (res) {
-                this.platform = 'article-comment';
-            } else {
-                res = MESSAGE_WALL_URL_REGEX.exec(url);
-                if (res) {
-                    this.platform = 'message-wall';
-                } else {
-                    this._error(
-                        'discussionsurl',
-                        'Discussions URL failed to parse.'
-                    );
-                    return;
-                }
+                this.platform = platform;
+                break;
             }
+        }
+        if (!res) {
+            this._error('discussionsurl', 'Discussions URL failed to parse.');
+            return;
         }
         res.shift();
         this.wiki = res.shift();
         this.domain = res.shift();
         this.language = res.shift() || 'en';
-        if (this.platform !== 'discussion') {
-            try {
-                this.page = decode(res.shift());
-            } catch (error) {
-                this._error(
-                    'discussionsurl2',
-                    'Discussions URL failed to decode.',
-                    {error}
-                );
-            }
+        switch (this.platform) {
+            case 'article-comment':
+            case 'message-wall':
+                try {
+                    this.page = decode(res.shift());
+                } catch (error) {
+                    this._error(
+                        'discussionsurl2',
+                        'Discussions URL failed to decode.',
+                        {error}
+                    );
+                }
+                // Falls through.
+            case 'discussion':
+                this.thread = res.shift();
+                this.reply = res.shift();
+                break;
+            case 'abuse-filter':
+                this.hit = Number(res.shift());
+                break;
+            default:
+                // Unknown platform, no special handling should be needed.
+                break;
         }
-        this.thread = res.shift();
-        this.reply = res.shift();
     }
     /**
      * Extracts Discussions action type.

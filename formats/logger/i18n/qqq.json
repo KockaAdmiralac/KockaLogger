@@ -10,6 +10,7 @@
     "moveprotect": "Appears when a page's protection is moved along with the page. $1: protection mover; $2: page being unprotected; $3: page being protected; $4: protection move summary",
     "rights": "Appears when a user's rights get changed. $1: user changing the rights; $2: user whose rights are being changed; $3: old rights; $4: new rights; $5: summary for the rights change",
     "delete": "Appears when a page is deleted. $1: user deleting the page; $2: page being deleted; $3: deletion summary",
+    "deleteredir": "Appears when a redirect is deleted by moving another page over it. $1: user deleting the redirect; $2: redirect being deleted; $3: deletion summary",
     "restore": "Appears when a page is undeleted. See delete for parameters.",
     "revdel": "Appears when revisions on a page get deleted with [RevisionDelete](https://mediawiki.org/wiki/Manual:RevisionDelete). See delete for parameters.",
     "logdel": "Appears when log events get hidden. $1: user hiding the log events; $2: log that the events are hidden from; $3: hiding summary",
@@ -35,5 +36,6 @@
     "discussion-board": "The 'posted on' part of the message when an event occurs in Discussions. $1: name of the Discussions board",
     "message-wall-board": "The 'posted on' part of the message when an event occurs on a message wall. $1: username of the user whose wall was posted on",
     "article-comment-board": "The 'posted on' part of the message when an event occurs in article or blog comments. $1: page name of the page that a comment was posted on",
-    "article-comment-comment": "Text on the link to a comment when an article comment has been posted."
+    "article-comment-comment": "Text on the link to a comment when an article comment has been posted.",
+    "discussions-abuse-filter-hit": "Appears when a Discussions abuse filter is hit. $1: user who hit the filter; $2: filter ID; $3: size in bytes; $4: board name where the filter hit (the `discussion` part afterwards is not to be modified); $5: short snippet from the post"
 }
