@@ -43,6 +43,8 @@ const IGNORED_LOGS = [
     'tournamentpurge',
     'contentmodel'
 ];
+const MONITORING_INTERVAL = 1 * 60 * 1000;
+const MONITORING_FAILED_INTERVAL = 5 * 60 * 1000;
 
 /**
  * IRC client class.
@@ -181,6 +183,15 @@ class Client {
             userName: username || nick
         });
         this._client.out.error = this._errorOverride.bind(this);
+        this._monitoring = {};
+        this._monitoringFailed = {};
+        for (const channel in channels) {
+            this._monitoring[channel] = Date.now();
+        }
+        this._monitoringInterval = setInterval(
+            this._checkChannels.bind(this),
+            MONITORING_INTERVAL
+        );
         for (const e of EVENTS) {
             this._client.on(e, this[`_${e.replace(
                 /-(\w)/u,
@@ -265,9 +276,14 @@ class Client {
      * @private
      */
     async _message(user, channel, message) {
+        const {channels, users} = this._config.client;
         for (const i in this._config.client.channels) {
-            const {channels, users} = this._config.client;
             if (user.startsWith(users[i]) && channel === channels[i]) {
+                this._monitoring[i] = Date.now();
+                if (this._monitoringFailed[i]) {
+                    this._logger.info('Channel', i, 'recovered');
+                    this._monitoringFailed[i] = false;
+                }
                 const msg = this[`_${i}Message`](message);
                 if (msg && typeof msg === 'object') {
                     if (msg.error) {
@@ -508,6 +524,26 @@ class Client {
         }
     }
     /**
+     * Checks whether all IRC channels have had recent activity and reports
+     * which ones have not.
+     * @private
+     */
+    _checkChannels() {
+        if (!this._monitoring) {
+            return;
+        }
+        const now = Date.now();
+        for (const channel in this._monitoring) {
+            if (this._monitoringFailed[channel]) {
+                continue;
+            }
+            if (now - this._monitoring[channel] > MONITORING_FAILED_INTERVAL) {
+                this._logger.error('ALERT: No recent messages in', channel);
+                this._monitoringFailed[channel] = true;
+            }
+        }
+    }
+    /**
      * Cleans up the resources after a kill has been requested.
      * @private
      */
@@ -525,6 +561,9 @@ class Client {
         // Quit client's logger.
         this._logger.info('Shutting down by user request...');
         this._logger.close();
+        if (this._monitoringInterval) {
+            clearInterval(this._monitoringInterval);
+        }
         // Quit IRC.
         if (
             typeof this._client === 'object' &&
