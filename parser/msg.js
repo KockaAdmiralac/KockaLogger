@@ -38,13 +38,11 @@ class Message {
     }
     /**
      * Starts fetching more details about the message.
-     * @param {Client} client Client instance to get external clients from
-     * @param {string[]} properties Details to fetch
-     * @param {string[]} _interested Modules interested in the message
+     * @param {Client} _client Client instance to get external clients from
+     * @param {string[]} _properties Details to fetch
      */
-    fetch(client, properties, _interested) {
-        this._client = client;
-        this._properties = properties;
+    fetch(_client, _properties) {
+        // To be implemented by subclasses if needed
     }
     /**
      * Cleans up after a failed fetch.

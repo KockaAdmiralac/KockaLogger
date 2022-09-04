@@ -7,12 +7,14 @@
 
 const Parser = require('./parser.js');
 const Message = require('./msg.js');
+const Client = require('../include/client.js');
 const {decode} = require('../include/util.js');
 
 const DISCUSSION_URL_REGEX = /^https?:\/\/([a-z0-9-.]+)\.(fandom\.com|gamepedia\.(?:com|io)|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:([a-z-]+)\/)?(?:d|f)\/p\/(\d{19,})(?:\/r\/(\d{19,}))?$/u;
-const ARTICLE_COMMENT_URL_REGEX = /^https?:\/\/([a-z0-9-.]+)\.(fandom\.com|gamepedia\.(?:com|io)|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:([a-z-]+)\/)?wiki\/([^?]+)\?commentId=(\d{19,})(?:&replyId=(\d{19,}))?$/u;
+const ARTICLE_COMMENT_URL_REGEX = /^https?:\/\/([a-z0-9-.]+)\.(fandom\.com|gamepedia\.(?:com|io)|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:([a-z-]+)\/)?index\.php\?curid=(\d+)&commentId=(\d{19,})(?:&replyId=(\d{19,}))?$/u;
 const MESSAGE_WALL_URL_REGEX = /^https?:\/\/([a-z0-9-.]+)\.(fandom\.com|gamepedia\.(?:com|io)|wikia\.(?:com|org)|(?:wikia|fandom)-dev\.(?:com|us|pl))\/(?:([a-z-]+)\/)?wiki\/[^:]+:(.+)\?threadId=(\d{19,})(?:#(\d{19,}))?$/u;
 const TYPE_REGEX = /^(discussion|article-comment|message-wall)-(thread|post|reply|report)$/u;
+const ARTICLE_TITLE_EXPIRY = 3 * 24 * 60 * 60;
 
 /**
  * Parses messages representing Discussions actions.
@@ -127,6 +129,36 @@ class DiscussionsMessage extends Message {
                 'Discussions action type failed to parse.'
             );
         }
+    }
+    /**
+     * Starts fetching more details about the message.
+     * @param {Client} client Client instance to get external clients from
+     * @param {string[]} properties Details to fetch
+     */
+    async fetch(client, properties) {
+        const {wiki, language, domain, platform} = this;
+        if (!properties.includes('title') || platform !== 'article-comment') {
+            return;
+        }
+        const key = `title:${language}:${wiki}:${domain}:${this.page}`;
+        const title = await client.cache.get(key);
+        if (title) {
+            this.page = title;
+            return;
+        }
+        const response = await client.io.query(wiki, language, domain, {
+            formatversion: 2,
+            pageids: this.page
+        });
+        const {query: q} = response;
+        if (!q || !q.pages || !q.pages[0] || q.pages[0].missing) {
+            this._error('commenttitle', 'Failed to fetch comment title.', {
+                response
+            });
+            return;
+        }
+        this.page = q.pages[0].title;
+        await client.cache.set(key, this.page, 'EX', ARTICLE_TITLE_EXPIRY);
     }
 }
 

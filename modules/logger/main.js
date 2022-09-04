@@ -103,13 +103,15 @@ class Logger extends Module {
      * @returns {boolean} Whether the module is interested in the message
      */
     interested(message) {
-        const indexes = this._wikiMap.get(
-            `${message.language}.${message.wiki}.${message.domain}`
-        );
-        if (!(indexes instanceof Array) || indexes.length === 0) {
+        const {type, language, wiki, domain, platform, flags} = message;
+        const indices = this._wikiMap.get(`${language}.${wiki}.${domain}`);
+        if (!(indices instanceof Array) || indices.length === 0) {
             return false;
         }
-        return message.type !== 'edit' || !message.flags.includes('B');
+        if (type === 'discussions' && platform === 'article-comment') {
+            return 'title';
+        }
+        return type !== 'edit' || !flags.includes('B');
     }
     /**
      * Handles messages.
