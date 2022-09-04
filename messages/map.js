@@ -130,7 +130,7 @@ const MAPPING = {
      * @returns {string} Regex'd log entry
      */
     'protectedarticle': e => `^${colorLink(escapeRegex(e))
-        .replace('\\$1', '([^\x03]+)')
+        .replace('\\$1', '([^\x03[]+)')
         // eslint-disable-next-line max-len
         .replace('\\]\\]', '((?: ?(?:\\u200E|\\u200F)\\[(?:edit|move|upload|create|comment|everything)=\\w+\\] \\([^\\u200E\\u200F]+\\)){1,3})\\]\\]')
         // This is weird UCP behavior.

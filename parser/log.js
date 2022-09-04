@@ -60,7 +60,7 @@ const MESSAGE_MAP = {
         upload: 'uploadedimage'
     }
 };
-const PROTECTSITE_REGEX = / (\d+ (?:second|minute|hour|day|week|month|year)s?)?(?:\s?(?::|：)\s?(.*))?$/u;
+const PROTECTSITE_REGEX = / \]\]": (\d+ (?:second|minute|hour|day|week|month|year)s?)?(?:\s?(?::|：)\s?(.*))?$/u;
 
 /**
  * Parses log action related messages.
@@ -183,7 +183,7 @@ class LogMessage extends RCMessage {
      * @private
      */
     _protectSiteReplace(_, duration, reason) {
-        const base = ` \u200E[everything=restricted] (${duration})`;
+        const base = ` \u200E[everything=restricted] (${duration})]]"`;
         if (reason) {
             return `${base}: ${reason.replace(`${duration}: `, '').trim()}`;
         }
@@ -258,26 +258,20 @@ class LogMessage extends RCMessage {
      * @private
      */
     _protect(res) {
-        const pageWithLevels = res.shift();
-        this.page = pageWithLevels.replace(/ \u200E.*$/ug, '');
+        this.page = res.shift().trim();
         if (this.action === 'move_prot') {
             this.target = res.shift();
         } else if (this.action !== 'unprotect') {
             this.level = [];
-            const level = pageWithLevels + res.shift();
-            const regex = /\u200E\[(edit|move|upload|create|comment|everything)=(\w+)\] \(([^\u200E]+)\)+/ug;
-            let res2 = null;
-            do {
-                res2 = regex.exec(level);
-                if (res2) {
-                    regex.lastIndex -= 2;
-                    this.level.push({
-                        expiry: res2[3],
-                        feature: res2[1],
-                        level: res2[2]
-                    });
-                }
-            } while (res2);
+            const levels = res.shift();
+            const regex = /\u200E\[(edit|move|upload|create|comment|everything)=(\w+)\] \(([^\u200E]+)\)/ug;
+            for (const [, feature, level, expiry] of levels.matchAll(regex)) {
+                this.level.push({
+                    expiry,
+                    feature,
+                    level
+                });
+            }
         }
         this.reason = res.shift();
     }
