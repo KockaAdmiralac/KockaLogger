@@ -14,6 +14,9 @@ Thank you for your contributions, everybody!
     - Bugfixes against `@mentions` and invite links on Discord **[WAL]**
 - [Nozomi](https://community.fandom.com/wiki/User:TheNozomi) — Notifications transport **[WAL]**
 - [Sophiedp](https://dev.fandom.com/wiki/User:Sophiedp) — Bugfix for a deprecated NPM feature and HTTPS links **[WAL]**
+- [Noreplyz](https://community.fandom.com/wiki/User:Noreplyz)
+    - [Fix for obtaining the wiki ID on UCP wikis](https://github.com/KockaAdmiralac/KockaLogger/pull/40)
+    - [Fix for protect logs after the format changed](https://github.com/KockaAdmiralac/KockaLogger/pull/51)
 
 ## Translation
 - [Unai Mengual](https://unai01.github.io) — Spanish translation **[WAL]**
@@ -26,6 +29,7 @@ Thank you for your contributions, everybody!
 - [Lady Furude](https://dev.fandom.com/wiki/User:Lady_Furude) — [Russian translation](https://github.com/KockaAdmiralac/KockaLogger/pull/1)
 - [Dorumin](https://dev.fandom.com/wiki/User:Dorumin) — [Spanish translation and fixes](https://github.com/KockaAdmiralac/KockaLogger/pull/3)
 - [Tokina8937](https://dev.fandom.com/wiki/User:Tokina8937) — [French translation](https://github.com/KockaAdmiralac/KockaLogger/pull/4)
-- [East6](https://starwars.fandom.com/tr/wiki/User:East6) and [BaRaN6161TURK](https://dev.fandom.com/wiki/User:BaRaN6161TURK) — [Turkish](https://github.com/KockaAdmiralac/KockaLogger/pull/34) [translation](https://github.com/KockaAdmiralac/KockaLogger/pull/33)
-- [ThisIsACreeper0101](https://dev.fandom.com/wiki/User:ThisIsACreeper0101) — [Hindi and Bengali translation](https://github.com/KockaAdmiralac/KockaLogger/pull/38)
-- [Miss Toki](https://dev.fandom.com/wiki/User:TokihikoH11) — [French translation fixes](https://github.com/KockaAdmiralac/KockaLogger/pull/48)
+- [East6](https://starwars.fandom.com/tr/wiki/User:East6) and [BaRaN6161TURK](https://dev.fandom.com/wiki/User:BaRaN6161TURK) — [Turkish](https://github.com/KockaAdmiralac/KockaLogger/pull/34) [translation](https://github.com/KockaAdmiralac/KockaLogger/pull/33) ([2](https://github.com/KockaAdmiralac/KockaLogger/pull/37))
+- [Saurmandal](https://dev.fandom.com/wiki/User:Saurmandal) — [Hindi and Bengali translation](https://github.com/KockaAdmiralac/KockaLogger/pull/38)
+- [Miss Toki](https://dev.fandom.com/wiki/User:Miss_Toki) — [French translation fixes](https://github.com/KockaAdmiralac/KockaLogger/pull/48)
+- [Magiczocker](https://community.fandom.com/wiki/User:Magiczocker) — [German translation fixes](https://github.com/KockaAdmiralac/KockaLogger/pull/52)
