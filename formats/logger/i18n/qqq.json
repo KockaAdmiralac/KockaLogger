@@ -37,5 +37,5 @@
     "message-wall-board": "The 'posted on' part of the message when an event occurs on a message wall. $1: username of the user whose wall was posted on",
     "article-comment-board": "The 'posted on' part of the message when an event occurs in article or blog comments. $1: page name of the page that a comment was posted on",
     "article-comment-comment": "Text on the link to a comment when an article comment has been posted.",
-    "discussions-abuse-filter-hit": "Appears when a Discussions abuse filter is hit. $1: user who hit the filter; $2: filter ID; $3: size in bytes; $4: board name where the filter hit (the `discussion` part afterwards is not to be modified); $5: short snippet from the post"
+    "discussions-abuse-filter-hit": "Appears when a Discussions abuse filter is hit. $1: user who hit the filter; $2: hit ID; $3: size in bytes; $4: board name where the filter hit (the `discussion` part afterwards is not to be modified); $5: short snippet from the post"
 }

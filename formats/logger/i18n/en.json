@@ -37,5 +37,5 @@
     "message-wall-board": "on $1's wall",
     "article-comment-board": "on $1",
     "article-comment-comment": "a comment",
-    "discussions-abuse-filter-hit": "{{user|$1}} hit filter {{flink|$2}} ($3) {{board|$4|discussion}} {{summary|$5}}"
+    "discussions-abuse-filter-hit": "{{user|$1}} created a filter hit {{flink|$2}} ($3) {{board|$4|discussion}} {{summary|$5}}"
 }
