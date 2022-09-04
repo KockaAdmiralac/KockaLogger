@@ -162,7 +162,7 @@ class Client {
     async run(data, loader) {
         this._caches = data;
         this._loader = loader;
-        this._parser = new Parser(this, data);
+        this._parser = new Parser(data);
         this._logger.info('Setting up modules...');
         for (const mod in this._modules) {
             await this._modules[mod].setup(data);

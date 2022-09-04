@@ -5,7 +5,6 @@
  */
 'use strict';
 
-const Client = require('../include/client.js');
 const DiscussionsMessage = require('./discussions.js');
 const EditMessage = require('./edit.js');
 const ErrorMessage = require('./error.js');
@@ -24,11 +23,9 @@ const LOG_REGEX = /^\x0314\[\[\x0307[^:]+:Log\/([^\x03]+)\x0314\]\]\x034 ([^\x03
 class Parser {
     /**
      * Class constructor.
-     * @param {Client} client Client instance
      * @param {object} data Loader data
      */
-    constructor(client, data) {
-        this._client = client;
+    constructor(data) {
         for (const key in data) {
             this[`_${key}`] = data[key];
         }
