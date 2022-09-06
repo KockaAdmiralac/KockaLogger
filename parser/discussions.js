@@ -105,7 +105,7 @@ class DiscussionsMessage extends Message {
             case 'article-comment':
             case 'message-wall':
                 try {
-                    this.page = decode(res.shift());
+                    this.page = decode(this.#fixDiscussionsURL(res.shift()));
                 } catch (error) {
                     this._error(
                         'discussionsurl2',
@@ -125,6 +125,18 @@ class DiscussionsMessage extends Message {
                 // Unknown platform, no special handling should be needed.
                 break;
         }
+    }
+    /**
+     * Fixes Fandom's URL bug where they don't properly escape percent-signs in
+     * URLs, so they cause URL decoding issues.
+     * @param {string} url Discussions URL part to fix
+     * @returns {string} Fixed Discussions URL part
+     */
+    #fixDiscussionsURL(url) {
+        return url.replace(
+            /%$|%(.)$|%([^0-7][^0-9a-fA-F])/ug,
+            (_, m1, m2) => `%25${m2 || m1 || ''}`
+        );
     }
     /**
      * Extracts Discussions action type.
