@@ -61,6 +61,21 @@ const MESSAGE_MAP = {
     }
 };
 const PROTECTSITE_REGEX = / \]\]": (\d+ (?:second|minute|hour|day|week|month|year)s?)?(?:\s?(?::|：)\s?(.*))?$/u;
+const IGNORED_LOGS = [
+    'cargo',
+    'contentmodel',
+    'curseprofile',
+    'import',
+    'review',
+    'ro-tournament',
+    'ro-news',
+    'thanks',
+    'managetags',
+    'merge',
+    'pagetranslation',
+    'tag',
+    'tournamentpurge'
+];
 
 /**
  * Parses log action related messages.
@@ -102,10 +117,14 @@ class LogMessage extends RCMessage {
             // We've encountered an unexpected action.
             this.summary = this._summary;
             delete this._summary;
-            this._error(
-                'logactionunknown',
-                'Failed to parse log due to unknown log action.'
-            );
+            if (IGNORED_LOGS.includes(this.log)) {
+                this._error('ignore-unknownlog', 'Unknown log type (ignored).');
+            } else {
+                this._error(
+                    'logactionunknown',
+                    'Failed to parse log due to unknown log action.'
+                );
+            }
         }
     }
     /**

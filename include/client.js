@@ -31,18 +31,6 @@ const HANDLED_COMMANDS = [
 ];
 const FETCH_MAX_RETRIES = 5;
 const FETCH_DELAY = 10000;
-const IGNORED_LOGS = [
-    'ro-tournament',
-    'ro-news',
-    'curseprofile',
-    'review',
-    'thanks',
-    'cargo',
-    'import',
-    'merge',
-    'tournamentpurge',
-    'contentmodel'
-];
 const MONITORING_INTERVAL = 1 * 60 * 1000;
 const MONITORING_FAILED_INTERVAL = 5 * 60 * 1000;
 
@@ -324,9 +312,6 @@ class Client {
                 }
             }
             this._overflow = '';
-        }
-        if (msg && msg.error && IGNORED_LOGS.includes(msg.log)) {
-            return null;
         }
         return msg;
     }
