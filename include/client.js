@@ -453,6 +453,10 @@ class Client {
             );
             return;
         }
+        if (message.error.startsWith('ignore-')) {
+            // Some faulty messages we can just ignore.
+            return;
+        }
         const {language, wiki, domain} = message;
         const key = `${language}:${wiki}:${domain}`;
         if (

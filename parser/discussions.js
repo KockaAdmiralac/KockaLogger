@@ -85,6 +85,10 @@ class DiscussionsMessage extends Message {
      * @private
      */
     _extractURL(url) {
+        if (!url) {
+            this._error('ignore-nourl', 'Discussions message with no URL.');
+            return;
+        }
         let res = null;
         for (const [platform, regex] of Object.entries(URL_REGEXES)) {
             res = regex.exec(url);
