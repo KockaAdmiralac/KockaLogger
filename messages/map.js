@@ -61,30 +61,6 @@ const MAPPING = {
         .replace('\\$1', '[^:]+:(.+)')
     }`,
     /**
-     * Transforms the chat ban log entry
-     * @param {string} e Log entry
-     * @returns {string} Regex'd log entry
-     */
-    'chat-chatbanadd-log-entry': e => `^${colorLink(escapeRegex(e))
-        .replace(
-            '\\$1',
-            '\\[\\[(?:\x0302)?[^:]+:([^\\]\x03]+)(?:\x0310)?\\]\\]'
-        )
-        .replace('\\$2', '([^:]*)')
-        .replace('\\$3', '(.*)')
-    }${REASON}$`,
-    /**
-     * Transforms the chat unban log entry
-     * @param {string} e Log entry
-     * @returns {string} Regex'd log entry
-     */
-    'chat-chatbanremove-log-entry': e => `^${colorLink(escapeRegex(e))
-        .replace(
-            '\\$1',
-            '\\[\\[(?:\x0302)?[^:]+:([^\\]\x03]+)(?:\x0310)?\\]\\]'
-        )
-    }${REASON}$`,
-    /**
      * Transforms the delete log entry
      * @param {string} e Log entry
      * @returns {string} Regex'd log entry
@@ -182,8 +158,6 @@ MAPPING.modifiedarticleprotection = MAPPING.protectedarticle;
 MAPPING.undeletedarticle = MAPPING.deletedarticle;
 MAPPING.overwroteimage = MAPPING.uploadedimage;
 MAPPING['1movedto2_redir'] = MAPPING['1movedto2'];
-MAPPING['chat-chatbanchange-log-entry'] =
-MAPPING['chat-chatbanadd-log-entry'];
 MAPPING['logentry-delete-event'] = MAPPING['logentry-delete-revision'];
 MAPPING['logentry-delete-delete_redir'] = MAPPING['logentry-delete-revision'];
 
