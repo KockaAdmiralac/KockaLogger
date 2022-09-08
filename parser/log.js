@@ -72,6 +72,7 @@ const IGNORED_LOGS = [
     'thanks',
     'managetags',
     'merge',
+    'oredict',
     'pagetranslation',
     'tag',
     'tournamentpurge'
