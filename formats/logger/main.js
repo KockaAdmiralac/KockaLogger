@@ -100,6 +100,8 @@ class Logger extends Format {
      * @param {Message} m Message to format
      * @returns {object} Formatted message
      * @private
+     * @todo This function is horrible... ESLint either complains about its line
+     * count or its complexity
      */
     _handleLog(m) {
         const wldu = [m.wiki, m.language, m.domain, m.user];
@@ -107,42 +109,33 @@ class Logger extends Format {
         let temp2 = null;
         let temp3 = null;
         let action = '';
+        const {action: a, page: p, target: t, reason: r} = m;
         switch (m.log) {
             case 'block': switch (m.action) {
                 case 'block':
                 case 'reblock':
-                    return this._msg(
-                        m.action,
-                        ...wldu,
-                        m.target,
-                        m.expiry,
-                        m.flags.join(', '),
-                        m.reason
-                    );
+                    temp = m.flags.join(', ');
+                    return this._msg(a, ...wldu, t, m.expiry, temp, r);
                 case 'unblock':
-                    return this._msg('unblock', ...wldu, m.target, m.reason);
+                    return this._msg('unblock', ...wldu, t, r);
                 default:
                     return '';
             }
             case 'newusers':
                 return this._msg('newusers', ...wldu);
             case 'delete':
-                if (m.action === 'revision' || m.action === 'event') {
-                    action = m.action === 'revision' ? 'revdel' : 'logdel';
-                    return this._msg(action, ...wldu, m.target, m.reason);
+                if (a === 'revision' || a === 'event') {
+                    action = a === 'revision' ? 'revdel' : 'logdel';
+                    return this._msg(action, ...wldu, t, r, m.num, m.actions);
                 }
-                action = m.action === 'delete_redir' ? 'deleteredir' : m.action;
-                return this._msg(action, ...wldu, escape(m.page), m.reason);
+                action = a === 'delete_redir' ? 'deleteredir' : a;
+                return this._msg(action, ...wldu, escape(m.page), r);
             case 'move':
-                return this._msg(
-                    m.action === 'move_redir' ? 'moveredir' : 'move',
-                    ...wldu,
-                    escape(m.page),
-                    m.target,
-                    (m.reason || '')
-                        .replace('[[\x0302', '[[')
-                        .replace('\x0310]]', ']]')
-                );
+                action = a === 'move_redir' ? 'moveredir' : 'move';
+                temp = (r || '')
+                    .replace('[[\x0302', '[[')
+                    .replace('\x0310]]', ']]');
+                return this._msg(action, ...wldu, escape(m.page), t, temp);
             case 'rights':
                 temp3 = this._transportType === 'Slack' ? '*' : '**';
                 temp = m.oldgroups.map(function(group) {
@@ -157,42 +150,29 @@ class Logger extends Format {
                     }
                     return `${temp3}${group}${temp3}`;
                 }).join(', ') || this._i18n['rights-none'];
-                return this._msg(
-                    'rights',
-                    ...wldu,
-                    m.target,
-                    temp,
-                    temp2,
-                    m.reason
-                );
+                return this._msg('rights', ...wldu, t, temp, temp2, r);
             case 'upload':
                 return this._msg(
-                    m.action === 'overwrite' ? 'reupload' : 'upload',
+                    a === 'overwrite' ? 'reupload' : 'upload',
                     ...wldu,
                     `File:${m.file}`,
                     m.file,
-                    m.reason
+                    r
                 );
             case 'protect':
-                if (m.action === 'unprotect') {
-                    return this._msg('unprotect', ...wldu, m.page, m.reason);
-                } else if (m.action === 'move_prot') {
-                    return this._msg(
-                        'moveprotect',
-                        ...wldu,
-                        m.page,
-                        m.target,
-                        m.reason
-                    );
+                if (a === 'unprotect') {
+                    return this._msg('unprotect', ...wldu, m.page, r);
+                } else if (a === 'move_prot') {
+                    return this._msg('moveprotect', ...wldu, p, t, r);
                 }
                 return this._msg(
-                    m.action === 'modify' ? 'reprotect' : 'protect',
+                    a === 'modify' ? 'reprotect' : 'protect',
                     ...wldu,
                     m.page,
                     m.level
                         .map(lv => `[${lv.feature}=${lv.level}] (${lv.expiry})`)
                         .join(' '),
-                    m.reason
+                    r
                 );
             case 'abusefilter':
                 return this._msg('abusefilter', ...wldu, m.id, m.diff);

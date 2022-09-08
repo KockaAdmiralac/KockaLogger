@@ -31,9 +31,9 @@ const MESSAGE_MAP = {
         delete_redir: 'logentry-delete-delete_redir',
         delete_redir2: 'logentry-delete-delete_redir',
         /* eslint-enable camelcase */
-        event: 'logentry-delete-event-legacy',
+        event: 'logentry-delete-event',
         restore: 'undeletedarticle',
-        revision: 'logentry-delete-revision-legacy'
+        revision: 'logentry-delete-revision'
     },
     move: {
         move: '1movedto2',
@@ -250,7 +250,14 @@ class LogMessage extends RCMessage {
      */
     _delete(res) {
         if (this.action === 'revision' || this.action === 'event') {
-            [, , this.target, this.reason] = res;
+            this.num = 1;
+            while (res.length > 3) {
+                const num = res.shift();
+                if (num) {
+                    this.num = Number(num);
+                }
+            }
+            [this.target, this.actions, this.reason] = res;
         } else {
             [this.page, this.reason] = res;
         }

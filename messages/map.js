@@ -98,9 +98,15 @@ const MAPPING = {
      * @param {string} e Log entry
      * @returns {string} Regex'd log entry
      */
-    'logentry-delete-revision-legacy': e => `^${colorLink(escapeRegex(e))
+    'logentry-delete-revision': e => `^${colorLink(escapeRegex(e))
         .replace('\\$1', '.+')
         .replace('\\$3', '\\[\\[\x0302([^\x03]+)\x0310\\]\\]')
+        .replace('\\$4', '([^:：]+)')
+        .replace(
+            /\\\{\\\{PLURAL\s*:\s*\\\$5\\\|([^}]+)\\\}\\\}/ui,
+            (_, match1) => `(?:${match1.replaceAll('\\|', '|')})`
+        )
+        .replaceAll('\\$5', '(\\d+)')
     }(?:${REASON})?$`,
     /**
      * Transforms the log entry for moving protection
@@ -178,9 +184,7 @@ MAPPING.overwroteimage = MAPPING.uploadedimage;
 MAPPING['1movedto2_redir'] = MAPPING['1movedto2'];
 MAPPING['chat-chatbanchange-log-entry'] =
 MAPPING['chat-chatbanadd-log-entry'];
-MAPPING['logentry-delete-event-legacy'] =
-MAPPING['logentry-delete-revision-legacy'];
-MAPPING['logentry-delete-delete_redir'] =
-MAPPING['logentry-delete-revision-legacy'];
+MAPPING['logentry-delete-event'] = MAPPING['logentry-delete-revision'];
+MAPPING['logentry-delete-delete_redir'] = MAPPING['logentry-delete-revision'];
 
 module.exports = MAPPING;
