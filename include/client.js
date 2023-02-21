@@ -60,7 +60,6 @@ class Client {
      * @private
      */
     _initLogger(config, discord) {
-        Logger.setup(config, this._debug, this._io);
         this._logger = new Logger({
             discord,
             file: true,

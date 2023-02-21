@@ -8,6 +8,8 @@
 
 const process = require('process');
 const Client = require('./include/client.js');
+const IO = require('./include/io.js');
+const Logger = require('./include/log.js');
 const Loader = require('./messages/main.js');
 
 const optionCache = {};
@@ -46,31 +48,38 @@ try {
     exit(1);
 }
 
-const fetch = option('fetch');
-const debug = option('debug');
-const client = new Client(config, {debug});
-const loader = new Loader(config, {
-    debug,
-    fetch
-});
+let client = null;
+let loader = null;
 
 /**
  * Stop KockaLogger.
  */
 async function kill() {
-    await loader.kill();
-    await client.kill();
+    if (loader) {
+        await loader.kill();
+    }
+    if (client) {
+        await client.kill();
+    }
 }
 
 /**
  * Run KockaLogger.
  */
 async function main() {
+    const fetch = option('fetch');
+    const debug = option('debug');
+    Logger.setup(config, debug, new IO());
+    loader = new Loader(config, {
+        debug,
+        fetch
+    });
     const caches = await loader.run();
     if (fetch) {
         await kill();
         return;
     }
+    client = new Client(config, {debug});
     await client.run(caches, loader);
 }
 
