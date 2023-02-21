@@ -24,7 +24,7 @@ class DiscussionsFormat extends Format {
     /**
      * Main class method.
      * @param {Message} msg Message to format
-     * @returns {object} Formatted embed
+     * @returns {object|null} Formatted embed, if possible to format
      */
     execute(msg) {
         if (
@@ -32,7 +32,7 @@ class DiscussionsFormat extends Format {
             msg.platform !== 'discussion' ||
             this._transport.constructor.name !== 'Discord'
         ) {
-            return;
+            return null;
         }
         return {
             embeds: [

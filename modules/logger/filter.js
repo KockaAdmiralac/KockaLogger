@@ -47,13 +47,15 @@ class Filter {
     /**
      * Filters a message.
      * @param {Message} message Message to filter
-     * @returns {string} The transport name for the message
+     * @returns {string|false} The transport name for the message, or false if
+     * the message was filtered out
      */
     execute(message) {
         try {
             if (this._func(message) !== this._negation) {
                 return this._transport;
             }
+            return false;
         } catch (_error) {
             // TODO: Log failure
             return false;

@@ -89,7 +89,7 @@ class Wiki {
     /**
      * Initializes a single transport.
      * @param {object} config Transport configuration
-     * @returns {Transport?} Initialized transport on success
+     * @returns {Transport|null} Initialized transport on success, null on error
      * @private
      */
     _initTransport(config) {
@@ -99,6 +99,7 @@ class Wiki {
             return new OurTransport(c);
         } catch (error) {
             this._logger.error('Error initializing transport', error);
+            return null;
         }
     }
     /**
@@ -133,7 +134,7 @@ class Wiki {
      * Initializes a single format,
      * @param {object} config Format configuration
      * @param {Transport} transport Transport the format is for
-     * @returns {Format?} Initialized format or nothing on failure
+     * @returns {Format|null} Initialized format on success, null on error
      * @private
      */
     _initFormat(config, transport) {
@@ -146,6 +147,7 @@ class Wiki {
             return new OurFormat(c, transport);
         } catch (e) {
             this._logger.error('Error initializing format', e);
+            return null;
         }
     }
     /**
@@ -230,11 +232,11 @@ class Wiki {
     /**
      * Passes a message through filters.
      * @param {Message} message Message to filter
-     * @returns {string} Transport to use, if the message should be transported
+     * @returns {string|null} Transport to use, if transport is needed
      */
     _filterMessage(message) {
         if (this._bots.includes(message.user)) {
-            return;
+            return null;
         }
         for (let i = 0, l = this._filters.length; i < l; ++i) {
             const filter = this._filters[i];
@@ -243,6 +245,7 @@ class Wiki {
                 return result;
             }
         }
+        return null;
     }
     /**
      * Identifies the namespace an event happened in.

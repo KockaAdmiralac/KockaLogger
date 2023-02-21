@@ -232,18 +232,18 @@ class LogMessage extends RCMessage {
     }
     /**
      * Handles abuse filter summary extraction.
-     * @returns {boolean?} False if summary failed to parse
+     * @returns {boolean} False if summary failed to parse
      * @private
      */
     _abusefilter() {
         const res = AF_REGEX.exec(this._summary);
-        if (res) {
-            this.id = Number(res[1]);
-            this.diff = Number(res[2]);
-        } else {
+        if (!res) {
             this._error('afparseerr', 'Failed to parse AbuseFilter summary.');
             return false;
         }
+        this.id = Number(res[1]);
+        this.diff = Number(res[2]);
+        return true;
     }
     /**
      * Handles block summary extraction.

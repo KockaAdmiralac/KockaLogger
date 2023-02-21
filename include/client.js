@@ -286,7 +286,8 @@ class Client {
     /**
      * Handles messages in the RC channel.
      * @param {string} message Message to handle
-     * @returns {Message} Parsed message object
+     * @returns {Message|null} Parsed message object, unless we're dealing with
+     * an overflow
      * @private
      */
     _rcMessage(message) {
@@ -317,7 +318,8 @@ class Client {
     /**
      * Handles messages in the Discussions channel.
      * @param {string} message Message to handle
-     * @returns {Message} Parsed message object
+     * @returns {Message|null} Parsed message object, unless we're dealing with
+     * an overflow
      * @private
      */
     _discussionsMessage(message) {
@@ -327,18 +329,22 @@ class Client {
             return this._parser.parse(message, 'discussions');
         } else if (start) {
             this._dOverflow = message;
+            return null;
         } else if (end && this._dOverflow) {
             const overflow = this._dOverflow;
             this._dOverflow = '';
             return this._parser.parse(`${overflow}${message}`, 'discussions');
         } else if (this._dOverflow) {
             this._dOverflow = `${this._dOverflow}${message}`;
+            return null;
         }
+        return null;
     }
     /**
      * Handles messages in the new users channel.
      * @param {string} message Message to handle
-     * @returns {Message} Parsed message object
+     * @returns {Message|null} Parsed message object, unless the message
+     * overflowed
      * @private
      */
     _newusersMessage(message) {
@@ -346,6 +352,7 @@ class Client {
             return this._parser.parse(message, 'newusers');
         }
         this._logger.error('Newusers message overflowed?', message);
+        return null;
     }
     /**
      * Dispatches the message to modules.
