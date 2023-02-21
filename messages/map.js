@@ -70,7 +70,12 @@ const MAPPING = {
         '(?:\\[\\[)?(?:\x0302)?([^\x03\\]]+)(?:\x0310)?(?:\\]\\])?'
     )}(?:${REASON})?$`,
     /**
-     * Transforms the log entry for revision deletion
+     * Transforms the log entry for revision (and log entry) deletion.
+     *
+     * This entry is specific because it is the only entry where the PLURAL
+     * magic word creates a parsing issue, so we specially handle it here.
+     * In addition to that, Russian log entries also pass arguments to the
+     * PLURAL magic word in a weird way (with `1=`).
      * @param {string} e Log entry
      * @returns {string} Regex'd log entry
      */
@@ -80,7 +85,7 @@ const MAPPING = {
         .replace('\\$4', '([^:：]+)')
         .replace(
             /\\\{\\\{PLURAL\s*:\s*\\\$5\\\|([^}]+)\\\}\\\}/ui,
-            (_, match1) => `(?:${match1.replaceAll('\\|', '|')})`
+            (_, match1) => `(?:${match1.replaceAll('\\|', '|').replaceAll('1=', '')})`
         )
         .replaceAll('\\$5', '(\\d+)')
     }(?:${REASON})?$`,
