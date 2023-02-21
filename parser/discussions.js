@@ -85,7 +85,7 @@ class DiscussionsMessage extends Message {
      * @private
      */
     _extractURL(url) {
-        if (!url) {
+        if (!url || url === '#') {
             this._error('ignore-nourl', 'Discussions message with no URL.');
             return;
         }
