@@ -62,20 +62,41 @@ const MESSAGE_MAP = {
 };
 const PROTECTSITE_REGEX = / \]\]": (\d+ (?:second|minute|hour|day|week|month|year)s?)?(?:\s?(?::|：)\s?(.*))?$/u;
 const IGNORED_LOGS = [
+    // From wikis with the Cargo extension
     'cargo',
+    // General MediaWiki log
     'contentmodel',
+    // From former Gamepedia wikis
     'curseprofile',
+    // General MediaWiki log
     'import',
+    // From wikis with the Interwiki extension turned on
+    'interwiki',
+    // From wikis with the FlaggedRevs extension turned on
     'review',
+    // From [[w:c:lol]]
     'ro-tournament',
+    // From [[w:c:lol]]
     'ro-news',
+    // From wikis with the Thanks extension turned on
     'thanks',
+    // General MediaWiki log
     'managetags',
+    // General MediaWiki log
     'merge',
+    // From [[w:c:ftb]]
     'oredict',
     'pagetranslation',
+    'sprite',
+    // General MediaWiki log
     'tag',
-    'tournamentpurge'
+    // From [[w:c:ftb]]
+    'tilesheet',
+    'translationreview',
+    // From [[w:c:lol]]
+    'tournamentpurge',
+    // From [[w:c:ucp-internal-test-wdio]]
+    'ucpcustomlog'
 ];
 
 /**
