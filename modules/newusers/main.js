@@ -259,11 +259,11 @@ class NewUsers extends Module {
      */
     async _post(info, wiki, language, domain) {
         await this._profilesTransport.execute({
-            content: `\`!report p ${
+            content: `!report p ${
                 wiki === 'community' ?
                     'c' :
                     shorturl(wiki, language, domain)
-            } ${info.username}\``,
+            } ${info.username}`,
             embeds: [{
                 fields: Object.keys(PROPERTY_MAP)
                     .filter(key => info[key])
