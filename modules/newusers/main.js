@@ -28,7 +28,7 @@ const PROPERTY_MAP = {
 };
 /* eslint-enable */
 const PREFIXES = {
-    fbPage: 'https://facebook.com/',
+    fbPage: 'https://www.facebook.com/',
     twitter: 'https://twitter.com/'
 };
 const CACHE_EXPIRY = 30 * 60;
@@ -251,6 +251,25 @@ class NewUsers extends Module {
         })).query.users[0].userid;
     }
     /**
+     * Prefixes a social media handle with a link to that social media site, and
+     * formats the result as a Markdown link.
+     * @param {string?} prefix Prefix to use
+     * @param {string} info Social media handle
+     * @returns {string} Prefixed social media handle
+     */
+    #formatSocial(prefix, info) {
+        if (!prefix) {
+            // This is probably not a social profile at all.
+            return info;
+        }
+        if (info.startsWith(prefix)) {
+            // The handle is already prefixed.
+            const handle = info.replace(prefix, '');
+            return `[${handle}](${info})`;
+        }
+        return `[${info}](${prefix}${info})`;
+    }
+    /**
      * Posts profile information to a Discord channel.
      * @param {object} info User information
      * @param {string} wiki Wiki the user created their account on
@@ -270,9 +289,7 @@ class NewUsers extends Module {
                     .map(key => ({
                         inline: true,
                         name: PROPERTY_MAP[key],
-                        value: PREFIXES[key] ?
-                            `${PREFIXES[key]}${info[key]}` :
-                            info[key]
+                        value: this.#formatSocial(PREFIXES[key], info[key])
                     })),
                 image: info.avatar ? {
                     url: info.avatar
