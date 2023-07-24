@@ -41,25 +41,62 @@ const RETRY_DELAY = 10000;
  */
 class NewUsers extends Module {
     /**
+     * Discord transport for profile logs.
+     * @type {Discord}
+     */
+    #profilesTransport = null;
+    /**
+     * Discord transport for new user logs.
+     * @type {Discord}
+     */
+    #logTransport = null;
+    /**
+     * Database queries left to finish before killing this module.
+     * @type {number}
+     */
+    #noCloseConnection = 0;
+    /**
+     * This module's logger.
+     * @type {Logger}
+     */
+    #logger = this.#initLogger();
+    /**
+     * This module's database connection.
+     * @type {mysql.Pool}
+     */
+    #db = null;
+    /**
+     * This module's Redis subscriber.
+     * @type {Redis}
+     */
+    #subscriber = null;
+    /**
+     * Whether the module is currently being killed.
+     * @type {boolean}
+     */
+    #killing = false;
+    /**
      * Class constructor.
      * @param {object} config Module configuration
      * @param {Client} client Client instance
      */
     constructor(config, client) {
         super(config, client);
-        this._initLogger();
-        this._initDB(config.db);
-        this._initSubscriber();
-        this._initTransport(config.profiles || config.transport, 'profiles');
-        this._initTransport(config.log, 'log');
-        this._noCloseConnection = 0;
+        this.#initLogger();
+        this.#db = this.#initDB(config.db);
+        this.#subscriber = this.#initSubscriber();
+        this.#profilesTransport = this.#initTransport(
+            config.profiles || config.transport,
+            'profiles'
+        );
+        this.#logTransport = this.#initTransport(config.log, 'log');
     }
     /**
      * Sets up a logger.
-     * @private
+     * @returns {Logger} Logger
      */
-    _initLogger() {
-        this._logger = new Logger({
+    #initLogger() {
+        return new Logger({
             file: true,
             name: 'newusers',
             stdout: true
@@ -68,10 +105,10 @@ class NewUsers extends Module {
     /**
      * Initializes the database connection.
      * @param {object} config Database configuration
-     * @private
+     * @returns {mysql.Pool} Database connection
      */
-    _initDB(config) {
-        this._db = mysql.createPool({
+    #initDB(config) {
+        return mysql.createPool({
             connectionLimit: config.limit || 100,
             database: config.db || 'wikia',
             debug: false,
@@ -81,55 +118,52 @@ class NewUsers extends Module {
         });
     }
     /**
-     * Initializes a new Redis client used for subscribing to key expiry.
-     * @private
+     * Creates a new Redis client used for subscribing to key expiry.
+     * @returns {Redis} Redis client
      */
-    _initSubscriber() {
+    #initSubscriber() {
         // WARNING: Risky! `Redis#options` undocumented.
-        this._subscriber = new Redis(this._cache.options)
-            .on('connect', this._redisConnected.bind(this))
-            .on('end', this._redisDisconnected.bind(this))
-            .on('error', this._redisError.bind(this))
-            .on('reconnecting', this._redisReconnecting.bind(this))
-            .on('message', this._redisMessage.bind(this));
-        this._subscriber.subscribe('__keyevent@0__:expired');
+        const subscriber = new Redis(this._cache.options)
+            .on('connect', this.#redisConnected.bind(this))
+            .on('end', this.#redisDisconnected.bind(this))
+            .on('error', this.#redisError.bind(this))
+            .on('reconnecting', this.#redisReconnecting.bind(this))
+            .on('message', this.#redisMessage.bind(this));
+        subscriber.subscribe('__keyevent@0__:expired');
+        return subscriber;
     }
     /**
      * Event emitted when the Redis client connects.
-     * @private
      */
-    _redisConnected() {
-        this._logger.info('Connected to Redis.');
+    #redisConnected() {
+        this.#logger.info('Connected to Redis.');
     }
     /**
      * Event emitted when the Redis client connects.
-     * @private
      */
-    _redisDisconnected() {
-        if (!this._killing) {
-            this._logger.error('Disconnected from Redis.');
+    #redisDisconnected() {
+        if (!this.#killing) {
+            this.#logger.error('Disconnected from Redis.');
         }
     }
     /**
      * Event emitted when an error occurs with Redis.
      * @param {Error} error Error that occurred
-     * @private
      */
-    _redisError(error) {
+    #redisError(error) {
         if (error) {
             if (error.code === 'ENOENT') {
-                this._logger.error('Redis not started up.');
+                this.#logger.error('Redis not started up.');
             } else {
-                this._logger.error('Redis error:', error);
+                this.#logger.error('Redis error:', error);
             }
         }
     }
     /**
      * Event emitted when Redis starts attempting to reconnect.
-     * @private
      */
-    _redisReconnecting() {
-        this._logger.warn('Redis is reconnecting...');
+    #redisReconnecting() {
+        this.#logger.warn('Redis is reconnecting...');
     }
     /**
      * Initializes a Discord transport instance.
@@ -138,15 +172,15 @@ class NewUsers extends Module {
      * - `profiles`: Transport where possible spam profiles are logged.
      * @param {object} config Transport configuration
      * @param {string} name Transport name
+     * @returns {Discord} Discord transport
      * @throws {Error} If the transport configuration is not an object
-     * @private
      */
-    _initTransport(config, name) {
+    #initTransport(config, name) {
         if (typeof config !== 'object') {
             throw new Error('Discord configuration is invalid!');
         }
         config.type = `discord-newusers-${name}`;
-        this[`_${name}Transport`] = new Discord(config);
+        return new Discord(config);
     }
     /**
      * Determines whether the module is interested to receive the message
@@ -162,14 +196,14 @@ class NewUsers extends Module {
      * @param {Message} message Message to handle
      */
     async execute(message) {
-        if (this._killing) {
+        if (this.#killing) {
             return;
         }
-        await this._relay(message);
+        await this.#relay(message);
         try {
-            await this._insertUser(message);
+            await this.#insertUser(message);
         } catch (error) {
-            this._logger.error('Query error', error);
+            this.#logger.error('Query error', error);
         }
         const key = `newusers:${message.user}:${message.wiki}:${message.language}:${message.domain}`;
         await this._cache
@@ -181,12 +215,11 @@ class NewUsers extends Module {
     /**
      * Relays all creations in a separate channel for logging new users.
      * @param {Message} message New user information
-     * @private
      */
-    async _relay(message) {
+    async #relay(message) {
         const {wiki, language, domain, user} = message;
         const wikiUrl = url(wiki, language, domain);
-        await this._logTransport.execute({
+        await this.#logTransport.execute({
             content: `[${user}](<${wikiUrl}/wiki/Special:Contribs/${encode(user)}>) ([talk](<${wikiUrl}/wiki/User_talk:${encode(user)}>) | [${
                 shorturl(wiki, language, domain)
             }](<${wikiUrl}/wiki/Special:Log/newusers>))`
@@ -196,21 +229,20 @@ class NewUsers extends Module {
      * Inserts a user into the database, provided a connection.
      * @param {Message} message New user information
      */
-    async _insertUser(message) {
-        ++this._noCloseConnection;
+    async #insertUser(message) {
+        ++this.#noCloseConnection;
         const {user, wiki, language, domain} = message;
-        await this._db.execute(QUERY, [user, wiki, language, domain]);
-        if (--this._noCloseConnection === 0 && this._killing) {
-            await this._db.end();
+        await this.#db.execute(QUERY, [user, wiki, language, domain]);
+        if (--this.#noCloseConnection === 0 && this.#killing) {
+            await this.#db.end();
         }
     }
     /**
      * Callback after a key expires in Redis.
      * @param {string} channel Subscription channel
      * @param {string} message Message sent in the channel
-     * @private
      */
-    async _redisMessage(channel, message) {
+    async #redisMessage(channel, message) {
         const [type, user, wiki, language, domain] = message.split(':');
         if (channel !== '__keyevent@0__:expired' || type !== 'newusers') {
             return;
@@ -220,12 +252,12 @@ class NewUsers extends Module {
         for (let retry = 0; retry < MAX_RETRIES; ++retry) {
             await wait(retry * RETRY_DELAY);
             try {
-                const userId = await this._getID(user, wiki, language, domain);
+                const userId = await this.#getID(user, wiki, language, domain);
                 const {users} = await this._io.userInfo(userId);
                 const userData = users[userId];
                 const {bio, discordHandle, fbPage, twitter, website} = userData;
                 if (bio || discordHandle || fbPage || twitter || website) {
-                    await this._post(userData, wiki, language, domain);
+                    await this.#post(userData, wiki, language, domain);
                 }
                 return;
             } catch (error) {
@@ -235,16 +267,15 @@ class NewUsers extends Module {
                 errors.push(error);
             }
         }
-        this._logger.error(`Errors while fetching user ID (${message}):`, ...errors);
+        this.#logger.error(`Errors while fetching user ID (${message}):`, ...errors);
     }
     /**
      * Fetches a user's ID.
      * This method needs to fail if it wants the parent loop to retry
      * the request.
      * @param {string} user User whose ID is being obtained
-     * @private
      */
-    async _getID(user) {
+    async #getID(user) {
         return (await this._io.query('community', 'en', 'fandom.com', {
             list: 'users',
             ususers: user
@@ -276,8 +307,8 @@ class NewUsers extends Module {
      * @param {string} language Language path of the wiki
      * @param {string} domain Domain of the wiki
      */
-    async _post(info, wiki, language, domain) {
-        await this._profilesTransport.execute({
+    async #post(info, wiki, language, domain) {
+        await this.#profilesTransport.execute({
             content: `!report p ${
                 wiki === 'community' ?
                     'c' :
@@ -303,15 +334,15 @@ class NewUsers extends Module {
      * Cleans up the resources after a kill has been requested.
      */
     async kill() {
-        this._killing = true;
-        this._logger.close();
-        this._profilesTransport.kill();
-        this._logTransport.kill();
+        this.#killing = true;
+        this.#logger.close();
+        this.#profilesTransport.kill();
+        this.#logTransport.kill();
         // Close database connection when there are no pending queries.
-        if (this._noCloseConnection === 0) {
-            await this._db.end();
+        if (this.#noCloseConnection === 0) {
+            await this.#db.end();
         }
-        await promisify(this._subscriber.quit).call(this._subscriber);
+        await promisify(this.#subscriber.quit).call(this.#subscriber);
     }
 }
 
