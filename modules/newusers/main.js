@@ -15,8 +15,11 @@ const {url, shorturl, encode} = require('../../include/util.js');
 const Discord = require('../../transports/discord/main.js');
 const mysql = require('mysql2/promise');
 
-const QUERY = 'INSERT INTO `newusers` (`name`, `wiki`, `language`, `domain`) ' +
-              'VALUES(?, ?, ?, ?)';
+const INSERT_USER_QUERY = 'INSERT INTO `newusers` (`name`, `wiki`, ' +
+    '`language`, `domain`) VALUES(?, ?, ?, ?)';
+const INSERT_PROFILE_QUERY = 'INSERT INTO `profiles` (`id`, `name`, ' +
+    '`website`, `aka`, `facebook`, `twitter`, `discord`, `bio`) VALUES ' +
+    '(?, ?, ?, ?, ?, ?, ?, ?)';
 /* eslint-disable sort-keys */
 const PROPERTY_MAP = {
     website: 'Website',
@@ -232,7 +235,36 @@ class NewUsers extends Module {
     async #insertUser(message) {
         ++this.#noCloseConnection;
         const {user, wiki, language, domain} = message;
-        await this.#db.execute(QUERY, [user, wiki, language, domain]);
+        await this.#db.execute(INSERT_USER_QUERY, [
+            user,
+            wiki,
+            language,
+            domain
+        ]);
+        if (--this.#noCloseConnection === 0 && this.#killing) {
+            await this.#db.end();
+        }
+    }
+    /**
+     * Inserts a user's profile information into a database.
+     * @param {number} id User's ID
+     * @param {object} info User information
+     */
+    async #insertProfile(id, info) {
+        ++this.#noCloseConnection;
+        const {
+            bio, discordHandle, fbPage, name, twitter, username, website
+        } = info;
+        await this.#db.execute(INSERT_PROFILE_QUERY, [
+            id,
+            username,
+            (website || '').slice(0, 255) || null,
+            (name || '').slice(0, 64) || null,
+            (fbPage || '').slice(0, 255) || null,
+            (twitter || '').slice(0, 255) || null,
+            (discordHandle || '').slice(0, 64) || null,
+            bio || null
+        ]);
         if (--this.#noCloseConnection === 0 && this.#killing) {
             await this.#db.end();
         }
@@ -257,6 +289,7 @@ class NewUsers extends Module {
                 const userData = users[userId];
                 const {bio, discordHandle, fbPage, twitter, website} = userData;
                 if (bio || discordHandle || fbPage || twitter || website) {
+                    await this.#insertProfile(userId, userData);
                     await this.#post(userData, wiki, language, domain);
                 }
                 return;
