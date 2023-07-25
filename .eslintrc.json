@@ -781,6 +781,7 @@
     },
     "settings": {
         "jsdoc": {
+            "mode": "typescript",
             "tagNamePreference": {
                 "virtual": "abstract",
                 "extends": "augments",
