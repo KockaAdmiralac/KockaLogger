@@ -613,10 +613,6 @@
                 "noSingleLineBlocks": true
             }
         ],
-        "jsdoc/newline-after-description": [
-            "error",
-            "never"
-        ],
         "jsdoc/no-bad-blocks": "error",
         "jsdoc/no-defaults": "error",
         // I don't have any required syntax right now.
