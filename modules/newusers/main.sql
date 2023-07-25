@@ -37,9 +37,15 @@ CREATE TABLE `profiles` (
     `discord` varchar(64),
     -- User's biography.
     `bio` text,
+    -- Profile entry creation date.
+    `creation_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
     -- Whether the profile has been classified as spam (true), as not spam
     -- (false) or not classified at all (NULL).
-    `is_spam` boolean
+    `is_spam` boolean,
+    -- Discord ID of the user who has performed the classification.
+    `classifying_user` bigint,
+    -- Date when the classification occurred.
+    `classification_date` datetime
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
 
 -- Migration to KockaLogger v1.1.10:
