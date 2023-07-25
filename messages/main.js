@@ -81,6 +81,7 @@ class Loader {
     }
     /**
      * Runs the loading.
+     * @returns {object} All loaded messages as well as their processed versions
      */
     async run() {
         this._logger.info('KockaLogger started.');
@@ -282,6 +283,7 @@ class Loader {
      * @param {string} language Language of the wiki
      * @param {string} domain Domain of the wiki
      * @param {object} data Custom messages for the wiki
+     * @returns {object} Updated custom and generated messages
      */
     async updateCustom(wiki, language, domain, data) {
         if (!this._caches.custom) {

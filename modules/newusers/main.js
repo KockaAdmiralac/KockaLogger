@@ -307,6 +307,7 @@ class NewUsers extends Module {
      * This method needs to fail if it wants the parent loop to retry
      * the request.
      * @param {string} user User whose ID is being obtained
+     * @returns {Promise<number>} The user's ID
      */
     async #getID(user) {
         return (await this._io.query('community', 'en', 'fandom.com', {
