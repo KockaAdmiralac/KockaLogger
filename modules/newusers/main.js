@@ -13,6 +13,7 @@ const Module = require('../module.js');
 const Logger = require('../../include/log.js');
 const {url, shorturl, encode} = require('../../include/util.js');
 const Discord = require('../../transports/discord/main.js');
+const {MessageComponentTypes} = require('discord-interactions');
 const mysql = require('mysql2/promise');
 
 const INSERT_USER_QUERY = 'INSERT INTO `newusers` (`name`, `wiki`, ' +
@@ -79,20 +80,33 @@ class NewUsers extends Module {
      */
     #killing = false;
     /**
+     * Discord interactions handler.
+     * @type {import('./server.js')}
+     */
+    #server = null;
+    /**
      * Class constructor.
      * @param {object} config Module configuration
      * @param {Client} client Client instance
      */
     constructor(config, client) {
         super(config, client);
+        const {db, profiles, transport, log, publicKey, port} = config;
         this.#initLogger();
-        this.#db = this.#initDB(config.db);
+        this.#db = this.#initDB(db);
         this.#subscriber = this.#initSubscriber();
-        this.#profilesTransport = this.#initTransport(
-            config.profiles || config.transport,
-            'profiles'
-        );
-        this.#logTransport = this.#initTransport(config.log, 'log');
+        const profilesConf = profiles || transport;
+        this.#profilesTransport = this.#initTransport(profilesConf, 'profiles');
+        this.#logTransport = this.#initTransport(log, 'log');
+        if (publicKey) {
+            const NewUsersServer = require('./server.js');
+            this.#server = new NewUsersServer(
+                port,
+                publicKey,
+                this.#db,
+                profilesConf
+            );
+        }
     }
     /**
      * Sets up a logger.
@@ -290,7 +304,7 @@ class NewUsers extends Module {
                 const {bio, discordHandle, fbPage, twitter, website} = userData;
                 if (bio || discordHandle || fbPage || twitter || website) {
                     await this.#insertProfile(userId, userData);
-                    await this.#post(userData, wiki, language, domain);
+                    await this.#post(userId, userData, wiki, language, domain);
                 }
                 return;
             } catch (error) {
@@ -336,18 +350,33 @@ class NewUsers extends Module {
     }
     /**
      * Posts profile information to a Discord channel.
+     * @param {number} userId Fandom user ID
      * @param {object} info User information
      * @param {string} wiki Wiki the user created their account on
      * @param {string} language Language path of the wiki
      * @param {string} domain Domain of the wiki
      */
-    async #post(info, wiki, language, domain) {
+    async #post(userId, info, wiki, language, domain) {
         await this.#profilesTransport.execute({
-            content: `!report p ${
-                wiki === 'community' ?
-                    'c' :
-                    shorturl(wiki, language, domain)
-            } ${info.username}`,
+            components: this.#server ? [{
+                components: [
+                    {
+                        // eslint-disable-next-line camelcase
+                        custom_id: `spam-${userId}`,
+                        label: 'Spam',
+                        style: 3,
+                        type: MessageComponentTypes.BUTTON
+                    },
+                    {
+                        // eslint-disable-next-line camelcase
+                        custom_id: `notspam-${userId}`,
+                        label: 'Not spam',
+                        style: 4,
+                        type: MessageComponentTypes.BUTTON
+                    }
+                ],
+                type: MessageComponentTypes.ACTION_ROW
+            }] : undefined,
             embeds: [{
                 fields: Object.keys(PROPERTY_MAP)
                     .filter(key => info[key])
@@ -372,6 +401,9 @@ class NewUsers extends Module {
         this.#logger.close();
         this.#profilesTransport.kill();
         this.#logTransport.kill();
+        if (this.#server) {
+            this.#server.kill();
+        }
         // Close database connection when there are no pending queries.
         if (this.#noCloseConnection === 0) {
             await this.#db.end();
