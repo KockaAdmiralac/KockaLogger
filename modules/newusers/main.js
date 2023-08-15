@@ -98,9 +98,9 @@ class NewUsers extends Module {
     constructor(config, client) {
         super(config, client);
         const {
-            db, profiles, transport, log, publicKey, port, staging
+            db, discord, profiles, transport, log, publicKey, port, staging
         } = config;
-        this.#initLogger();
+        this.#initLogger(discord);
         this.#db = this.#initDB(db);
         this.#subscriber = this.#initSubscriber();
         const profilesConf = profiles || transport;
@@ -132,10 +132,12 @@ class NewUsers extends Module {
     }
     /**
      * Sets up a logger.
+     * @param {object|undefined} discord Configuration for logging to Discord
      * @returns {Logger} Logger
      */
-    #initLogger() {
+    #initLogger(discord) {
         return new Logger({
+            discord,
             file: true,
             name: 'newusers',
             stdout: true
