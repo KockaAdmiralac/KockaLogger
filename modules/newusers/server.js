@@ -19,6 +19,7 @@ const UPDATE_PROFILE_QUERY = 'UPDATE `profiles` SET ' +
         '`classifying_user` = ?, ' +
         '`classification_date` = ? ' +
     'WHERE `id` = ?';
+const GET_USERNAME_QUERY = 'SELECT `name` FROM `profiles` WHERE `id` = ?';
 
 /**
  * Handles Discord interaction requests for classifying profiles as spam or not
@@ -41,14 +42,21 @@ class NewUsersServer {
      */
     #profilesWebhook = null;
     /**
+     * Staging area controls.
+     * @type {import('./staging.js')|null}
+     */
+    #staging = null;
+    /**
      * Class constructor.
      * @param {number} port Express server's port
      * @param {string} publicKey Discord app's public key
      * @param {import('mysql2/promise').Pool} db Database connection
      * @param {object} transport Discord transport configuration
+     * @param {import('./staging.js')} staging Staging area controls
      */
-    constructor(port, publicKey, db, transport) {
+    constructor(port, publicKey, db, transport, staging) {
         this.#db = db;
+        this.#staging = staging;
         const app = express();
         app.post(
             '/',
@@ -74,6 +82,8 @@ class NewUsersServer {
         } = data;
         const [status, userId] = (customId || '').split('-');
         const isSpam = status === 'spam';
+        const reporterId = member.user.id;
+        const reporter = member.user.username;
         switch (type) {
             case InteractionType.PING:
                 res.json({
@@ -87,8 +97,32 @@ class NewUsersServer {
                     });
                     break;
                 }
-                await this.#classify(isSpam, member.user.id, Number(userId));
-                await this.#profilesWebhook.deleteMessage(message.id);
+                switch (status) {
+                    case 'spam':
+                    case 'notspam':
+                        await this.#classify(
+                            isSpam,
+                            reporterId,
+                            Number(userId)
+                        );
+                        await this.#profilesWebhook.deleteMessage(message.id);
+                        if (status === 'spam') {
+                            const username = await this.#getUsername(userId);
+                            await this.#staging.addUser(username, reporter);
+                        }
+                        break;
+                    case 'move':
+                        await this.#staging.moveReports();
+                        break;
+                    default:
+                        res.status(400).json({
+                            message: 'Unexpected component.'
+                        });
+                        return;
+                }
+                res.json({
+                    type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE
+                });
                 break;
             case InteractionType.APPLICATION_COMMAND:
             case InteractionType.APPLICATION_COMMAND_AUTOCOMPLETE:
@@ -114,6 +148,15 @@ class NewUsersServer {
             new Date(),
             fandomUserId
         ]);
+    }
+    /**
+     * Gets a Fandom user's username from the database.
+     * @param {number} userId Fandom user ID
+     * @returns {Promise<string>} Fandom username
+     */
+    async #getUsername(userId) {
+        const row = await this.#db.execute(GET_USERNAME_QUERY, [userId]);
+        return row[0][0].name;
     }
     /**
      * Kills the interaction handler.
