@@ -11,8 +11,11 @@ const {
     appSecret,
     redirectUrl,
     token
-    // eslint-disable-next-line node/no-unpublished-require
+    /* eslint-disable node/no-unpublished-require */
+    /* eslint-disable node/no-missing-require */
 } = require('../../config.json').modules.newusers;
+/* eslint-enable node/no-unpublished-require */
+/* eslint-enable node/no-missing-require */
 const {createInterface} = require('readline');
 const {stdin, stdout} = require('process');
 const {URL} = require('url');
