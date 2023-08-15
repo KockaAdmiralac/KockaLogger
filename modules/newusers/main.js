@@ -91,6 +91,11 @@ class NewUsers extends Module {
      */
     #staging = null;
     /**
+     * Interval to spawn test users in.
+     * @type {number}
+     */
+    #testUserInterval = 0;
+    /**
      * Class constructor.
      * @param {object} config Module configuration
      * @param {Client} client Client instance
@@ -98,7 +103,8 @@ class NewUsers extends Module {
     constructor(config, client) {
         super(config, client);
         const {
-            db, discord, profiles, transport, log, publicKey, port, staging
+            db, discord, profiles, transport, log, publicKey, port, staging,
+            testingUsersDoNotSetMeInProduction
         } = config;
         this.#initLogger(discord);
         this.#db = this.#initDB(db);
@@ -117,6 +123,12 @@ class NewUsers extends Module {
                 this.#db,
                 profilesConf,
                 this.#staging
+            );
+        }
+        if (testingUsersDoNotSetMeInProduction) {
+            this.#testUserInterval = setInterval(
+                this.#insertTestUser.bind(this),
+                testingUsersDoNotSetMeInProduction
             );
         }
     }
@@ -341,6 +353,26 @@ class NewUsers extends Module {
         this.#logger.error(`Errors while fetching user ID (${message}):`, ...errors);
     }
     /**
+     * Inserts a fake user into the database, and reports it in the channel.
+     *
+     * Only meant to be used for testing purposes. Absolutely do not use this in
+     * production!
+     */
+    async #insertTestUser() {
+        const userId = Math.round(Math.random() * 1000000);
+        const userData = {
+            bio: 'Not a real user',
+            discordHandle: 'lol123',
+            fbPage: 'login',
+            name: 'Test User',
+            twitter: 'lol123',
+            username: `Testuser${userId}`,
+            website: 'https://mysite.spam'
+        };
+        await this.#insertProfile(userId, userData);
+        await this.#post(userId, userData, 'kocka', 'en', 'fandom.com');
+    }
+    /**
      * Fetches a user's ID.
      * This method needs to fail if it wants the parent loop to retry
      * the request.
@@ -430,6 +462,9 @@ class NewUsers extends Module {
         }
         if (this.#server) {
             this.#server.kill();
+        }
+        if (this.#testUserInterval) {
+            clearInterval(this.#testUserInterval);
         }
         // Close database connection when there are no pending queries.
         if (this.#noCloseConnection === 0) {
