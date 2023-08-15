@@ -15,6 +15,7 @@ const {url, shorturl, encode} = require('../../include/util.js');
 const Discord = require('../../transports/discord/main.js');
 const {MessageComponentTypes} = require('discord-interactions');
 const mysql = require('mysql2/promise');
+const StagingArea = require('./staging.js');
 
 const INSERT_USER_QUERY = 'INSERT INTO `newusers` (`name`, `wiki`, ' +
     '`language`, `domain`) VALUES(?, ?, ?, ?)';
@@ -81,9 +82,14 @@ class NewUsers extends Module {
     #killing = false;
     /**
      * Discord interactions handler.
-     * @type {import('./server.js')}
+     * @type {import('./server.js')|null}
      */
     #server = null;
+    /**
+     * Staging area controls.
+     * @type {StagingArea|null}
+     */
+    #staging = null;
     /**
      * Class constructor.
      * @param {object} config Module configuration
@@ -91,21 +97,37 @@ class NewUsers extends Module {
      */
     constructor(config, client) {
         super(config, client);
-        const {db, profiles, transport, log, publicKey, port} = config;
+        const {
+            db, profiles, transport, log, publicKey, port, staging
+        } = config;
         this.#initLogger();
         this.#db = this.#initDB(db);
         this.#subscriber = this.#initSubscriber();
         const profilesConf = profiles || transport;
         this.#profilesTransport = this.#initTransport(profilesConf, 'profiles');
         this.#logTransport = this.#initTransport(log, 'log');
+        if (staging) {
+            this.#staging = new StagingArea(this._cache, staging);
+        }
         if (publicKey) {
             const NewUsersServer = require('./server.js');
             this.#server = new NewUsersServer(
                 port,
                 publicKey,
                 this.#db,
-                profilesConf
+                profilesConf,
+                this.#staging
             );
+        }
+    }
+    /**
+     * Sets up the staging area.
+     * @param {...any} args Arguments to the superclass method
+     */
+    async setup(...args) {
+        super.setup(...args);
+        if (this.#staging) {
+            await this.#staging.setup();
         }
     }
     /**
@@ -401,6 +423,9 @@ class NewUsers extends Module {
         this.#logger.close();
         this.#profilesTransport.kill();
         this.#logTransport.kill();
+        if (this.#staging) {
+            this.#staging.kill();
+        }
         if (this.#server) {
             this.#server.kill();
         }
