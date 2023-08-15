@@ -12,13 +12,16 @@ const {
     InteractionResponseType,
     MessageComponentTypes
 } = require('discord-interactions');
-const {WebhookClient} = require('discord.js');
+const {WebhookClient, MessageFlags} = require('discord.js');
 
-const UPDATE_PROFILE_QUERY = 'UPDATE `profiles` SET ' +
+const UPDATE_PROFILE_QUERY_BASE = 'UPDATE `profiles` SET ' +
         '`is_spam` = ?, ' +
         '`classifying_user` = ?, ' +
-        '`classification_date` = ? ' +
-    'WHERE `id` = ?';
+        '`classification_date` = ?';
+const UPDATE_PROFILE_QUERY_ID = `${UPDATE_PROFILE_QUERY_BASE}
+    WHERE \`id\` = ?`;
+const UPDATE_PROFILE_QUERY_NAME = `${UPDATE_PROFILE_QUERY_BASE}
+    WHERE \`name\` = ?`;
 const GET_USERNAME_QUERY = 'SELECT `name` FROM `profiles` WHERE `id` = ?';
 
 /**
@@ -78,12 +81,15 @@ class NewUsersServer {
         const {type, data, message, member} = req.body;
         const {
             custom_id: customId,
-            component_type: componentType
+            component_type: componentType,
+            name,
+            options
         } = data;
         const [status, userId] = (customId || '').split('-');
         const isSpam = status === 'spam';
         const reporterId = member.user.id;
         const reporter = member.user.username;
+        const [userOpt] = options || [];
         switch (type) {
             case InteractionType.PING:
                 res.json({
@@ -125,6 +131,29 @@ class NewUsersServer {
                 });
                 break;
             case InteractionType.APPLICATION_COMMAND:
+                switch (name) {
+                    case 'report':
+                        await this.#staging.addUser(userOpt.value, reporter);
+                        await this.#classify(true, reporterId, userOpt.value);
+                        break;
+                    case 'unreport':
+                        await this.#staging.removeUser(userOpt.value);
+                        await this.#classify(false, reporterId, userOpt.value);
+                        break;
+                    default:
+                        res.status(400).json({
+                            message: 'Unexpected slash command.'
+                        });
+                        return;
+                }
+                res.json({
+                    data: {
+                        content: 'Done!',
+                        flags: MessageFlags.Ephemeral
+                    },
+                    type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE
+                });
+                break;
             case InteractionType.APPLICATION_COMMAND_AUTOCOMPLETE:
             case InteractionType.MODAL_SUBMIT:
             default:
@@ -138,15 +167,19 @@ class NewUsersServer {
      * Classifies a profile as spam or not spam.
      * @param {boolean} isSpam Whether the profile is spam
      * @param {string} discordUserId ID of the classifying user
-     * @param {number} fandomUserId ID of the Fandom user being classified
+     * @param {number|string} fandomUser ID/username of the Fandom user being
+     * classified
      * @returns {Promise} Result of the insert operation
      */
-    #classify(isSpam, discordUserId, fandomUserId) {
-        return this.#db.execute(UPDATE_PROFILE_QUERY, [
+    #classify(isSpam, discordUserId, fandomUser) {
+        const query = typeof fandomUser === 'string' ?
+            UPDATE_PROFILE_QUERY_NAME :
+            UPDATE_PROFILE_QUERY_ID;
+        return this.#db.execute(query, [
             isSpam,
             discordUserId,
             new Date(),
-            fandomUserId
+            fandomUser
         ]);
     }
     /**
