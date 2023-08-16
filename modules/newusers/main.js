@@ -40,6 +40,7 @@ const PREFIXES = {
 const CACHE_EXPIRY = 30 * 60;
 const MAX_RETRIES = 5;
 const RETRY_DELAY = 10000;
+const REDIS_MESSAGES_KEY = 'newusers-messages';
 
 /**
  * Module for recording account creations and reporting possible profile spam.
@@ -104,7 +105,7 @@ class NewUsers extends Module {
     constructor(config, client) {
         super(config, client);
         const {
-            db, discord, profiles, transport, log, publicKey, port, staging,
+            db, discord, profiles, transport, log, staging,
             testingUsersDoNotSetMeInProduction
         } = config;
         this.#initLogger(discord);
@@ -116,14 +117,14 @@ class NewUsers extends Module {
         if (staging) {
             this.#staging = new StagingArea(this._cache, this._io, staging);
         }
-        if (publicKey) {
+        if (config.port) {
             const NewUsersServer = require('./server.js');
             this.#server = new NewUsersServer(
-                port,
-                publicKey,
                 this.#db,
+                this.#staging,
+                this._cache,
                 profilesConf,
-                this.#staging
+                config
             );
         }
         if (testingUsersDoNotSetMeInProduction) {
@@ -362,18 +363,37 @@ class NewUsers extends Module {
      * production!
      */
     async #insertTestUser() {
-        const userId = Math.round(Math.random() * 1000000);
-        const userData = {
-            bio: 'Not a real user',
-            discordHandle: 'lol123',
-            fbPage: 'login',
-            name: 'Test User',
-            twitter: 'lol123',
-            username: `Testuser${userId}`,
-            website: 'https://mysite.spam'
-        };
-        await this.#insertProfile(userId, userData);
-        await this.#post(userId, userData, 'kocka', 'en', 'fandom.com');
+        try {
+            const startUserId = Math.round(Math.random() * 50000000);
+            const userIds = Array(50).fill().map((_, i) => startUserId + i);
+            const {users} = await this._io.userInfo(userIds);
+            const foundUser = Object.entries(users)
+                .find(([_, u]) => isReportable(u));
+            if (!foundUser) {
+                this.#logger.debug('No reportable users found.');
+                return;
+            }
+            const [userId, userData] = foundUser;
+            this.#logger.debug('Reporting test user', userData);
+            await this.#reportUser(
+                userId,
+                userData,
+                'kocka',
+                'en',
+                'fandom.com'
+            );
+        } catch (error) {
+            if (error && error.response && error.response.statusCode === 404) {
+                this.#logger.debug('No reportable users found.');
+            } else if (error.code === 'ERR_NON_2XX_3XX_RESPONSE') {
+                this.#logger.debug(
+                    'Error while reporting test user:',
+                    error.response
+                );
+            } else {
+                this.#logger.debug('Error while reporting test user:', error);
+            }
+        }
     }
     /**
      * Reports the user for review.
@@ -415,7 +435,8 @@ class NewUsers extends Module {
      * @param {string} domain Domain of the wiki
      */
     async #post(userId, info, wiki, language, domain) {
-        await this.#profilesTransport.execute({
+        // TODO: This is a hack to get rid of soon.
+        const message = await this.#profilesTransport._webhook.send({
             components: this.#server ? [{
                 components: [
                     {
@@ -450,6 +471,7 @@ class NewUsers extends Module {
                 url: `${url(wiki, language, domain)}/wiki/Special:Contribs/${encode(info.username)}`
             }]
         });
+        this._cache.sadd(REDIS_MESSAGES_KEY, message.id);
     }
     /**
      * Cleans up the resources after a kill has been requested.

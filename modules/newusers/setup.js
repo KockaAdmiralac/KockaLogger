@@ -60,6 +60,15 @@ async function setupCommands() {
             type: 1
         }
     }).json();
+    await got.post(`https://discord.com/api/applications/${appId}/commands`, {
+        headers,
+        json: {
+            description: 'Use only if you are sure no profiles in the ' +
+                'channel are spam!',
+            name: 'clean',
+            type: 1
+        }
+    }).json();
 }
 
 /**

@@ -22,7 +22,10 @@ const UPDATE_PROFILE_QUERY_ID = `${UPDATE_PROFILE_QUERY_BASE}
     WHERE \`id\` = ?`;
 const UPDATE_PROFILE_QUERY_NAME = `${UPDATE_PROFILE_QUERY_BASE}
     WHERE \`name\` = ?`;
+const UPDATE_ALL_PROFILES = `${UPDATE_PROFILE_QUERY_BASE}
+    WHERE \`is_spam\` IS NULL`;
 const GET_USERNAME_QUERY = 'SELECT `name` FROM `profiles` WHERE `id` = ?';
+const REDIS_MESSAGES_KEY = 'newusers-messages';
 
 /**
  * Handles Discord interaction requests for classifying profiles as spam or not
@@ -40,6 +43,11 @@ class NewUsersServer {
      */
     #db = null;
     /**
+     * Redis client instance.
+     * @type {import('ioredis').Redis}
+     */
+    #redis = null;
+    /**
      * The webhook that relays profile report messages.
      * @type {WebhookClient}
      */
@@ -51,14 +59,18 @@ class NewUsersServer {
     #staging = null;
     /**
      * Class constructor.
-     * @param {number} port Express server's port
-     * @param {string} publicKey Discord app's public key
      * @param {import('mysql2/promise').Pool} db Database connection
-     * @param {object} transport Discord transport configuration
      * @param {import('./staging.js')} staging Staging area controls
+     * @param {import('ioredis').Redis} redis Redis client
+     * @param {object} transport Discord transport configuration
+     * @param {object} config Server configuration
+     * @param {number} config.port Express server's port
+     * @param {string} config.publicKey Discord app's public key
      */
-    constructor(port, publicKey, db, transport, staging) {
+    constructor(db, staging, redis, transport, config) {
+        const {port, publicKey} = config;
         this.#db = db;
+        this.#redis = redis;
         this.#staging = staging;
         const app = express();
         app.post(
@@ -67,10 +79,7 @@ class NewUsersServer {
             this.#handle.bind(this)
         );
         this.#server = app.listen(port);
-        this.#profilesWebhook = new WebhookClient({
-            id: transport.id,
-            token: transport.token
-        });
+        this.#profilesWebhook = new WebhookClient(transport);
     }
     /**
      * Handles a Discord interaction request.
@@ -112,6 +121,7 @@ class NewUsersServer {
                             Number(userId)
                         );
                         await this.#profilesWebhook.deleteMessage(message.id);
+                        await this.#redis.srem(REDIS_MESSAGES_KEY, message.id);
                         if (status === 'spam') {
                             const username = await this.#getUsername(userId);
                             await this.#staging.addUser(username, reporter);
@@ -140,6 +150,18 @@ class NewUsersServer {
                         await this.#staging.removeUser(userOpt.value);
                         await this.#classify(false, reporterId, userOpt.value);
                         break;
+                    case 'clean':
+                        await this.#classifyAll(false, reporterId);
+                        res.json({
+                            data: {
+                                content: 'Clean in progress!',
+                                flags: MessageFlags.Ephemeral
+                            },
+                            type: InteractionResponseType
+                                .CHANNEL_MESSAGE_WITH_SOURCE
+                        });
+                        await this.#clean();
+                        return;
                     default:
                         res.status(400).json({
                             message: 'Unexpected slash command.'
@@ -190,6 +212,34 @@ class NewUsersServer {
     async #getUsername(userId) {
         const row = await this.#db.execute(GET_USERNAME_QUERY, [userId]);
         return row[0][0].name;
+    }
+    /**
+     * Classifies all unclassified profiles as spam or not spam.
+     * @param {boolean} isSpam Whether the profile is spam
+     * @param {string} discordUserId ID of the classifying user
+     * @returns {Promise} Result of the insert operation
+     */
+    #classifyAll(isSpam, discordUserId) {
+        return this.#db.execute(UPDATE_ALL_PROFILES, [
+            isSpam,
+            discordUserId,
+            new Date()
+        ]);
+    }
+    /**
+     * Removes all report messages up until this point.
+     */
+    async #clean() {
+        const numMembers = await this.#redis.scard(REDIS_MESSAGES_KEY);
+        const messages = await this.#redis.spop(REDIS_MESSAGES_KEY, numMembers);
+        for (const message of messages) {
+            try {
+                await this.#profilesWebhook.deleteMessage(message);
+            } catch (error) {
+                // TODO: Log error
+                console.error(error);
+            }
+        }
     }
     /**
      * Kills the interaction handler.
