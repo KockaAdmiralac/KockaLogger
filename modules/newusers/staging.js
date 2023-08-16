@@ -182,7 +182,7 @@ class StagingArea {
      */
     #getUsersMessage(users) {
         const usersDiscord = users.map(
-            u => `- [${u}](<https://c.fandom.com/Special:Contribs/${u}>)`
+            u => `- [${u}](<https://c.fandom.com/Special:Contribs/${encodeURIComponent(u)}>)`
         );
         const pickedUsers = [];
         let messageLength = 0;
