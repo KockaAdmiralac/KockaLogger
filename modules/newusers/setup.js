@@ -16,27 +16,10 @@ const {
 } = require('../../config.json').modules.newusers;
 /* eslint-enable node/no-unpublished-require */
 /* eslint-enable node/no-missing-require */
-const {createInterface} = require('readline');
-const {stdin, stdout} = require('process');
 const {URL} = require('url');
 const got = require('got').default;
 const {WebhookClient} = require('discord.js');
-
-const rl = createInterface({
-    input: stdin,
-    output: stdout
-});
-
-/**
- * Reads user's input from standard input.
- * @param {string} query Query to ask the user
- * @returns {Promise<string>} String that was read
- */
-function question(query) {
-    return new Promise(function(resolve) {
-        rl.question(query, resolve);
-    });
-}
+const express = require('express');
 
 /**
  * Sets up /report and /unreport slash commands for the bot.
@@ -90,8 +73,23 @@ async function setupWebhook() {
     url.searchParams.append('redurect_uri', redirectUrl);
     url.searchParams.append('response_type', 'code');
     console.info('Visit this URL:', url.toString());
-    const authUrl = await question('Enter the URL you got redirected to: ');
-    const code = new URL(authUrl).searchParams.get('code');
+    const codePromise = new Promise(function(resolve) {
+        const app = express();
+        let server = null;
+        app.get('/', function(request, response) {
+            if (request.query.code) {
+                resolve(request.query.code);
+                response.send('Cool');
+                if (server) {
+                    server.close();
+                }
+            } else {
+                response.send('Uncool');
+            }
+        });
+        server = app.listen(12345);
+    });
+    const code = await codePromise;
     const response = await got.post('https://discord.com/api/oauth2/token', {
         form: {
             // eslint-disable-next-line camelcase
@@ -106,7 +104,6 @@ async function setupWebhook() {
         }
     }).json();
     console.info('Your webhook information:', response.webhook);
-    rl.close();
     return response.webhook;
 }
 
