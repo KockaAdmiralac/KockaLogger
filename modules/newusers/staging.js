@@ -8,6 +8,7 @@
 const {MessageComponentTypes} = require('discord-interactions');
 const {WebhookClient} = require('discord.js');
 const {mwn: Mwn} = require('mwn');
+const {getUserData, isReportable} = require('./util.js');
 
 const REDIS_LIST_KEY = 'newusers-staging';
 const MOVE_INTERVAL = 20 * 60 * 1000;
@@ -22,6 +23,11 @@ class StagingArea {
      * @type {import('ioredis').Redis}
      */
     #redis = null;
+    /**
+     * API client.
+     * @type {import('../../include/io.js')}
+     */
+    #io = null;
     /**
      * Webhook client of the webhook holding the update message.
      * @type {WebhookClient}
@@ -55,6 +61,7 @@ class StagingArea {
     /**
      * Class constructor to initialize all dependent resources.
      * @param {import('ioredis').Redis} redis Redis client
+     * @param {import('../../include/io.js')} io API client
      * @param {object} config Staging area configuration
      * @param {string} config.id Report webhook ID
      * @param {string} config.token Report webhook token
@@ -64,9 +71,10 @@ class StagingArea {
      * @param {string} config.wiki Wiki to report on
      * @param {string} config.page Page to report on
      */
-    constructor(redis, config) {
+    constructor(redis, io, config) {
         const {messageId, id, token, username, password, wiki, page} = config;
         this.#redis = redis;
+        this.#io = io;
         this.#webhook = new WebhookClient({
             id,
             token
@@ -139,9 +147,16 @@ class StagingArea {
     async moveReports() {
         const reports = await this.#redis.hgetall(REDIS_LIST_KEY);
         const users = Object.keys(reports);
-        const numUsers = users.length;
-        if (numUsers === 0) {
+        if (users.length === 0) {
             // Nothing to report.
+            return;
+        }
+        // TODO: Log users before moving.
+        const userData = await getUserData(this.#io, users);
+        const filteredUsers = userData
+            .filter(isReportable)
+            .map(u => u.username);
+        if (filteredUsers.length === 0) {
             return;
         }
         const reporters = Array.from(new Set(Object.values(reports)));
@@ -152,7 +167,7 @@ class StagingArea {
             undefined,
             summary,
             {
-                appendtext: `\n\n== ${numUsers} user(s) ==\n{{Report profile|c|${summary}|${users.join('|')}|{{subst:REVISIONUSER}}|~~~~~}}`,
+                appendtext: `\n\n== ${filteredUsers.length} user(s) ==\n{{Report profile|c|${summary}|${filteredUsers.join('|')}|{{subst:REVISIONUSER}}|~~~~~}}`,
                 bot: true
             }
         );

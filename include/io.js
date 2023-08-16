@@ -55,13 +55,19 @@ class IO {
         return response;
     }
     /**
-     * Gets user info for a user with specified user ID.
-     * @param {number} id User ID of the user
+     * Gets user info for users with specified user IDs.
+     *
+     * Amount of users that can be retrieved is limited by the query string
+     * length, so over 50 users is not advised. This can also return less than
+     * the amount of users requested, or throw a 404 error if no users were
+     * found.
+     * @param {number[]} ids User IDs of the users
      * @returns {Promise} Promise to listen on for response
      */
-    userInfo(id) {
+    userInfo(ids) {
+        const idsQuery = ids.map(id => `id=${id}`).join('&');
         return this._client.get(
-            `https://services.fandom.com/user-attribute/user/bulk?id=${id}`,
+            `https://services.fandom.com/user-attribute/user/bulk?${idsQuery}`,
             {
                 headers: {
                     accept: '*/*'

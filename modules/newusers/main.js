@@ -16,6 +16,7 @@ const Discord = require('../../transports/discord/main.js');
 const {MessageComponentTypes} = require('discord-interactions');
 const mysql = require('mysql2/promise');
 const StagingArea = require('./staging.js');
+const {getUserData, isReportable} = require('./util.js');
 
 const INSERT_USER_QUERY = 'INSERT INTO `newusers` (`name`, `wiki`, ' +
     '`language`, `domain`) VALUES(?, ?, ?, ?)';
@@ -113,7 +114,7 @@ class NewUsers extends Module {
         this.#profilesTransport = this.#initTransport(profilesConf, 'profiles');
         this.#logTransport = this.#initTransport(log, 'log');
         if (staging) {
-            this.#staging = new StagingArea(this._cache, staging);
+            this.#staging = new StagingArea(this._cache, this._io, staging);
         }
         if (publicKey) {
             const NewUsersServer = require('./server.js');
@@ -334,13 +335,15 @@ class NewUsers extends Module {
         for (let retry = 0; retry < MAX_RETRIES; ++retry) {
             await wait(retry * RETRY_DELAY);
             try {
-                const userId = await this.#getID(user, wiki, language, domain);
-                const {users} = await this._io.userInfo(userId);
-                const userData = users[userId];
-                const {bio, discordHandle, fbPage, twitter, website} = userData;
-                if (bio || discordHandle || fbPage || twitter || website) {
-                    await this.#insertProfile(userId, userData);
-                    await this.#post(userId, userData, wiki, language, domain);
+                const [userData] = await getUserData(this._io, [user]);
+                if (isReportable(userData)) {
+                    await this.#reportUser(
+                        Number(userData.id),
+                        userData,
+                        wiki,
+                        language,
+                        domain
+                    );
                 }
                 return;
             } catch (error) {
@@ -373,17 +376,16 @@ class NewUsers extends Module {
         await this.#post(userId, userData, 'kocka', 'en', 'fandom.com');
     }
     /**
-     * Fetches a user's ID.
-     * This method needs to fail if it wants the parent loop to retry
-     * the request.
-     * @param {string} user User whose ID is being obtained
-     * @returns {Promise<number>} The user's ID
+     * Reports the user for review.
+     * @param {number} userId ID of the user to report
+     * @param {object} userData User profile data
+     * @param {string} wiki Wiki the user created their account on
+     * @param {string} language Language path of the wiki
+     * @param {string} domain Domain of the wiki
      */
-    async #getID(user) {
-        return (await this._io.query('community', 'en', 'fandom.com', {
-            list: 'users',
-            ususers: user
-        })).query.users[0].userid;
+    async #reportUser(userId, userData, wiki, language, domain) {
+        await this.#insertProfile(userId, userData);
+        await this.#post(userId, userData, wiki, language, domain);
     }
     /**
      * Prefixes a social media handle with a link to that social media site, and
