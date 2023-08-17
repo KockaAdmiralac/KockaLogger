@@ -79,7 +79,7 @@ async function setupWebhook() {
     const url = new URL('https://discord.com/api/oauth2/authorize');
     url.searchParams.append('client_id', appId);
     url.searchParams.append('scope', 'webhook.incoming');
-    url.searchParams.append('redurect_uri', redirectUrl);
+    url.searchParams.append('redirect_uri', redirectUrl);
     url.searchParams.append('response_type', 'code');
     console.info('Visit this URL:', url.toString());
     const codePromise = new Promise(function(resolve) {
