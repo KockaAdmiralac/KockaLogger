@@ -192,7 +192,7 @@ class ReportsChannel {
         for (let retry = 0; retry < MAX_RETRIES; ++retry) {
             try {
                 const [userData] = await getUserData(this.#io, [user]);
-                if (isReportable(userData)) {
+                if (userData && isReportable(userData)) {
                     await this.#reportUser(
                         Number(userData.id),
                         userData,
