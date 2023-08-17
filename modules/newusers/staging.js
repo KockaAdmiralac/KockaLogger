@@ -19,15 +19,20 @@ const MOVE_INTERVAL = 20 * 60 * 1000;
  */
 class StagingArea {
     /**
+     * API client.
+     * @type {import('../../include/io.js')}
+     */
+    #io = null;
+    /**
      * Redis client instance.
      * @type {import('ioredis').Redis}
      */
     #redis = null;
     /**
-     * API client.
-     * @type {import('../../include/io.js')}
+     * This module's logger.
+     * @type {import('../../include/log.js')}
      */
-    #io = null;
+    #logger = null;
     /**
      * Webhook client of the webhook holding the update message.
      * @type {WebhookClient}
@@ -60,8 +65,9 @@ class StagingArea {
     #bot = null;
     /**
      * Class constructor to initialize all dependent resources.
-     * @param {import('ioredis').Redis} redis Redis client
      * @param {import('../../include/io.js')} io API client
+     * @param {import('ioredis').Redis} redis Redis client
+     * @param {import('../../include/log.js')} log This module's logger
      * @param {object} config Staging area configuration
      * @param {string} config.id Report webhook ID
      * @param {string} config.token Report webhook token
@@ -71,10 +77,11 @@ class StagingArea {
      * @param {string} config.wiki Wiki to report on
      * @param {string} config.page Page to report on
      */
-    constructor(redis, io, config) {
+    constructor(io, redis, log, config) {
         const {messageId, id, token, username, password, wiki, page} = config;
-        this.#redis = redis;
         this.#io = io;
+        this.#redis = redis;
+        this.#logger = log;
         this.#webhook = new WebhookClient({
             id,
             token
@@ -105,16 +112,24 @@ class StagingArea {
      * @param {string} reporter Discord username of the reporting user
      */
     async addUser(user, reporter) {
-        await this.#redis.hset(REDIS_LIST_KEY, user, reporter);
-        await this.#updateStagingMessage();
+        try {
+            await this.#redis.hset(REDIS_LIST_KEY, user, reporter);
+            await this.#updateStagingMessage();
+        } catch (error) {
+            this.#logger.error('Error while staging a user', error);
+        }
     }
     /**
      * Removes a reported user from the staging area.
      * @param {string} user Fandom account username of the user to remove
      */
     async removeUser(user) {
-        await this.#redis.hdel(REDIS_LIST_KEY, user);
-        await this.#updateStagingMessage();
+        try {
+            await this.#redis.hdel(REDIS_LIST_KEY, user);
+            await this.#updateStagingMessage();
+        } catch (error) {
+            this.#logger.error('Error while unstaging a user', error);
+        }
     }
     /**
      * Called every time the bot should be automatically moving reports to the
@@ -145,34 +160,38 @@ class StagingArea {
      * Moves reports from the staging area to the wiki.
      */
     async moveReports() {
-        const reports = await this.#redis.hgetall(REDIS_LIST_KEY);
-        const users = Object.keys(reports);
-        if (users.length === 0) {
-            // Nothing to report.
-            return;
-        }
-        // TODO: Log users before moving.
-        const userData = await getUserData(this.#io, users);
-        const filteredUsers = userData
-            .filter(isReportable)
-            .map(u => u.username);
-        if (filteredUsers.length === 0) {
-            return;
-        }
-        const reporters = Array.from(new Set(Object.values(reports)));
-        const reporterList = this.#reporterList(reporters);
-        const summary = `Profile reports by ${reporterList} from Discord`;
-        await this.#bot.save(
-            this.#page,
-            undefined,
-            summary,
-            {
-                appendtext: `\n\n== ${filteredUsers.length} user(s) ==\n{{Report profile|c|${summary}|${filteredUsers.join('|')}|{{subst:REVISIONUSER}}|~~~~~}}`,
-                bot: true
+        try {
+            const reports = await this.#redis.hgetall(REDIS_LIST_KEY);
+            const users = Object.keys(reports);
+            if (users.length === 0) {
+                // Nothing to report.
+                return;
             }
-        );
-        await this.#redis.hdel(REDIS_LIST_KEY, users);
-        await this.#updateStagingMessage();
+            // TODO: Log users before moving.
+            const userData = await getUserData(this.#io, users);
+            const filteredUsers = userData
+                .filter(isReportable)
+                .map(u => u.username);
+            if (filteredUsers.length === 0) {
+                return;
+            }
+            const reporters = Array.from(new Set(Object.values(reports)));
+            const reporterList = this.#reporterList(reporters);
+            const summary = `Profile reports by ${reporterList} from Discord`;
+            await this.#bot.save(
+                this.#page,
+                undefined,
+                summary,
+                {
+                    appendtext: `\n\n== ${filteredUsers.length} user(s) ==\n{{Report profile|c|${summary}|${filteredUsers.join('|')}|{{subst:REVISIONUSER}}|~~~~~}}`,
+                    bot: true
+                }
+            );
+            await this.#redis.hdel(REDIS_LIST_KEY, users);
+            await this.#updateStagingMessage();
+        } catch (error) {
+            this.#logger.error('Error while moving reports', error);
+        }
     }
     /**
      * Forms a list of link to contributions of Fandom users in a Discord

@@ -13,7 +13,7 @@ const {
     token
     /* eslint-disable node/no-unpublished-require */
     /* eslint-disable node/no-missing-require */
-} = require('../../config.json').modules.newusers;
+} = require('../../config.json').modules.newusers.setup;
 /* eslint-enable node/no-unpublished-require */
 /* eslint-enable node/no-missing-require */
 const {URL} = require('url');

@@ -12,20 +12,7 @@ const {
     InteractionResponseType,
     MessageComponentTypes
 } = require('discord-interactions');
-const {WebhookClient, MessageFlags} = require('discord.js');
-
-const UPDATE_PROFILE_QUERY_BASE = 'UPDATE `profiles` SET ' +
-        '`is_spam` = ?, ' +
-        '`classifying_user` = ?, ' +
-        '`classification_date` = ?';
-const UPDATE_PROFILE_QUERY_ID = `${UPDATE_PROFILE_QUERY_BASE}
-    WHERE \`id\` = ?`;
-const UPDATE_PROFILE_QUERY_NAME = `${UPDATE_PROFILE_QUERY_BASE}
-    WHERE \`name\` = ?`;
-const UPDATE_ALL_PROFILES = `${UPDATE_PROFILE_QUERY_BASE}
-    WHERE \`is_spam\` IS NULL`;
-const GET_USERNAME_QUERY = 'SELECT `name` FROM `profiles` WHERE `id` = ?';
-const REDIS_MESSAGES_KEY = 'newusers-messages';
+const {MessageFlags} = require('discord.js');
 
 /**
  * Handles Discord interaction requests for classifying profiles as spam or not
@@ -33,53 +20,61 @@ const REDIS_MESSAGES_KEY = 'newusers-messages';
  */
 class NewUsersServer {
     /**
+     * This module's logger.
+     * @type {import('../../include/log.js')}
+     */
+    #logger = null;
+    /**
      * HTTP server returned by Express.
      * @type {import('http').Server}
      */
     #server = null;
-    /**
-     * This module's database connection.
-     * @type {import('mysql2/promise').Pool}
-     */
-    #db = null;
-    /**
-     * Redis client instance.
-     * @type {import('ioredis').Redis}
-     */
-    #redis = null;
-    /**
-     * The webhook that relays profile report messages.
-     * @type {WebhookClient}
-     */
-    #profilesWebhook = null;
     /**
      * Staging area controls.
      * @type {import('./staging.js')|null}
      */
     #staging = null;
     /**
+     * Reports area controls.
+     * @type {import('./reports.js')|null}
+     */
+    #reports = null;
+    /**
      * Class constructor.
-     * @param {import('mysql2/promise').Pool} db Database connection
+     * @param {import('../../include/log.js')} log This module's logger
      * @param {import('./staging.js')} staging Staging area controls
-     * @param {import('ioredis').Redis} redis Redis client
-     * @param {object} transport Discord transport configuration
+     * @param {import('./reports.js')} reports Reports area controls
      * @param {object} config Server configuration
      * @param {number} config.port Express server's port
      * @param {string} config.publicKey Discord app's public key
      */
-    constructor(db, staging, redis, transport, config) {
+    constructor(log, staging, reports, config) {
         const {port, publicKey} = config;
-        this.#db = db;
-        this.#redis = redis;
+        this.#logger = log;
         this.#staging = staging;
+        this.#reports = reports;
         const app = express();
         app.post(
             '/',
             verifyKeyMiddleware(publicKey),
-            this.#handle.bind(this)
+            this.#handleWrapper.bind(this)
         );
         this.#server = app.listen(port);
-        this.#profilesWebhook = new WebhookClient(transport);
+    }
+    /**
+     * Calls #handle but with error handling around it.
+     * @param {express.Request} req Request data
+     * @param {express.Response} res Response data
+     */
+    async #handleWrapper(req, res) {
+        try {
+            await this.#handle(req, res);
+        } catch (error) {
+            this.#logger.error(
+                'Unexpected error in the Discord command handler',
+                error
+            );
+        }
     }
     /**
      * Handles a Discord interaction request.
@@ -94,64 +89,40 @@ class NewUsersServer {
             name,
             options
         } = data;
-        const [status, userId] = (customId || '').split('-');
-        const isSpam = status === 'spam';
-        const reporterId = member.user.id;
-        const reporter = member.user.username;
-        const [userOpt] = options || [];
         switch (type) {
             case InteractionType.PING:
+                // Discord has requested a ping from our command handler.
                 res.json({
                     type: InteractionResponseType.PONG
                 });
                 break;
             case InteractionType.MESSAGE_COMPONENT:
+                // A button was pressed on one of our messages.
                 if (componentType !== MessageComponentTypes.BUTTON) {
-                    res.status(400).json({
-                        message: 'Unexpected component type.'
-                    });
+                    this.#reportError(res, 'Unexpected component type.');
                     break;
                 }
-                switch (status) {
-                    case 'spam':
-                    case 'notspam':
-                        await this.#classify(
-                            isSpam,
-                            reporterId,
-                            Number(userId)
-                        );
-                        await this.#profilesWebhook.deleteMessage(message.id);
-                        await this.#redis.srem(REDIS_MESSAGES_KEY, message.id);
-                        if (status === 'spam') {
-                            const username = await this.#getUsername(userId);
-                            await this.#staging.addUser(username, reporter);
-                        }
-                        break;
-                    case 'move':
-                        await this.#staging.moveReports();
-                        break;
-                    default:
-                        res.status(400).json({
-                            message: 'Unexpected component.'
-                        });
-                        return;
+                if (customId === 'move') {
+                    await this.#staging.moveReports();
+                } else {
+                    await this.#handleClassification(
+                        customId,
+                        member,
+                        message.id
+                    );
                 }
                 res.json({
                     type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE
                 });
                 break;
             case InteractionType.APPLICATION_COMMAND:
+                // A slash command was used.
                 switch (name) {
                     case 'report':
-                        await this.#staging.addUser(userOpt.value, reporter);
-                        await this.#classify(true, reporterId, userOpt.value);
-                        break;
                     case 'unreport':
-                        await this.#staging.removeUser(userOpt.value);
-                        await this.#classify(false, reporterId, userOpt.value);
+                        await this.#handleReport(name, options, member);
                         break;
                     case 'clean':
-                        await this.#classifyAll(false, reporterId);
                         res.json({
                             data: {
                                 content: 'Clean in progress!',
@@ -160,12 +131,10 @@ class NewUsersServer {
                             type: InteractionResponseType
                                 .CHANNEL_MESSAGE_WITH_SOURCE
                         });
-                        await this.#clean();
+                        await this.#reports.clean(member.user.id);
                         return;
                     default:
-                        res.status(400).json({
-                            message: 'Unexpected slash command.'
-                        });
+                        this.#reportError(res, 'Unexpected slash command.');
                         return;
                 }
                 res.json({
@@ -179,66 +148,55 @@ class NewUsersServer {
             case InteractionType.APPLICATION_COMMAND_AUTOCOMPLETE:
             case InteractionType.MODAL_SUBMIT:
             default:
-                res.status(400).json({
-                    message: 'Unexpected interaction type.'
-                });
+                this.#reportError(res, 'Unexpected interaction type.');
                 break;
         }
     }
     /**
-     * Classifies a profile as spam or not spam.
-     * @param {boolean} isSpam Whether the profile is spam
-     * @param {string} discordUserId ID of the classifying user
-     * @param {number|string} fandomUser ID/username of the Fandom user being
-     * classified
-     * @returns {Promise} Result of the insert operation
+     * Reports an error from the command handler and logs it.
+     * @param {express.Response} res Response data
+     * @param {string} message Error message
      */
-    #classify(isSpam, discordUserId, fandomUser) {
-        const query = typeof fandomUser === 'string' ?
-            UPDATE_PROFILE_QUERY_NAME :
-            UPDATE_PROFILE_QUERY_ID;
-        return this.#db.execute(query, [
-            isSpam,
-            discordUserId,
-            new Date(),
-            fandomUser
-        ]);
+    #reportError(res, message) {
+        this.#logger.error(`Command handler error: ${message}`);
+        res.status(400).json({message});
     }
     /**
-     * Gets a Fandom user's username from the database.
-     * @param {number} userId Fandom user ID
-     * @returns {Promise<string>} Fandom username
+     * Handles classification buttons (spam/not spam) on report messages.
+     * @param {string} customId Button's custom ID, consisting of "spam"/
+     * "notspam", the user's ID, and the user's username, separated by colons
+     * @param {import('discord.js').GuildMember} member Member who used the
+     * button
+     * @param {string} messageId Discord message ID where the button was used
      */
-    async #getUsername(userId) {
-        const row = await this.#db.execute(GET_USERNAME_QUERY, [userId]);
-        return row[0][0].name;
+    async #handleClassification(customId, member, messageId) {
+        const [status, userIdStr, username] = customId.split(':');
+        const isSpam = status === 'spam';
+        const userId = Number(userIdStr);
+        const reporterId = member.user.id;
+        const reporter = member.user.username;
+        await this.#reports.classify(isSpam, userId, reporterId, messageId);
+        if (isSpam) {
+            await this.#staging.addUser(username, reporter);
+        }
     }
     /**
-     * Classifies all unclassified profiles as spam or not spam.
-     * @param {boolean} isSpam Whether the profile is spam
-     * @param {string} discordUserId ID of the classifying user
-     * @returns {Promise} Result of the insert operation
+     * Handles /report and /unreport slash commands.
+     * @param {string} command Command name
+     * @param {object[]} options Command options
+     * @param {import('discord.js').GuildMember} member Member who used the
+     * command
      */
-    #classifyAll(isSpam, discordUserId) {
-        return this.#db.execute(UPDATE_ALL_PROFILES, [
-            isSpam,
-            discordUserId,
-            new Date()
-        ]);
-    }
-    /**
-     * Removes all report messages up until this point.
-     */
-    async #clean() {
-        const numMembers = await this.#redis.scard(REDIS_MESSAGES_KEY);
-        const messages = await this.#redis.spop(REDIS_MESSAGES_KEY, numMembers);
-        for (const message of messages) {
-            try {
-                await this.#profilesWebhook.deleteMessage(message);
-            } catch (error) {
-                // TODO: Log error
-                console.error(error);
-            }
+    async #handleReport(command, options, member) {
+        const username = options[0].value;
+        const isSpam = command === 'report';
+        const reporterId = member.user.id;
+        const reporter = member.user.username;
+        await this.#reports.classify(isSpam, username, reporterId);
+        if (isSpam) {
+            await this.#staging.addUser(username, reporter);
+        } else {
+            await this.#staging.removeUser(username);
         }
     }
     /**
@@ -246,7 +204,6 @@ class NewUsersServer {
      */
     kill() {
         this.#server.close();
-        this.#profilesWebhook.destroy();
     }
 }
 
