@@ -9,6 +9,7 @@ const {MessageComponentTypes} = require('discord-interactions');
 const {WebhookClient} = require('discord.js');
 const {mwn: Mwn} = require('mwn');
 const {getUserData, isReportable} = require('./util.js');
+const {encode} = require('../../include/util.js');
 
 const REDIS_LIST_KEY = 'newusers-staging';
 const MOVE_INTERVAL = 20 * 60 * 1000;
@@ -201,7 +202,7 @@ class StagingArea {
      */
     #getUsersMessage(users) {
         const usersDiscord = users.map(
-            u => `- [${u}](<https://c.fandom.com/Special:Contribs/${encodeURIComponent(u)}>)`
+            u => `- [${u}](<https://c.fandom.com/Special:Contribs/${encode(u)}>)`
         );
         const pickedUsers = [];
         let messageLength = 0;
