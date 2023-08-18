@@ -155,7 +155,7 @@ class StagingArea {
         if (reporters.length === 1) {
             return reporters[0];
         }
-        return `${reporters.slice(0, -1).join(', ')} and ${reporters[0]}`;
+        return `${reporters.slice(0, -1).join(', ')} and ${reporters[reporters.length - 1]}`;
     }
     /**
      * Moves reports from the staging area to the wiki.
@@ -174,10 +174,13 @@ class StagingArea {
                 .filter(isReportable)
                 .map(u => u.username);
             if (filteredUsers.length === 0) {
+                // All users were filtered out, clear out the reports message.
+                await this.#updateStagingMessage();
                 return;
             }
-            const reporters = Array.from(new Set(Object.values(reports)));
-            const reporterList = this.#reporterList(reporters);
+            const filteredReporters = filteredUsers.map(user => reports[user]);
+            const uniqueReporters = Array.from(new Set(filteredReporters));
+            const reporterList = this.#reporterList(uniqueReporters);
             const summary = `Profile reports by ${reporterList} from Discord`;
             await this.#bot.save(
                 this.#page,
