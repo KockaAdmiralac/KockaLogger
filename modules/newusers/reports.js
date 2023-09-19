@@ -203,9 +203,6 @@ class ReportsChannel {
                 }
                 return;
             } catch (error) {
-                if (user.startsWith('QATest')) {
-                    return;
-                }
                 errors.push(error);
             }
             await wait(retry * RETRY_DELAY);
