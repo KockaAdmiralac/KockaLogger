@@ -75,6 +75,8 @@ const IGNORED_LOGS = [
     // From wikis with the FlaggedRevs extension turned on
     'review',
     // From [[w:c:lol]]
+    'ro-teamnames',
+    // From [[w:c:lol]]
     'ro-tournament',
     // From [[w:c:lol]]
     'ro-news',
