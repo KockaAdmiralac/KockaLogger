@@ -388,7 +388,7 @@ class ReportsChannel {
      * @param {number|string} user ID or username of the Fandom user being
      * classified
      * @param {string} classifierId Discord user ID of the classifying user
-     * @returns {Promise} Result of the insert operation
+     * @returns {Promise<any>} Result of the insert operation
      */
     #updateClassification(isSpam, user, classifierId) {
         const query = typeof user === 'string' ?
@@ -405,7 +405,7 @@ class ReportsChannel {
      * Classifies all unclassified profiles as spam or not spam.
      * @param {boolean} isSpam Whether the profile is spam
      * @param {string} classifierId Discord ID of the classifying user
-     * @returns {Promise} Result of the insert operation
+     * @returns {Promise<any>} Result of the insert operation
      */
     #updateClassificationAll(isSpam, classifierId) {
         return this.#db.execute(UPDATE_ALL_PROFILES, [

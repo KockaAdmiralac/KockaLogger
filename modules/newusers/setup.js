@@ -73,7 +73,7 @@ async function setupCommands() {
 
 /**
  * Sets up an application-owned webhook.
- * @returns {object} Webhook information
+ * @returns {Promise<object>} Webhook information
  */
 async function setupWebhook() {
     const url = new URL('https://discord.com/api/oauth2/authorize');

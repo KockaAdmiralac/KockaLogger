@@ -21,7 +21,7 @@ function isReportable(userData) {
  * Can only get 50 users due to API restrictions.
  * @param {import('../../include/io.js')} io API client
  * @param {string[]} usernames Usernames whose data should be retrieved
- * @returns {number[]} User IDs of requested users
+ * @returns {Promise<number[]>} User IDs of requested users
  */
 async function getIds(io, usernames) {
     const {query} = await io.query('community', 'en', 'fandom.com', {
@@ -36,7 +36,7 @@ async function getIds(io, usernames) {
  * Retrieves user data about users with specified usernames from the API.
  * @param {import('../../include/io.js')} io API client
  * @param {string[]} usernames Usernames whose data should be retrieved
- * @returns {object[]} User data
+ * @returns {Promise<object[]>} User data
  */
 async function getUserData(io, usernames) {
     const usernamesLeft = Array.from(usernames);
