@@ -95,6 +95,7 @@ class StagingArea {
                 assert: 'user'
             },
             password,
+            silent: true,
             userAgent: 'KockaLogger profile reports',
             username
         });
