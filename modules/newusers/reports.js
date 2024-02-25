@@ -319,15 +319,23 @@ class ReportsChannel {
                     {
                         // eslint-disable-next-line camelcase
                         custom_id: `spam:${userId}:${username}`,
+                        emoji: {
+                            id: null,
+                            name: '🗑️'
+                        },
                         label: 'Spam',
-                        style: 3,
+                        style: 4,
                         type: MessageComponentTypes.BUTTON
                     },
                     {
                         // eslint-disable-next-line camelcase
                         custom_id: `notspam:${userId}:${username}`,
+                        emoji: {
+                            id: null,
+                            name: '✔'
+                        },
                         label: 'Not spam',
-                        style: 4,
+                        style: 3,
                         type: MessageComponentTypes.BUTTON
                     }
                 ],
