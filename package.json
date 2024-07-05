@@ -26,16 +26,16 @@
         "url": "https://github.com/KockaAdmiralac/KockaLogger.git"
     },
     "dependencies": {
-        "discord.js": "14.11.0",
+        "discord.js": "14.15.3",
         "got": "11.x",
-        "ioredis": "5.3.2",
+        "ioredis": "5.4.1",
         "irc-upd": "0.11.0",
-        "mysql2": "3.5.2"
+        "mysql2": "3.10.2"
     },
     "optionalDependencies": {
         "discord-interactions": "3.4.0",
         "express": "4.18.2",
-        "mwn": "2.0.2"
+        "mwn": "2.0.3"
     },
     "devDependencies": {
         "eslint": "8.56.0",
